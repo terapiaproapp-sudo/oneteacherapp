@@ -28,25 +28,37 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
   const { signOut, user } = useAuth();
 
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
-          {!collapsed && <img src={logo} alt="OneTeacher" className="h-8 object-contain brightness-0 invert" />}
-          {collapsed && <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-bold text-sm">O</div>}
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0">
+          {!collapsed && (
+            <img src={logo} alt="OneTeacher" className="h-7 object-contain brightness-0 invert opacity-90" />
+          )}
+          {collapsed && (
+            <div className="w-8 h-8 rounded-lg bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold text-xs">
+              OT
+            </div>
+          )}
         </div>
-        <SidebarGroup>
+
+        <SidebarGroup className="mt-2">
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end={item.url === "/"} className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/"}
+                      className="hover:bg-sidebar-accent/40 rounded-lg transition-colors"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <item.icon className="mr-2.5 h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -55,15 +67,16 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
       <SidebarFooter className="border-t border-sidebar-border">
         {!collapsed && user && (
-          <p className="px-4 py-2 text-xs text-sidebar-foreground/60 truncate">{user.email}</p>
+          <p className="px-4 py-2 text-[11px] text-sidebar-foreground/50 truncate">{user.email}</p>
         )}
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={signOut} className="hover:bg-sidebar-accent/50">
-              <LogOut className="mr-2 h-4 w-4" />
-              {!collapsed && <span>Sair</span>}
+            <SidebarMenuButton onClick={signOut} className="hover:bg-sidebar-accent/40 rounded-lg transition-colors">
+              <LogOut className="mr-2.5 h-[18px] w-[18px]" />
+              {!collapsed && <span className="text-sm">Sair</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
