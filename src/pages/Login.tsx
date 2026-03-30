@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/logo-oneteacher.png";
 
@@ -20,40 +20,45 @@ export default function Login() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) {
-      toast({ title: "Erro ao entrar", description: error.message, variant: "destructive" });
-    } else {
-      navigate("/");
-    }
+    if (error) { toast({ title: "Erro no login", description: error.message, variant: "destructive" }); return; }
+    navigate("/");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md animate-fade-in">
-        <CardHeader className="text-center pb-2">
-          <img src={logo} alt="OneTeacher" className="h-12 mx-auto mb-4 object-contain" />
-          <p className="text-muted-foreground text-sm">Acesse sua conta</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
-            <div className="flex items-center justify-between text-sm">
-              <Link to="/forgot-password" className="text-primary hover:underline">Esqueci minha senha</Link>
-              <Link to="/signup" className="text-primary hover:underline">Criar conta</Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <div className="w-full max-w-sm animate-fade-in">
+        <div className="text-center mb-8">
+          <img src={logo} alt="OneTeacher" className="h-10 mx-auto mb-6 object-contain" />
+          <h1 className="text-xl font-bold text-foreground">Bem-vindo de volta</h1>
+          <p className="text-sm text-muted-foreground mt-1">Entre na sua conta para continuar</p>
+        </div>
+
+        <Card className="card-premium">
+          <CardContent className="p-6">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">E-mail</Label>
+                <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="h-10" placeholder="seu@email.com" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">Senha</Label>
+                  <Link to="/forgot-password" className="text-[11px] text-primary hover:underline">Esqueci a senha</Link>
+                </div>
+                <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="h-10" placeholder="••••••••" />
+              </div>
+              <Button type="submit" disabled={loading} className="w-full h-10 rounded-lg font-medium">
+                {loading ? "Entrando..." : "Entrar"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-sm text-muted-foreground mt-5">
+          Não tem conta?{" "}
+          <Link to="/signup" className="text-primary font-medium hover:underline">Criar conta</Link>
+        </p>
+      </div>
     </div>
   );
 }
