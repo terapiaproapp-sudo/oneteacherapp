@@ -14,7 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      lessons: {
+        Row: {
+          created_at: string
+          date: string
+          duration: number
+          id: string
+          modality: string | null
+          notes: string | null
+          status: string | null
+          student_id: string
+          subject: string | null
+          teacher_id: string
+          time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          duration?: number
+          id?: string
+          modality?: string | null
+          notes?: string | null
+          status?: string | null
+          student_id: string
+          subject?: string | null
+          teacher_id: string
+          time?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          duration?: number
+          id?: string
+          modality?: string | null
+          notes?: string | null
+          status?: string | null
+          student_id?: string
+          subject?: string | null
+          teacher_id?: string
+          time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          notes: string | null
+          paid_date: string | null
+          payment_method: string | null
+          status: string | null
+          student_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          status?: string | null
+          student_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          status?: string | null
+          student_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          created_at: string
+          email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          hourly_rate: number | null
+          hours_contracted: number | null
+          hours_remaining: number | null
+          id: string
+          lesson_content: string | null
+          modality: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          status: string | null
+          subject: string | null
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          hourly_rate?: number | null
+          hours_contracted?: number | null
+          hours_remaining?: number | null
+          id?: string
+          lesson_content?: string | null
+          modality?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          status?: string | null
+          subject?: string | null
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          hourly_rate?: number | null
+          hours_contracted?: number | null
+          hours_remaining?: number | null
+          id?: string
+          lesson_content?: string | null
+          modality?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          status?: string | null
+          subject?: string | null
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
