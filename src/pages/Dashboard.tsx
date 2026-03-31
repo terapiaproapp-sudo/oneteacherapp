@@ -9,24 +9,14 @@ import { useNavigate } from "react-router-dom";
 interface Stats {
   totalStudents: number; activeStudents: number; todayLessons: number;
   monthRevenue: number; pendingPayments: number; totalHoursRemaining: number;
-  totalHoursSold: number; overduePayments: number; expiringPackages: number;
+  totalHoursSold: number; overduePayments: number;
 }
-
-interface Alert {
-  type: "warning" | "danger" | "info";
-  title: string;
-  description: string;
-  link?: string;
-}
+interface Alert { type: "warning" | "danger" | "info"; title: string; description: string; link?: string; }
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<Stats>({
-    totalStudents: 0, activeStudents: 0, todayLessons: 0,
-    monthRevenue: 0, pendingPayments: 0, totalHoursRemaining: 0,
-    totalHoursSold: 0, overduePayments: 0, expiringPackages: 0,
-  });
+  const [stats, setStats] = useState<Stats>({ totalStudents: 0, activeStudents: 0, todayLessons: 0, monthRevenue: 0, pendingPayments: 0, totalHoursRemaining: 0, totalHoursSold: 0, overduePayments: 0 });
   const [recentLessons, setRecentLessons] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
 
@@ -34,45 +24,29 @@ export default function Dashboard() {
 
   const loadStats = async () => {
     const today = format(new Date(), "yyyy-MM-dd");
-    const startOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
-
+    const som = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
     const [studentsRes, todayRes, paymentsRes, packagesRes] = await Promise.all([
       supabase.from("students").select("*").eq("teacher_id", user!.id),
       supabase.from("lessons").select("*, students(name)").eq("teacher_id", user!.id).gte("date", today).lte("date", today + "T23:59:59").order("time"),
       supabase.from("payments").select("*").eq("teacher_id", user!.id),
       supabase.from("packages").select("*").eq("teacher_id", user!.id),
     ]);
-
     const students = studentsRes.data || [];
-    const active = students.filter(s => s.status === "ativo");
     const payments = paymentsRes.data || [];
     const pkgs = packagesRes.data || [];
-
-    const monthPaid = payments.filter(p => p.status === "pago" && p.paid_date && p.paid_date >= startOfMonth).reduce((s, p) => s + (p.amount || 0), 0);
-    const pending = payments.filter(p => p.status === "pendente").reduce((s, p) => s + (p.amount || 0), 0);
-    const overdue = payments.filter(p => p.status === "pendente" && p.due_date < today).reduce((s, p) => s + (p.amount || 0), 0);
-    const totalHoursSold = pkgs.reduce((s, p) => s + (p.hours_total || 0), 0);
-    const totalHoursRemaining = pkgs.filter(p => p.status === "ativo").reduce((s, p) => s + ((p.hours_total || 0) - (p.hours_used || 0)), 0);
-
-    // Check expiring packages (within 7 days)
-    const sevenDaysFromNow = format(new Date(Date.now() + 7 * 86400000), "yyyy-MM-dd");
-    const expiringPkgs = pkgs.filter(p => p.status === "ativo" && p.expires_at && p.expires_at <= sevenDaysFromNow && p.expires_at >= today);
-
-    // Low hours packages
-    const lowHoursPkgs = pkgs.filter(p => p.status === "ativo" && (p.hours_total - p.hours_used) <= 2 && (p.hours_total - p.hours_used) > 0);
+    const monthPaid = payments.filter((p: any) => p.status === "pago" && p.paid_date && p.paid_date >= som).reduce((s: number, p: any) => s + (p.amount || 0), 0);
+    const pending = payments.filter((p: any) => p.status === "pendente").reduce((s: number, p: any) => s + (p.amount || 0), 0);
+    const overdue = payments.filter((p: any) => p.status === "pendente" && p.due_date < today).reduce((s: number, p: any) => s + (p.amount || 0), 0);
+    const totalHoursSold = pkgs.reduce((s: number, p: any) => s + (p.hours_total || 0), 0);
+    const totalHoursRemaining = pkgs.filter((p: any) => p.status === "ativo").reduce((s: number, p: any) => s + ((p.hours_total || 0) - (p.hours_used || 0)), 0);
+    const lowHoursPkgs = pkgs.filter((p: any) => p.status === "ativo" && (p.hours_total - p.hours_used) <= 2 && (p.hours_total - p.hours_used) > 0);
 
     const alertsList: Alert[] = [];
     if (overdue > 0) alertsList.push({ type: "danger", title: "Pagamentos em atraso", description: `R$ ${overdue.toFixed(2)} vencidos`, link: "/financeiro" });
     if (pending > 0) alertsList.push({ type: "warning", title: "Pagamentos pendentes", description: `R$ ${pending.toFixed(2)} a receber`, link: "/financeiro" });
-    if (expiringPkgs.length > 0) alertsList.push({ type: "warning", title: "Pacotes vencendo", description: `${expiringPkgs.length} pacote(s) vence(m) em até 7 dias`, link: "/alunos" });
     if (lowHoursPkgs.length > 0) alertsList.push({ type: "info", title: "Pacotes com poucas horas", description: `${lowHoursPkgs.length} pacote(s) com ≤2h restantes`, link: "/alunos" });
 
-    setStats({
-      totalStudents: students.length, activeStudents: active.length,
-      todayLessons: todayRes.data?.length || 0, monthRevenue: monthPaid,
-      pendingPayments: pending, totalHoursRemaining, totalHoursSold,
-      overduePayments: overdue, expiringPackages: expiringPkgs.length,
-    });
+    setStats({ totalStudents: students.length, activeStudents: students.filter((s: any) => s.status === "ativo").length, todayLessons: todayRes.data?.length || 0, monthRevenue: monthPaid, pendingPayments: pending, totalHoursRemaining, totalHoursSold, overduePayments: overdue });
     setRecentLessons(todayRes.data || []);
     setAlerts(alertsList);
   };
@@ -96,36 +70,35 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        {statCards.map((card) => (
+        {statCards.map(card => (
           <Card key={card.label} className="card-premium hover:shadow-md transition-all duration-200">
-            <CardContent className="p-4">
-              <div className={`w-8 h-8 rounded-lg ${card.bg} flex items-center justify-center mb-3`}>
+            <CardContent className="p-3 sm:p-4">
+              <div className={`w-8 h-8 rounded-xl ${card.bg} flex items-center justify-center mb-2`}>
                 <card.icon className={`h-4 w-4 ${card.color}`} />
               </div>
-              <p className="stat-value">{card.value}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5 font-medium uppercase tracking-wide">{card.label}</p>
+              <p className="text-xl sm:text-2xl font-bold tracking-tight">{card.value}</p>
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 font-semibold uppercase tracking-wide">{card.label}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Today's Lessons */}
         <Card className="card-premium">
-          <CardContent className="p-5">
+          <CardContent className="p-4 sm:p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-primary/8 flex items-center justify-center"><Calendar className="h-4 w-4 text-primary" /></div>
-                <h2 className="section-title">Aulas de Hoje</h2>
+                <div className="w-8 h-8 rounded-xl bg-primary/8 flex items-center justify-center"><Calendar className="h-4 w-4 text-primary" /></div>
+                <h2 className="text-sm font-bold">Aulas de Hoje</h2>
               </div>
-              <button onClick={() => navigate("/agenda")} className="text-xs text-primary hover:underline">Ver agenda</button>
+              <button onClick={() => navigate("/agenda")} className="text-xs text-primary hover:underline font-medium">Ver agenda</button>
             </div>
             {recentLessons.length === 0 ? (
-              <div className="py-8 text-center"><p className="text-sm text-muted-foreground">Nenhuma aula agendada para hoje.</p></div>
+              <div className="py-8 text-center"><p className="text-sm text-muted-foreground">Nenhuma aula hoje.</p></div>
             ) : (
               <div className="space-y-2">
-                {recentLessons.map((lesson) => (
-                  <div key={lesson.id} onClick={() => navigate("/agenda")} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors cursor-pointer">
+                {recentLessons.map((lesson: any) => (
+                  <div key={lesson.id} onClick={() => navigate("/agenda")} className="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="text-center shrink-0">
                         <p className="text-sm font-bold text-primary leading-none">{lesson.time}</p>
@@ -136,14 +109,7 @@ export default function Dashboard() {
                         <p className="text-[11px] text-muted-foreground truncate">{lesson.subject}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                        lesson.status === "concluida" ? "bg-accent/10 text-accent" :
-                        lesson.status === "cancelada" ? "bg-destructive/10 text-destructive" :
-                        "bg-primary/10 text-primary"
-                      }`}>{lesson.status}</span>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />
-                    </div>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
                   </div>
                 ))}
               </div>
@@ -151,12 +117,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Alerts */}
         <Card className="card-premium">
-          <CardContent className="p-5">
+          <CardContent className="p-4 sm:p-5">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-warning/8 flex items-center justify-center"><AlertTriangle className="h-4 w-4 text-warning" /></div>
-              <h2 className="section-title">Alertas</h2>
+              <div className="w-8 h-8 rounded-xl bg-warning/8 flex items-center justify-center"><AlertTriangle className="h-4 w-4 text-warning" /></div>
+              <h2 className="text-sm font-bold">Alertas</h2>
             </div>
             {alerts.length === 0 ? (
               <div className="py-8 text-center"><p className="text-sm text-muted-foreground">Tudo em ordem! 🎉</p></div>
@@ -164,14 +129,8 @@ export default function Dashboard() {
               <div className="space-y-2">
                 {alerts.map((alert, i) => (
                   <div key={i} onClick={() => alert.link && navigate(alert.link)}
-                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                      alert.type === "danger" ? "bg-destructive/6 border border-destructive/10 hover:bg-destructive/10" :
-                      alert.type === "warning" ? "bg-warning/6 border border-warning/10 hover:bg-warning/10" :
-                      "bg-primary/6 border border-primary/10 hover:bg-primary/10"
-                    }`}>
-                    <p className={`text-sm font-medium ${
-                      alert.type === "danger" ? "text-destructive" : alert.type === "warning" ? "text-warning" : "text-primary"
-                    }`}>{alert.title}</p>
+                    className={`p-3 rounded-xl cursor-pointer transition-colors ${alert.type === "danger" ? "bg-destructive/5 border border-destructive/10 hover:bg-destructive/10" : alert.type === "warning" ? "bg-warning/5 border border-warning/10 hover:bg-warning/10" : "bg-primary/5 border border-primary/10 hover:bg-primary/10"}`}>
+                    <p className={`text-sm font-semibold ${alert.type === "danger" ? "text-destructive" : alert.type === "warning" ? "text-warning" : "text-primary"}`}>{alert.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{alert.description}</p>
                   </div>
                 ))}

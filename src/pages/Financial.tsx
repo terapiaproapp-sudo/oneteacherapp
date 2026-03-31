@@ -1,17 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, DollarSign, ArrowUpRight, ArrowDownRight, Check, CreditCard } from "lucide-react";
+import { Search, DollarSign, ArrowUpRight, ArrowDownRight, Check, CreditCard, TrendingUp, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, addMonths, startOfMonth, endOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 interface Payment {
   id: string; student_id: string; teacher_id: string; amount: number;
@@ -20,84 +18,19 @@ interface Payment {
   installment_number: number | null; total_installments: number | null;
   students?: { name: string };
 }
-interface Student { id: string; name: string; }
-interface StudentPackage { id: string; student_id: string; name: string; total_value: number; }
 
 export default function Financial() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [packages, setPackages] = useState<StudentPackage[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Payment | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
-  const [form, setForm] = useState({
-    student_id: "", amount: 0, due_date: format(new Date(), "yyyy-MM-dd"),
-    paid_date: "", status: "pendente", payment_method: "", notes: "",
-    package_id: "", installment_number: 0, total_installments: 0,
-  });
-  const [installmentMode, setInstallmentMode] = useState(false);
-  const [installmentCount, setInstallmentCount] = useState(2);
-  const [installmentTotal, setInstallmentTotal] = useState(0);
 
-  useEffect(() => { if (user) { loadPayments(); loadStudents(); loadPackages(); } }, [user]);
-
-  const loadStudents = async () => {
-    const { data } = await supabase.from("students").select("id,name").eq("teacher_id", user!.id);
-    setStudents(data || []);
-  };
-
-  const loadPackages = async () => {
-    const { data } = await supabase.from("packages").select("id,student_id,name,total_value").eq("teacher_id", user!.id);
-    setPackages(data || []);
-  };
+  useEffect(() => { if (user) loadPayments(); }, [user]);
 
   const loadPayments = async () => {
-    const { data } = await supabase.from("payments").select("*, students(name)")
-      .eq("teacher_id", user!.id).order("due_date", { ascending: false });
+    const { data } = await supabase.from("payments").select("*, students(name)").eq("teacher_id", user!.id).order("due_date");
     setPayments(data || []);
-  };
-
-  const handleSave = async () => {
-    if (!form.student_id || !form.amount) { toast({ title: "Preencha aluno e valor", variant: "destructive" }); return; }
-    const payload = {
-      student_id: form.student_id, amount: form.amount, due_date: form.due_date,
-      paid_date: form.paid_date || null, status: form.status, payment_method: form.payment_method,
-      notes: form.notes, teacher_id: user!.id, package_id: form.package_id || null,
-      installment_number: form.installment_number || null, total_installments: form.total_installments || null,
-    };
-    if (editing) {
-      await supabase.from("payments").update(payload).eq("id", editing.id);
-      toast({ title: "Pagamento atualizado!" });
-    } else {
-      await supabase.from("payments").insert(payload);
-      toast({ title: "Pagamento registrado!" });
-    }
-    setDialogOpen(false); setEditing(null); loadPayments();
-  };
-
-  const handleCreateInstallments = async () => {
-    if (!form.student_id || installmentTotal <= 0 || installmentCount < 2) {
-      toast({ title: "Preencha todos os campos", variant: "destructive" }); return;
-    }
-    const perInstallment = Math.round((installmentTotal / installmentCount) * 100) / 100;
-    const payloads = [];
-    for (let i = 1; i <= installmentCount; i++) {
-      const dueDate = new Date(form.due_date);
-      dueDate.setMonth(dueDate.getMonth() + (i - 1));
-      payloads.push({
-        student_id: form.student_id, amount: perInstallment, due_date: format(dueDate, "yyyy-MM-dd"),
-        paid_date: null, status: "pendente", payment_method: form.payment_method,
-        notes: `Parcela ${i}/${installmentCount}`, teacher_id: user!.id,
-        package_id: form.package_id || null, installment_number: i, total_installments: installmentCount,
-      });
-    }
-    const { error } = await supabase.from("payments").insert(payloads);
-    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
-    toast({ title: `${installmentCount} parcelas criadas!` });
-    setDialogOpen(false); setInstallmentMode(false); loadPayments();
   };
 
   const markPaid = async (p: Payment) => {
@@ -105,245 +38,201 @@ export default function Financial() {
     toast({ title: "Marcado como pago!" }); loadPayments();
   };
 
-  const openEdit = (p: Payment) => {
-    setEditing(p); setInstallmentMode(false);
-    setForm({
-      student_id: p.student_id, amount: p.amount, due_date: p.due_date,
-      paid_date: p.paid_date || "", status: p.status, payment_method: p.payment_method || "",
-      notes: p.notes || "", package_id: p.package_id || "",
-      installment_number: p.installment_number || 0, total_installments: p.total_installments || 0,
-    });
-    setDialogOpen(true);
-  };
+  const today = format(new Date(), "yyyy-MM-dd");
+  const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
+  const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
 
-  const openNew = () => {
-    setEditing(null); setInstallmentMode(false);
-    setForm({ student_id: "", amount: 0, due_date: format(new Date(), "yyyy-MM-dd"), paid_date: "", status: "pendente", payment_method: "", notes: "", package_id: "", installment_number: 0, total_installments: 0 });
-    setInstallmentTotal(0); setInstallmentCount(2);
-    setDialogOpen(true);
-  };
+  const monthPayments = payments.filter(p => p.due_date >= monthStart && p.due_date <= monthEnd);
+  const totalForecast = monthPayments.reduce((s, p) => s + p.amount, 0);
+  const totalReceived = monthPayments.filter(p => p.status === "pago").reduce((s, p) => s + p.amount, 0);
+  const totalPending = monthPayments.filter(p => p.status === "pendente").reduce((s, p) => s + p.amount, 0);
+  const totalOverdue = payments.filter(p => p.status === "pendente" && p.due_date < today).reduce((s, p) => s + p.amount, 0);
 
-  const getStudentPackages = (studentId: string) => packages.filter(p => p.student_id === studentId);
+  // Forecast: next 6 months
+  const forecastData = useMemo(() => {
+    const months = [];
+    for (let i = 0; i < 6; i++) {
+      const d = addMonths(new Date(), i);
+      const ms = format(startOfMonth(d), "yyyy-MM-dd");
+      const me = format(endOfMonth(d), "yyyy-MM-dd");
+      const mPayments = payments.filter(p => p.due_date >= ms && p.due_date <= me);
+      const received = mPayments.filter(p => p.status === "pago").reduce((s, p) => s + p.amount, 0);
+      const pending = mPayments.filter(p => p.status === "pendente").reduce((s, p) => s + p.amount, 0);
+      months.push({
+        name: format(d, "MMM", { locale: ptBR }),
+        recebido: received,
+        previsto: pending,
+        total: received + pending,
+      });
+    }
+    return months;
+  }, [payments]);
 
-  const totalReceived = payments.filter(p => p.status === "pago").reduce((s, p) => s + p.amount, 0);
-  const totalPending = payments.filter(p => p.status === "pendente").reduce((s, p) => s + p.amount, 0);
-  const totalOverdue = payments.filter(p => p.status === "pendente" && p.due_date < format(new Date(), "yyyy-MM-dd")).reduce((s, p) => s + p.amount, 0);
+  // Upcoming payments
+  const upcomingPayments = payments.filter(p => p.status === "pendente").sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 20);
 
   const filtered = payments.filter(p => {
     const matchSearch = !search || p.students?.name?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === "todos" || p.status === filterStatus ||
-      (filterStatus === "atrasado" && p.status === "pendente" && p.due_date < format(new Date(), "yyyy-MM-dd"));
+      (filterStatus === "atrasado" && p.status === "pendente" && p.due_date < today);
     return matchSearch && matchStatus;
   });
 
-  const statusBadge = (p: Payment) => {
-    if (p.status === "pago") return "bg-accent/10 text-accent border-accent/20";
-    if (p.status === "pendente" && p.due_date < format(new Date(), "yyyy-MM-dd")) return "bg-destructive/10 text-destructive border-destructive/20";
-    return "bg-warning/10 text-warning border-warning/20";
-  };
+  const isOverdue = (p: Payment) => p.status === "pendente" && p.due_date < today;
+  const statusBadgeClass = (p: Payment) => p.status === "pago" ? "bg-accent/10 text-accent border-accent/20" : isOverdue(p) ? "bg-destructive/10 text-destructive border-destructive/20" : "bg-warning/10 text-warning border-warning/20";
+  const statusLabel = (p: Payment) => p.status === "pago" ? "Pago" : isOverdue(p) ? "Atrasado" : "Pendente";
 
-  const statusLabel = (p: Payment) => {
-    if (p.status === "pago") return "Pago";
-    if (p.status === "pendente" && p.due_date < format(new Date(), "yyyy-MM-dd")) return "Atrasado";
-    return "Pendente";
-  };
+  const formatCurrency = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="space-y-5 animate-fade-in max-w-5xl">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="page-title">Financeiro</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNew} size="sm" className="rounded-lg shadow-sm h-9"><Plus className="h-4 w-4 mr-1.5" /> Novo</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle className="text-lg">{editing ? "Editar Pagamento" : "Novo Pagamento"}</DialogTitle></DialogHeader>
-            <div className="grid gap-4 py-3">
-              {!editing && (
-                <div className="flex bg-muted rounded-lg p-0.5">
-                  <button onClick={() => setInstallmentMode(false)} className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!installmentMode ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>À vista</button>
-                  <button onClick={() => setInstallmentMode(true)} className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${installmentMode ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>Parcelado</button>
-                </div>
-              )}
+      <h1 className="page-title">Financeiro</h1>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Aluno</Label>
-                <Select value={form.student_id} onValueChange={v => setForm({ ...form, student_id: v })}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>{students.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                </Select>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="card-premium">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><TrendingUp className="h-4 w-4 text-primary" /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-tight">Previsto (mês)</p>
+                <p className="text-sm sm:text-lg font-bold text-primary leading-tight">R$ {formatCurrency(totalForecast)}</p>
               </div>
-
-              {form.student_id && getStudentPackages(form.student_id).length > 0 && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Pacote (opcional)</Label>
-                  <Select value={form.package_id} onValueChange={v => {
-                    setForm({ ...form, package_id: v });
-                    if (installmentMode) {
-                      const pkg = packages.find(p => p.id === v);
-                      if (pkg) setInstallmentTotal(pkg.total_value);
-                    }
-                  }}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Vincular a pacote" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value=" ">Nenhum</SelectItem>
-                      {getStudentPackages(form.student_id).map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.name} · R$ {p.total_value.toFixed(2)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {installmentMode && !editing ? (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label className="text-xs font-medium">Valor Total (R$)</Label><Input type="number" value={installmentTotal || ""} onChange={e => setInstallmentTotal(parseFloat(e.target.value) || 0)} className="h-9" /></div>
-                    <div className="space-y-1.5"><Label className="text-xs font-medium">Parcelas</Label><Input type="number" min={2} value={installmentCount} onChange={e => setInstallmentCount(parseInt(e.target.value) || 2)} className="h-9" /></div>
-                  </div>
-                  {installmentTotal > 0 && installmentCount >= 2 && (
-                    <p className="text-xs text-muted-foreground">{installmentCount}x de <span className="font-semibold text-foreground">R$ {(installmentTotal / installmentCount).toFixed(2)}</span></p>
-                  )}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label className="text-xs font-medium">1º Vencimento</Label><Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="h-9" /></div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">Forma</Label>
-                      <Select value={form.payment_method} onValueChange={v => setForm({ ...form, payment_method: v })}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent><SelectItem value="pix">PIX</SelectItem><SelectItem value="transferencia">Transferência</SelectItem><SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="cartao">Cartão</SelectItem></SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button onClick={handleCreateInstallments} className="h-10 rounded-lg">Criar {installmentCount} Parcelas</Button>
-                </>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><Label className="text-xs font-medium">Valor (R$)</Label><Input type="number" value={form.amount || ""} onChange={e => setForm({ ...form, amount: parseFloat(e.target.value) || 0 })} className="h-9" /></div>
-                    <div className="space-y-1.5"><Label className="text-xs font-medium">Vencimento</Label><Input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="h-9" /></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">Status</Label>
-                      <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent><SelectItem value="pendente">Pendente</SelectItem><SelectItem value="pago">Pago</SelectItem></SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5"><Label className="text-xs font-medium">Data pagamento</Label><Input type="date" value={form.paid_date} onChange={e => setForm({ ...form, paid_date: e.target.value })} className="h-9" /></div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Forma de pagamento</Label>
-                    <Select value={form.payment_method} onValueChange={v => setForm({ ...form, payment_method: v })}>
-                      <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent><SelectItem value="pix">PIX</SelectItem><SelectItem value="transferencia">Transferência</SelectItem><SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="cartao">Cartão</SelectItem></SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5"><Label className="text-xs font-medium">Observações</Label><Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} className="text-sm" /></div>
-                  <Button onClick={handleSave} className="h-10 rounded-lg">{editing ? "Salvar" : "Registrar"}</Button>
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Summary Cards - stacked on mobile */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="card-premium">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-              <ArrowUpRight className="h-5 w-5 text-accent" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground font-medium">Recebido</p>
-              <p className="text-lg font-bold text-accent leading-tight">R$ {totalReceived.toFixed(2)}</p>
             </div>
           </CardContent>
         </Card>
         <Card className="card-premium">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
-              <DollarSign className="h-5 w-5 text-warning" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground font-medium">Pendente</p>
-              <p className="text-lg font-bold text-warning leading-tight">R$ {totalPending.toFixed(2)}</p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0"><ArrowUpRight className="h-4 w-4 text-accent" /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-tight">Recebido</p>
+                <p className="text-sm sm:text-lg font-bold text-accent leading-tight">R$ {formatCurrency(totalReceived)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
         <Card className="card-premium">
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
-              <ArrowDownRight className="h-5 w-5 text-destructive" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-warning/10 flex items-center justify-center shrink-0"><DollarSign className="h-4 w-4 text-warning" /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-tight">Pendente</p>
+                <p className="text-sm sm:text-lg font-bold text-warning leading-tight">R$ {formatCurrency(totalPending)}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground font-medium">Em atraso</p>
-              <p className="text-lg font-bold text-destructive leading-tight">R$ {totalOverdue.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+        <Card className="card-premium">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0"><ArrowDownRight className="h-4 w-4 text-destructive" /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-tight">Em atraso</p>
+                <p className="text-sm sm:text-lg font-bold text-destructive leading-tight">R$ {formatCurrency(totalOverdue)}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-10 h-9 rounded-lg bg-card border-border/60" placeholder="Buscar por aluno..." value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
-          {["todos", "pendente", "pago", "atrasado"].map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize whitespace-nowrap ${filterStatus === s ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{s}</button>
-          ))}
-        </div>
-      </div>
+      {/* Projection Chart */}
+      <Card className="card-premium">
+        <CardContent className="p-4 sm:p-5">
+          <h2 className="text-sm font-bold mb-4 flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary" /> Previsão de Recebimentos</h2>
+          <div className="h-48 sm:h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={forecastData} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} tickFormatter={v => `R$${v}`} width={50} />
+                <Tooltip formatter={(v: number) => `R$ ${formatCurrency(v)}`} contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", fontSize: 12 }} />
+                <Bar dataKey="recebido" name="Recebido" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="previsto" name="Previsto" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} opacity={0.6} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Payment List */}
-      {filtered.length === 0 ? (
-        <Card className="card-premium"><CardContent className="py-16 text-center">
-          <DollarSign className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Nenhum pagamento encontrado.</p>
-        </CardContent></Card>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map((p) => (
-            <Card key={p.id} className="card-premium hover:shadow-md transition-all duration-200">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
+      {/* Upcoming payments */}
+      {upcomingPayments.length > 0 && (
+        <Card className="card-premium">
+          <CardContent className="p-4 sm:p-5">
+            <h2 className="text-sm font-bold mb-3 flex items-center gap-2"><CreditCard className="h-4 w-4 text-primary" /> Próximos Recebimentos</h2>
+            <div className="space-y-2">
+              {upcomingPayments.slice(0, 8).map(p => (
+                <div key={p.id} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/30 border border-border/30 hover:bg-muted/50 transition-colors">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate">{p.students?.name}</p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="text-xs text-muted-foreground">Vence: {p.due_date}</span>
-                      {p.payment_method && <span className="text-[10px] text-muted-foreground/60 uppercase">{p.payment_method}</span>}
-                      {p.total_installments && p.total_installments > 1 && (
-                        <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
-                          <CreditCard className="h-3 w-3" /> {p.installment_number}/{p.total_installments}
-                        </span>
-                      )}
-                    </div>
+                    <p className="text-[11px] text-muted-foreground">{p.due_date} {p.total_installments ? `· ${p.installment_number}/${p.total_installments}` : ""}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="text-right">
-                      <p className="text-base font-bold leading-tight">R$ {p.amount.toFixed(2)}</p>
-                      <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border mt-0.5 ${statusBadge(p)}`}>{statusLabel(p)}</Badge>
+                      <p className="text-sm font-bold">R$ {formatCurrency(p.amount)}</p>
+                      <Badge variant="outline" className={`text-[9px] h-4 px-1.5 border ${statusBadgeClass(p)}`}>{statusLabel(p)}</Badge>
                     </div>
-                    <div className="flex flex-col gap-0.5">
-                      {p.status !== "pago" && (
-                        <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-lg text-accent hover:bg-accent/10">
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(p)} className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground">
-                        <CreditCard className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-xl text-accent hover:bg-accent/10"><Check className="h-4 w-4" /></Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      {/* All payments with filters */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-bold">Todos os Pagamentos</h2>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input className="pl-10 h-10 rounded-xl bg-card border-border/60" placeholder="Buscar por aluno..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <div className="flex bg-muted rounded-xl p-1 shrink-0 overflow-x-auto">
+            {["todos", "pendente", "pago", "atrasado"].map(s => (
+              <button key={s} onClick={() => setFilterStatus(s)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize whitespace-nowrap ${filterStatus === s ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{s}</button>
+            ))}
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <Card className="card-premium"><CardContent className="py-16 text-center">
+            <DollarSign className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Nenhum pagamento encontrado.</p>
+          </CardContent></Card>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map(p => (
+              <Card key={p.id} className="card-premium hover:shadow-md transition-all duration-200">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate">{p.students?.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-[11px] text-muted-foreground">{p.due_date}</span>
+                        {p.payment_method && <span className="text-[10px] text-muted-foreground/60 uppercase">{p.payment_method}</span>}
+                        {p.total_installments && p.total_installments > 1 && (
+                          <span className="text-[10px] text-primary font-medium">{p.installment_number}/{p.total_installments}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="text-right">
+                        <p className="text-sm sm:text-base font-bold leading-tight">R$ {formatCurrency(p.amount)}</p>
+                        <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border mt-0.5 ${statusBadgeClass(p)}`}>{statusLabel(p)}</Badge>
+                      </div>
+                      {p.status !== "pago" && (
+                        <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-xl text-accent hover:bg-accent/10"><Check className="h-4 w-4" /></Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
