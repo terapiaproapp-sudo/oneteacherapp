@@ -23,6 +23,7 @@ export type Database = {
           modality: string | null
           notes: string | null
           package_id: string | null
+          receipt_url: string | null
           status: string | null
           student_id: string
           subject: string | null
@@ -38,6 +39,7 @@ export type Database = {
           modality?: string | null
           notes?: string | null
           package_id?: string | null
+          receipt_url?: string | null
           status?: string | null
           student_id: string
           subject?: string | null
@@ -53,6 +55,7 @@ export type Database = {
           modality?: string | null
           notes?: string | null
           package_id?: string | null
+          receipt_url?: string | null
           status?: string | null
           student_id?: string
           subject?: string | null
