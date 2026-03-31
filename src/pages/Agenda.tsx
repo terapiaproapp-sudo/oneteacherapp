@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ChevronLeft, ChevronRight, Clock, MapPin, Trash2, Check, RotateCcw, AlertTriangle, Package, X as XIcon, Edit } from "lucide-react";
+import {
+  Plus, ChevronLeft, ChevronRight, Clock, MapPin, Trash2, Check, RotateCcw,
+  Package, X as XIcon, Edit, CalendarPlus, MessageCircle, Upload, FileText, Image as ImageIcon
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -19,9 +22,10 @@ interface Lesson {
   id: string; student_id: string; teacher_id: string; date: string;
   time: string; duration: number; subject: string; status: string;
   notes: string; modality: string; package_id: string | null;
-  students?: { name: string };
+  receipt_url?: string | null;
+  students?: { name: string; phone?: string };
 }
-interface Student { id: string; name: string; subject: string; modality: string; }
+interface Student { id: string; name: string; subject: string; modality: string; phone?: string; }
 interface StudentPackage { id: string; student_id: string; name: string; hours_total: number; hours_used: number; status: string; total_value: number; }
 
 export default function Agenda() {
@@ -35,6 +39,8 @@ export default function Agenda() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editing, setEditing] = useState<Lesson | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     student_id: "", date: format(new Date(), "yyyy-MM-dd"),
     time_start: "08:00", time_end: "09:00",
@@ -43,12 +49,12 @@ export default function Agenda() {
 
   useEffect(() => { if (user) { loadLessons(); loadStudents(); loadPackages(); } }, [user, currentDate]);
 
-  const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality").eq("teacher_id", user!.id); setStudents(data || []); };
+  const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality,phone").eq("teacher_id", user!.id); setStudents(data || []); };
   const loadPackages = async () => { const { data } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).eq("status", "ativo"); setPackages(data || []); };
   const loadLessons = async () => {
     const start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd");
     const end = format(endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd") + "T23:59:59";
-    const { data } = await supabase.from("lessons").select("*, students(name)").eq("teacher_id", user!.id).gte("date", start).lte("date", end).order("date").order("time");
+    const { data } = await supabase.from("lessons").select("*, students(name, phone)").eq("teacher_id", user!.id).gte("date", start).lte("date", end).order("date").order("time");
     setLessons(data || []);
   };
 
@@ -154,6 +160,67 @@ export default function Agenda() {
     setDialogOpen(true);
   };
 
+  // WhatsApp
+  const sendWhatsApp = (lesson: Lesson) => {
+    const student = students.find(s => s.id === lesson.student_id);
+    const phone = student?.phone || lesson.students?.phone;
+    if (!phone) { toast({ title: "Telefone não cadastrado", description: "Cadastre o telefone do aluno para enviar mensagens.", variant: "destructive" }); return; }
+    const cleanPhone = phone.replace(/\D/g, "");
+    const fullPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+    const name = lesson.students?.name || student?.name || "Aluno";
+    const dateFormatted = lesson.date ? format(new Date(lesson.date + "T12:00:00"), "dd/MM/yyyy") : "";
+    const msg = encodeURIComponent(
+      `Olá, ${name}! 😊\n\nSua aula de *${lesson.subject || "aula"}* está marcada para *${dateFormatted}* às *${lesson.time}*.\n\nPor favor, responda com:\n👉 *Confirmar*\n👉 *Remarcar*\n👉 *Cancelar*\n\nAguardo sua confirmação! 📚`
+    );
+    window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
+  };
+
+  // Calendar export (.ics)
+  const exportToCalendar = (lesson: Lesson) => {
+    const name = lesson.students?.name || "Aula";
+    const [h, m] = (lesson.time || "08:00").split(":").map(Number);
+    const startDate = new Date(lesson.date + "T12:00:00");
+    startDate.setHours(h, m, 0, 0);
+    const endDate = new Date(startDate.getTime() + lesson.duration * 60 * 60 * 1000);
+    const fmt = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const ics = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//OneTeacher//PT", "BEGIN:VEVENT",
+      `DTSTART:${fmt(startDate)}`, `DTEND:${fmt(endDate)}`,
+      `SUMMARY:Aula - ${name} - ${lesson.subject || ""}`,
+      `DESCRIPTION:${lesson.notes || ""}`,
+      `LOCATION:${lesson.modality === "online" ? "Online" : "Presencial"}`,
+      "BEGIN:VALARM", "TRIGGER:-PT30M", "ACTION:DISPLAY", `DESCRIPTION:Aula em 30 min - ${name}`, "END:VALARM",
+      "END:VEVENT", "END:VCALENDAR"
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `aula-${name.replace(/\s/g, "_")}.ics`; a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Evento exportado! 📅", description: "Abra o arquivo para adicionar ao calendário." });
+  };
+
+  // Receipt upload
+  const handleReceiptUpload = async (lessonId: string, file: File) => {
+    setUploadingReceipt(lessonId);
+    const ext = file.name.split(".").pop();
+    const path = `${user!.id}/${lessonId}.${ext}`;
+    const { error } = await supabase.storage.from("receipts").upload(path, file, { upsert: true });
+    if (error) { toast({ title: "Erro no upload", description: error.message, variant: "destructive" }); setUploadingReceipt(null); return; }
+    const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
+    await supabase.from("lessons").update({ receipt_url: urlData.publicUrl }).eq("id", lessonId);
+    toast({ title: "Comprovante anexado! ✅" });
+    setUploadingReceipt(null);
+    loadLessons();
+  };
+
+  const deleteReceipt = async (lessonId: string, receiptUrl: string) => {
+    const pathMatch = receiptUrl.split("/receipts/")[1];
+    if (pathMatch) await supabase.storage.from("receipts").remove([decodeURIComponent(pathMatch)]);
+    await supabase.from("lessons").update({ receipt_url: null }).eq("id", lessonId);
+    toast({ title: "Comprovante removido" }); loadLessons();
+  };
+
   const statusStyle = (s: string) => ({ agendada: "bg-primary/10 text-primary border-primary/20", concluida: "bg-accent/10 text-accent border-accent/20", cancelada: "bg-destructive/10 text-destructive border-destructive/20", falta: "bg-warning/10 text-warning border-warning/20", remarcada: "bg-info/10 text-info border-info/20" }[s] || "bg-muted text-muted-foreground");
   const statusLabel = (s: string) => ({ agendada: "Agendada", concluida: "Realizada", cancelada: "Cancelada", falta: "Falta", remarcada: "Remarcada" }[s] || s);
   const dotColor = (s: string) => ({ agendada: "bg-primary", concluida: "bg-accent", cancelada: "bg-destructive", falta: "bg-warning", remarcada: "bg-info" }[s] || "bg-muted-foreground");
@@ -177,6 +244,10 @@ export default function Agenda() {
 
   return (
     <div className="space-y-4 animate-fade-in max-w-3xl mx-auto">
+      {/* Hidden file input for receipt upload */}
+      <input type="file" ref={fileInputRef} className="hidden" accept="image/*,application/pdf"
+        onChange={e => { const f = e.target.files?.[0]; if (f && uploadingReceipt) handleReceiptUpload(uploadingReceipt, f); e.target.value = ""; }} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="page-title">Agenda</h1>
@@ -212,7 +283,6 @@ export default function Agenda() {
               const inMonth = day.getMonth() === currentDate.getMonth();
               const today = isToday(day);
               const isSelected = selectedDate && isSameDay(day, selectedDate);
-
               return (
                 <button key={day.toISOString()} onClick={() => handleDayClick(day)}
                   className={`relative flex flex-col items-center justify-start py-2 sm:py-3 min-h-[44px] sm:min-h-[56px] bg-card transition-all ${!inMonth ? "opacity-25" : ""} ${isSelected ? "bg-primary/8 ring-1 ring-inset ring-primary/20" : "hover:bg-muted/50"}`}>
@@ -258,6 +328,7 @@ export default function Agenda() {
                   </div>
                   {lesson.notes && <p className="text-xs text-muted-foreground bg-muted/40 rounded-xl px-3 py-2">{lesson.notes}</p>}
 
+                  {/* Package summary */}
                   {pkgInfo.total > 0 && (
                     <div className="rounded-xl bg-primary/5 border border-primary/15 p-3 space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
@@ -273,6 +344,27 @@ export default function Agenda() {
                     </div>
                   )}
 
+                  {/* Receipt */}
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Comprovante</p>
+                    {lesson.receipt_url ? (
+                      <div className="flex items-center gap-2">
+                        <a href={lesson.receipt_url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                          {lesson.receipt_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? <ImageIcon className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+                          Ver comprovante
+                        </a>
+                        <Button size="sm" variant="ghost" className="h-7 text-[10px] text-destructive hover:bg-destructive/10 rounded-lg px-2"
+                          onClick={() => deleteReceipt(lesson.id, lesson.receipt_url!)}>Remover</Button>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1"
+                        onClick={() => { setUploadingReceipt(lesson.id); fileInputRef.current?.click(); }}>
+                        <Upload className="h-3.5 w-3.5" /> Anexar comprovante
+                      </Button>
+                    )}
+                  </div>
+
                   {/* Actions */}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {lesson.status === "agendada" && (
@@ -287,6 +379,14 @@ export default function Agenda() {
                     )}
                     <Button size="sm" variant="ghost" className="h-8 text-xs rounded-xl gap-1" onClick={() => { setDetailOpen(false); openEdit(lesson); }}><Edit className="h-3.5 w-3.5" /> Editar</Button>
                     <Button size="sm" variant="ghost" className="h-8 text-xs rounded-xl gap-1 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(lesson.id)}><Trash2 className="h-3.5 w-3.5" /> Excluir</Button>
+                    {/* WhatsApp */}
+                    <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 border-green-500/30 text-green-600 hover:bg-green-500/10" onClick={() => sendWhatsApp(lesson)}>
+                      <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                    </Button>
+                    {/* Calendar export */}
+                    <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1" onClick={() => exportToCalendar(lesson)}>
+                      <CalendarPlus className="h-3.5 w-3.5" /> Calendário
+                    </Button>
                   </div>
                 </div>
               );
