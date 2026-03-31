@@ -22,6 +22,7 @@ export type Database = {
           id: string
           modality: string | null
           notes: string | null
+          package_id: string | null
           status: string | null
           student_id: string
           subject: string | null
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           modality?: string | null
           notes?: string | null
+          package_id?: string | null
           status?: string | null
           student_id: string
           subject?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           id?: string
           modality?: string | null
           notes?: string | null
+          package_id?: string | null
           status?: string | null
           student_id?: string
           subject?: string | null
@@ -59,7 +62,67 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "lessons_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lessons_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      packages: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          hourly_rate: number
+          hours_total: number
+          hours_used: number
+          id: string
+          name: string
+          status: string
+          student_id: string
+          teacher_id: string
+          total_value: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          hourly_rate?: number
+          hours_total?: number
+          hours_used?: number
+          id?: string
+          name?: string
+          status?: string
+          student_id: string
+          teacher_id: string
+          total_value?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          hourly_rate?: number
+          hours_total?: number
+          hours_used?: number
+          id?: string
+          name?: string
+          status?: string
+          student_id?: string
+          teacher_id?: string
+          total_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "packages_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -73,12 +136,15 @@ export type Database = {
           created_at: string
           due_date: string
           id: string
+          installment_number: number | null
           notes: string | null
+          package_id: string | null
           paid_date: string | null
           payment_method: string | null
           status: string | null
           student_id: string
           teacher_id: string
+          total_installments: number | null
           updated_at: string
         }
         Insert: {
@@ -86,12 +152,15 @@ export type Database = {
           created_at?: string
           due_date: string
           id?: string
+          installment_number?: number | null
           notes?: string | null
+          package_id?: string | null
           paid_date?: string | null
           payment_method?: string | null
           status?: string | null
           student_id: string
           teacher_id: string
+          total_installments?: number | null
           updated_at?: string
         }
         Update: {
@@ -99,15 +168,25 @@ export type Database = {
           created_at?: string
           due_date?: string
           id?: string
+          installment_number?: number | null
           notes?: string | null
+          package_id?: string | null
           paid_date?: string | null
           payment_method?: string | null
           status?: string | null
           student_id?: string
           teacher_id?: string
+          total_installments?: number | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_student_id_fkey"
             columns: ["student_id"]
