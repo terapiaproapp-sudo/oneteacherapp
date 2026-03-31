@@ -143,23 +143,22 @@ export default function Financial() {
   };
 
   const statusLabel = (p: Payment) => {
-    if (p.status === "pago") return "pago";
-    if (p.status === "pendente" && p.due_date < format(new Date(), "yyyy-MM-dd")) return "atrasado";
-    return "pendente";
+    if (p.status === "pago") return "Pago";
+    if (p.status === "pendente" && p.due_date < format(new Date(), "yyyy-MM-dd")) return "Atrasado";
+    return "Pendente";
   };
 
   return (
     <div className="space-y-5 animate-fade-in max-w-5xl">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="page-title">Financeiro</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openNew} size="sm" className="rounded-lg shadow-sm"><Plus className="h-4 w-4 mr-1.5" /> Novo Pagamento</Button>
+            <Button onClick={openNew} size="sm" className="rounded-lg shadow-sm h-9"><Plus className="h-4 w-4 mr-1.5" /> Novo</Button>
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle className="text-lg">{editing ? "Editar Pagamento" : "Novo Pagamento"}</DialogTitle></DialogHeader>
             <div className="grid gap-4 py-3">
-              {/* Payment type toggle */}
               {!editing && (
                 <div className="flex bg-muted rounded-lg p-0.5">
                   <button onClick={() => setInstallmentMode(false)} className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${!installmentMode ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}>À vista</button>
@@ -249,33 +248,39 @@ export default function Financial() {
         </Dialog>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Summary Cards - stacked on mobile */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Card className="card-premium">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-accent/8 flex items-center justify-center"><ArrowUpRight className="h-3.5 w-3.5 text-accent" /></div>
-              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Recebido</span>
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+              <ArrowUpRight className="h-5 w-5 text-accent" />
             </div>
-            <p className="text-xl font-bold text-accent">R$ {totalReceived.toFixed(2)}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground font-medium">Recebido</p>
+              <p className="text-lg font-bold text-accent leading-tight">R$ {totalReceived.toFixed(2)}</p>
+            </div>
           </CardContent>
         </Card>
         <Card className="card-premium">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-warning/8 flex items-center justify-center"><DollarSign className="h-3.5 w-3.5 text-warning" /></div>
-              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Pendente</span>
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+              <DollarSign className="h-5 w-5 text-warning" />
             </div>
-            <p className="text-xl font-bold text-warning">R$ {totalPending.toFixed(2)}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground font-medium">Pendente</p>
+              <p className="text-lg font-bold text-warning leading-tight">R$ {totalPending.toFixed(2)}</p>
+            </div>
           </CardContent>
         </Card>
         <Card className="card-premium">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-destructive/8 flex items-center justify-center"><ArrowDownRight className="h-3.5 w-3.5 text-destructive" /></div>
-              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Em atraso</span>
+          <CardContent className="flex items-center gap-3 p-4">
+            <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+              <ArrowDownRight className="h-5 w-5 text-destructive" />
             </div>
-            <p className="text-xl font-bold text-destructive">R$ {totalOverdue.toFixed(2)}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground font-medium">Em atraso</p>
+              <p className="text-lg font-bold text-destructive leading-tight">R$ {totalOverdue.toFixed(2)}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -286,9 +291,9 @@ export default function Financial() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input className="pl-10 h-9 rounded-lg bg-card border-border/60" placeholder="Buscar por aluno..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div className="flex bg-muted rounded-lg p-0.5">
+        <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
           {["todos", "pendente", "pago", "atrasado"].map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize ${filterStatus === s ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{s}</button>
+            <button key={s} onClick={() => setFilterStatus(s)} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize whitespace-nowrap ${filterStatus === s ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{s}</button>
           ))}
         </div>
       </div>
@@ -303,30 +308,36 @@ export default function Financial() {
         <div className="space-y-2">
           {filtered.map((p) => (
             <Card key={p.id} className="card-premium hover:shadow-md transition-all duration-200">
-              <CardContent className="p-4 flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold truncate">{p.students?.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span className="text-xs text-muted-foreground">Vence: {p.due_date}</span>
-                    {p.payment_method && <span className="text-[10px] text-muted-foreground/60 uppercase">{p.payment_method}</span>}
-                    {p.total_installments && p.total_installments > 1 && (
-                      <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
-                        <CreditCard className="h-3 w-3" /> {p.installment_number}/{p.total_installments}
-                      </span>
-                    )}
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{p.students?.name}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs text-muted-foreground">Vence: {p.due_date}</span>
+                      {p.payment_method && <span className="text-[10px] text-muted-foreground/60 uppercase">{p.payment_method}</span>}
+                      {p.total_installments && p.total_installments > 1 && (
+                        <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
+                          <CreditCard className="h-3 w-3" /> {p.installment_number}/{p.total_installments}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
-                    <p className="text-base font-bold">R$ {p.amount.toFixed(2)}</p>
-                    <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border mt-0.5 ${statusBadge(p)}`}>{statusLabel(p)}</Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <p className="text-base font-bold leading-tight">R$ {p.amount.toFixed(2)}</p>
+                      <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border mt-0.5 ${statusBadge(p)}`}>{statusLabel(p)}</Badge>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      {p.status !== "pago" && (
+                        <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-lg text-accent hover:bg-accent/10">
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(p)} className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground">
+                        <CreditCard className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  {p.status !== "pago" && (
-                    <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-lg text-accent hover:bg-accent/10">
-                      <Check className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(p)} className="h-8 text-xs rounded-lg">Editar</Button>
                 </div>
               </CardContent>
             </Card>
