@@ -1,19 +1,86 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogOut, User, Shield, Bell, Palette, Save } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+
+type ThemeMode = "light" | "dark" | "system";
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [editingProfile, setEditingProfile] = useState(false);
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || "");
+
+  // Theme
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    return (localStorage.getItem("ot-theme") as ThemeMode) || "light";
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "dark") { root.classList.add("dark"); }
+    else if (theme === "light") { root.classList.remove("dark"); }
+    else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      prefersDark ? root.classList.add("dark") : root.classList.remove("dark");
+    }
+    localStorage.setItem("ot-theme", theme);
+  }, [theme]);
+
+  // Notification preferences
+  const [notifPrefs, setNotifPrefs] = useState(() => {
+    const saved = localStorage.getItem("ot-notif-prefs");
+    return saved ? JSON.parse(saved) : {
+      aulasAgendadas: true, aulasDoDia: true, lembrete: true,
+      pagamentosPendentes: true, pagamentosAtraso: true,
+      vencimentoParcelas: true, pacoteBaixo: true, pacoteAcabando: true,
+    };
+  });
+  const [reminderTime, setReminderTime] = useState(() => localStorage.getItem("ot-reminder-time") || "30min");
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    if ("Notification" in window) setNotifPermission(Notification.permission);
+  }, []);
+
+  const updateNotifPref = (key: string, val: boolean) => {
+    const updated = { ...notifPrefs, [key]: val };
+    setNotifPrefs(updated);
+    localStorage.setItem("ot-notif-prefs", JSON.stringify(updated));
+  };
+
+  const saveReminderTime = (v: string) => {
+    setReminderTime(v);
+    localStorage.setItem("ot-reminder-time", v);
+  };
+
+  const requestNotifPermission = async () => {
+    if (!("Notification" in window)) {
+      toast({ title: "Notificações não suportadas", description: "Seu navegador não suporta notificações push.", variant: "destructive" });
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    setNotifPermission(perm);
+    if (perm === "granted") toast({ title: "Notificações ativadas! ✅" });
+    else toast({ title: "Permissão negada", variant: "destructive" });
+  };
+
+  const testNotification = () => {
+    if (notifPermission !== "granted") {
+      requestNotifPermission();
+      return;
+    }
+    new Notification("OneTeacher 📚", { body: "Esta é uma notificação de teste! Tudo funcionando.", icon: "/favicon.png" });
+    toast({ title: "Notificação de teste enviada! 🔔" });
+  };
 
   const handleSaveProfile = async () => {
     const { error } = await supabase.auth.updateUser({ data: { full_name: fullName } });
@@ -22,11 +89,31 @@ export default function SettingsPage() {
     setEditingProfile(false);
   };
 
-  const sections = [
-    {
-      icon: User, title: "Minha Conta", description: "Informações do perfil",
-      content: (
-        <div className="space-y-4">
+  const notifOptions = [
+    { key: "aulasAgendadas", label: "Aulas agendadas" },
+    { key: "aulasDoDia", label: "Aulas do dia" },
+    { key: "lembrete", label: "Lembretes antes da aula" },
+    { key: "pagamentosPendentes", label: "Pagamentos pendentes" },
+    { key: "pagamentosAtraso", label: "Pagamentos em atraso" },
+    { key: "vencimentoParcelas", label: "Vencimento de parcelas" },
+    { key: "pacoteBaixo", label: "Pacotes com poucas horas" },
+    { key: "pacoteAcabando", label: "Pacotes próximos de acabar" },
+  ];
+
+  return (
+    <div className="space-y-4 animate-fade-in max-w-2xl">
+      <div>
+        <h1 className="page-title">Configurações</h1>
+        <p className="section-subtitle">Gerencie sua conta e preferências.</p>
+      </div>
+
+      {/* Profile */}
+      <Card className="card-premium">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center"><User className="h-4 w-4 text-primary" /></div>
+            <div><h2 className="text-sm font-bold">Minha Conta</h2><p className="text-[11px] text-muted-foreground">Informações do perfil</p></div>
+          </div>
           {editingProfile ? (
             <div className="space-y-3">
               <div className="space-y-1.5">
@@ -59,48 +146,93 @@ export default function SettingsPage() {
               </Button>
             </div>
           )}
-        </div>
-      ),
-    },
-    {
-      icon: Bell, title: "Notificações", description: "Preferências de lembretes e alertas",
-      content: <p className="text-sm text-muted-foreground">Em breve: configure lembretes de aulas e vencimentos.</p>,
-    },
-    {
-      icon: Palette, title: "Aparência", description: "Tema e personalização visual",
-      content: <p className="text-sm text-muted-foreground">Em breve: modo escuro e personalização de cores.</p>,
-    },
-    {
-      icon: Shield, title: "Segurança", description: "Senha e autenticação",
-      content: <p className="text-sm text-muted-foreground">Em breve: alterar senha e autenticação em duas etapas.</p>,
-    },
-  ];
+        </CardContent>
+      </Card>
 
-  return (
-    <div className="space-y-5 animate-fade-in max-w-2xl">
-      <div>
-        <h1 className="page-title">Configurações</h1>
-        <p className="section-subtitle">Gerencie sua conta e preferências.</p>
-      </div>
+      {/* Notifications */}
+      <Card className="card-premium">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center"><Bell className="h-4 w-4 text-primary" /></div>
+            <div><h2 className="text-sm font-bold">Notificações</h2><p className="text-[11px] text-muted-foreground">Lembretes e alertas</p></div>
+          </div>
 
-      <div className="space-y-3">
-        {sections.map((section, i) => (
-          <Card key={i} className="card-premium">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center">
-                  <section.icon className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-bold">{section.title}</h2>
-                  <p className="text-[11px] text-muted-foreground">{section.description}</p>
-                </div>
+          {notifPermission !== "granted" && (
+            <div className="p-3 rounded-xl bg-warning/8 border border-warning/15 mb-4">
+              <p className="text-xs text-warning font-medium mb-2">Notificações não ativadas no navegador.</p>
+              <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1 border-warning/30 text-warning hover:bg-warning/10" onClick={requestNotifPermission}>
+                <BellRing className="h-3.5 w-3.5" /> Ativar notificações
+              </Button>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {notifOptions.map(opt => (
+              <div key={opt.key} className="flex items-center justify-between">
+                <span className="text-sm">{opt.label}</span>
+                <Switch checked={notifPrefs[opt.key]} onCheckedChange={v => updateNotifPref(opt.key, v)} />
               </div>
-              {section.content}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Antecedência do lembrete</span>
+              <Select value={reminderTime} onValueChange={saveReminderTime}>
+                <SelectTrigger className="h-9 w-40 rounded-xl text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">No horário</SelectItem>
+                  <SelectItem value="15min">15 minutos antes</SelectItem>
+                  <SelectItem value="30min">30 minutos antes</SelectItem>
+                  <SelectItem value="1h">1 hora antes</SelectItem>
+                  <SelectItem value="2h">2 horas antes</SelectItem>
+                  <SelectItem value="1d">1 dia antes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" onClick={testNotification}>
+              <BellRing className="h-3.5 w-3.5" /> Testar notificação
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
+      <Card className="card-premium">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center"><Palette className="h-4 w-4 text-primary" /></div>
+            <div><h2 className="text-sm font-bold">Aparência</h2><p className="text-[11px] text-muted-foreground">Tema e personalização</p></div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { value: "light" as ThemeMode, icon: Sun, label: "Claro" },
+              { value: "dark" as ThemeMode, icon: Moon, label: "Escuro" },
+              { value: "system" as ThemeMode, icon: Monitor, label: "Sistema" },
+            ]).map(opt => (
+              <button key={opt.value} onClick={() => setTheme(opt.value)}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${theme === opt.value ? "border-primary bg-primary/8 text-primary" : "border-border/60 hover:bg-muted/50 text-muted-foreground"}`}>
+                <opt.icon className="h-5 w-5" />
+                <span className="text-xs font-semibold">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Security */}
+      <Card className="card-premium">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center"><Shield className="h-4 w-4 text-primary" /></div>
+            <div><h2 className="text-sm font-bold">Segurança</h2><p className="text-[11px] text-muted-foreground">Senha e autenticação</p></div>
+          </div>
+          <p className="text-sm text-muted-foreground">Em breve: alterar senha e autenticação em duas etapas.</p>
+        </CardContent>
+      </Card>
 
       <Separator />
 
