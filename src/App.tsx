@@ -14,6 +14,7 @@ import Signup from "@/pages/Signup";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
+import Landing from "@/pages/Landing";
 
 const queryClient = new QueryClient();
 
