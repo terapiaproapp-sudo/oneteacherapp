@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ChevronLeft, ChevronRight, Clock, MapPin, Edit, Trash2, X, Check, RotateCcw } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Clock, MapPin, Edit, Trash2, X, Check, RotateCcw, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -19,10 +19,12 @@ type ViewMode = "day" | "week" | "month";
 interface Lesson {
   id: string; student_id: string; teacher_id: string; date: string;
   time: string; duration: number; subject: string; status: string;
-  notes: string; modality: string; students?: { name: string };
+  notes: string; modality: string; package_id: string | null;
+  students?: { name: string };
 }
 
 interface Student { id: string; name: string; subject: string; modality: string; }
+interface StudentPackage { id: string; student_id: string; name: string; hours_total: number; hours_used: number; status: string; }
 
 export default function Agenda() {
   const { user } = useAuth();
@@ -31,18 +33,24 @@ export default function Agenda() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [packages, setPackages] = useState<StudentPackage[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Lesson | null>(null);
   const [form, setForm] = useState({
     student_id: "", date: format(new Date(), "yyyy-MM-dd"), time: "08:00",
-    duration: 1, subject: "", status: "agendada", notes: "", modality: "online",
+    duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "",
   });
 
-  useEffect(() => { if (user) { loadLessons(); loadStudents(); } }, [user, currentDate, view]);
+  useEffect(() => { if (user) { loadLessons(); loadStudents(); loadPackages(); } }, [user, currentDate, view]);
 
   const loadStudents = async () => {
     const { data } = await supabase.from("students").select("id,name,subject,modality").eq("teacher_id", user!.id);
     setStudents(data || []);
+  };
+
+  const loadPackages = async () => {
+    const { data } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).eq("status", "ativo");
+    setPackages(data || []);
   };
 
   const loadLessons = async () => {
@@ -70,7 +78,7 @@ export default function Agenda() {
 
   const handleSave = async () => {
     if (!form.student_id) { toast({ title: "Selecione um aluno", variant: "destructive" }); return; }
-    const payload = { ...form, teacher_id: user!.id };
+    const payload: any = { ...form, teacher_id: user!.id, package_id: form.package_id || null };
     if (editing) {
       await supabase.from("lessons").update(payload).eq("id", editing.id);
       toast({ title: "Aula atualizada!" });
@@ -82,8 +90,40 @@ export default function Agenda() {
   };
 
   const updateStatus = async (id: string, status: string) => {
+    const lesson = lessons.find(l => l.id === id);
+    if (!lesson) return;
+
+    // Auto-deduct hours when completing or marking absence
+    if ((status === "concluida" || status === "falta") && lesson.status === "agendada") {
+      const pkg = lesson.package_id
+        ? packages.find(p => p.id === lesson.package_id)
+        : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
+
+      if (pkg) {
+        const newUsed = pkg.hours_used + lesson.duration;
+        const newStatus = newUsed >= pkg.hours_total ? "concluido" : "ativo";
+        await supabase.from("packages").update({ hours_used: newUsed, status: newStatus }).eq("id", pkg.id);
+
+        // Update student hours_remaining
+        const { data: studentPkgs } = await supabase.from("packages").select("*").eq("student_id", lesson.student_id).eq("status", "ativo");
+        const remaining = (studentPkgs || []).reduce((s, p) => s + (p.hours_total - p.hours_used), 0) - lesson.duration;
+        await supabase.from("students").update({ hours_remaining: Math.max(0, remaining) }).eq("id", lesson.student_id);
+
+        if (status === "falta") {
+          toast({ title: "Falta registrada", description: `${lesson.duration}h descontada do pacote (ausência sem aviso)` });
+        } else {
+          toast({ title: "Aula concluída!", description: `${lesson.duration}h descontada do pacote` });
+        }
+        loadPackages();
+      } else {
+        toast({ title: status === "falta" ? "Falta registrada" : "Aula concluída!" });
+      }
+    } else {
+      toast({ title: `Aula: ${status}` });
+    }
+
     await supabase.from("lessons").update({ status }).eq("id", id);
-    toast({ title: `Aula: ${status}` }); loadLessons();
+    loadLessons();
   };
 
   const handleDelete = async (id: string) => {
@@ -94,15 +134,22 @@ export default function Agenda() {
 
   const openEdit = (lesson: Lesson) => {
     setEditing(lesson);
-    setForm({ student_id: lesson.student_id, date: lesson.date?.split("T")[0] || "", time: lesson.time, duration: lesson.duration, subject: lesson.subject, status: lesson.status, notes: lesson.notes || "", modality: lesson.modality || "online" });
+    setForm({
+      student_id: lesson.student_id, date: lesson.date?.split("T")[0] || "",
+      time: lesson.time, duration: lesson.duration, subject: lesson.subject,
+      status: lesson.status, notes: lesson.notes || "", modality: lesson.modality || "online",
+      package_id: lesson.package_id || "",
+    });
     setDialogOpen(true);
   };
 
   const openNew = (date?: string) => {
     setEditing(null);
-    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time: "08:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online" });
+    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time: "08:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "" });
     setDialogOpen(true);
   };
+
+  const getStudentPackages = (studentId: string) => packages.filter(p => p.student_id === studentId);
 
   const getLessonsForDay = (date: Date) => lessons.filter(l => isSameDay(new Date(l.date), date));
 
@@ -117,7 +164,6 @@ export default function Agenda() {
     return m[s] || "bg-muted text-muted-foreground";
   };
 
-  // Views
   const renderWeekView = () => {
     const ws = startOfWeek(currentDate, { weekStartsOn: 1 });
     const days = Array.from({ length: 7 }, (_, i) => addDays(ws, i));
@@ -175,10 +221,15 @@ export default function Agenda() {
                   </div>
                 </div>
                 <div className="flex gap-0.5 shrink-0">
+                  {lesson.status === "agendada" && (
+                    <>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-accent hover:bg-accent/10" onClick={() => updateStatus(lesson.id, "concluida")} title="Concluir"><Check className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-warning hover:bg-warning/10" onClick={() => updateStatus(lesson.id, "falta")} title="Falta"><AlertTriangle className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-info hover:bg-info/10" onClick={() => updateStatus(lesson.id, "reposicao")} title="Reposição"><RotateCcw className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-destructive hover:bg-destructive/10" onClick={() => updateStatus(lesson.id, "cancelada")} title="Cancelar"><X className="h-3.5 w-3.5" /></Button>
+                    </>
+                  )}
                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg" onClick={() => openEdit(lesson)}><Edit className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-accent" onClick={() => updateStatus(lesson.id, "concluida")}><Check className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-warning" onClick={() => updateStatus(lesson.id, "reposicao")}><RotateCcw className="h-3.5 w-3.5" /></Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-lg text-destructive" onClick={() => updateStatus(lesson.id, "cancelada")}><X className="h-3.5 w-3.5" /></Button>
                 </div>
               </div>
             </CardContent>
@@ -223,14 +274,11 @@ export default function Agenda() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="page-title">Agenda</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => openNew()} size="sm" className="rounded-lg shadow-sm">
-              <Plus className="h-4 w-4 mr-1.5" /> Nova Aula
-            </Button>
+            <Button onClick={() => openNew()} size="sm" className="rounded-lg shadow-sm"><Plus className="h-4 w-4 mr-1.5" /> Nova Aula</Button>
           </DialogTrigger>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle className="text-lg">{editing ? "Editar Aula" : "Agendar Aula"}</DialogTitle></DialogHeader>
@@ -239,12 +287,26 @@ export default function Agenda() {
                 <Label className="text-xs font-medium">Aluno *</Label>
                 <Select value={form.student_id} onValueChange={v => {
                   const st = students.find(s => s.id === v);
-                  setForm({ ...form, student_id: v, subject: st?.subject || form.subject, modality: st?.modality || form.modality });
+                  const stPkgs = getStudentPackages(v);
+                  setForm({ ...form, student_id: v, subject: st?.subject || form.subject, modality: st?.modality || form.modality, package_id: stPkgs.length > 0 ? stPkgs[0].id : "" });
                 }}>
                   <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>{students.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+              {form.student_id && getStudentPackages(form.student_id).length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Pacote</Label>
+                  <Select value={form.package_id} onValueChange={v => setForm({ ...form, package_id: v })}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {getStudentPackages(form.student_id).map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name} ({p.hours_total - p.hours_used}h restantes)</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5"><Label className="text-xs font-medium">Data</Label><Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="h-9" /></div>
                 <div className="space-y-1.5"><Label className="text-xs font-medium">Horário</Label><Input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} className="h-9" /></div>
@@ -285,7 +347,6 @@ export default function Agenda() {
         </Dialog>
       </div>
 
-      {/* Navigation */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg" onClick={() => navigate(-1)}><ChevronLeft className="h-4 w-4" /></Button>
