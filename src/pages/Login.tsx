@@ -22,6 +22,7 @@ export default function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) { toast({ title: "Erro no login", description: error.message, variant: "destructive" }); return; }
+    logActivity("login_realizado");
     navigate("/");
   };
 
