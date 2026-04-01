@@ -3,7 +3,9 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AppLayout from "@/components/AppLayout";
+import AdminLayout from "@/components/AdminLayout";
 import Dashboard from "@/pages/Dashboard";
 import Students from "@/pages/Students";
 import Agenda from "@/pages/Agenda";
@@ -15,6 +17,10 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 import Landing from "@/pages/Landing";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminActivity from "@/pages/admin/AdminActivity";
+import AdminFinancial from "@/pages/admin/AdminFinancial";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +36,14 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   if (loading) return null;
   if (user) return <Navigate to="/" replace />;
   return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAdmin, loading, user } = useAdminAuth();
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Verificando permissões...</div></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return <AdminLayout>{children}</AdminLayout>;
 }
 
 const App = () => (
@@ -49,6 +63,11 @@ const App = () => (
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/financeiro" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            {/* Admin routes */}
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/usuarios" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+            <Route path="/admin/atividade" element={<AdminRoute><AdminActivity /></AdminRoute>} />
+            <Route path="/admin/financeiro" element={<AdminRoute><AdminFinancial /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
