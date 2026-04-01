@@ -4,11 +4,11 @@ export async function logActivity(action: string, details: Record<string, unknow
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("activity_logs").insert({
+    await supabase.from("activity_logs").insert([{
       user_id: user.id,
       action,
-      details,
-    });
+      details: details as any,
+    }]);
   } catch (e) {
     console.error("Activity log error:", e);
   }

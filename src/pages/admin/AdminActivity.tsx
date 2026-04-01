@@ -10,7 +10,7 @@ interface LogEntry {
   id: string;
   user_id: string;
   action: string;
-  details: Record<string, any>;
+  details: any;
   created_at: string;
   profile?: { email: string; full_name: string } | null;
 }
