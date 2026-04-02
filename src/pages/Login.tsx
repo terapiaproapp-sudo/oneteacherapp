@@ -23,7 +23,7 @@ export default function Login() {
     setLoading(false);
     if (error) { toast({ title: "Erro no login", description: error.message, variant: "destructive" }); return; }
     logActivity("login_realizado");
-    navigate("/");
+    navigate("/dashboard");
   };
 
   return (
