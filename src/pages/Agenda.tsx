@@ -81,6 +81,29 @@ export default function Agenda() {
   const getLessonsForDay = (date: Date) => lessons.filter(l => isSameDay(new Date(l.date), date));
   const selectedDayLessons = useMemo(() => selectedDate ? getLessonsForDay(selectedDate) : [], [selectedDate, lessons]);
 
+  const generateRecurrenceDates = (baseDate: string, recurrence: string, days: number[], endDate: string): string[] => {
+    if (recurrence === "unica" || !endDate) return [baseDate];
+    const dates: string[] = [];
+    const start = new Date(baseDate + "T12:00:00");
+    const end = new Date(endDate + "T12:00:00");
+    const current = new Date(start);
+    while (current <= end && dates.length < 200) {
+      if (recurrence === "diaria") {
+        dates.push(format(current, "yyyy-MM-dd"));
+        current.setDate(current.getDate() + 1);
+      } else if (recurrence === "semanal") {
+        if (days.length === 0 || days.includes(current.getDay())) {
+          dates.push(format(current, "yyyy-MM-dd"));
+        }
+        current.setDate(current.getDate() + 1);
+      } else if (recurrence === "mensal") {
+        dates.push(format(current, "yyyy-MM-dd"));
+        current.setMonth(current.getMonth() + 1);
+      }
+    }
+    return dates.length > 0 ? dates : [baseDate];
+  };
+
   const handleSave = async () => {
     if (!form.student_id) { toast({ title: "Selecione um aluno", variant: "destructive" }); return; }
     if (form.duration <= 0) { toast({ title: "Duração inválida", variant: "destructive" }); return; }
@@ -94,8 +117,15 @@ export default function Agenda() {
       await supabase.from("lessons").update(payload).eq("id", editing.id);
       toast({ title: "Aula atualizada!" });
     } else {
-      await supabase.from("lessons").insert(payload);
-      toast({ title: "Aula agendada!" });
+      const dates = generateRecurrenceDates(form.date, form.recurrence, form.recurrence_days, form.recurrence_end);
+      if (dates.length > 1) {
+        const rows = dates.map(d => ({ ...payload, date: d }));
+        await supabase.from("lessons").insert(rows);
+        toast({ title: `${dates.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
+      } else {
+        await supabase.from("lessons").insert(payload);
+        toast({ title: "Aula agendada!" });
+      }
     }
     setDialogOpen(false); setEditing(null); loadLessons(); loadPackages();
   };
