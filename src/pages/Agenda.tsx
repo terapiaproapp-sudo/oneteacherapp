@@ -499,6 +499,54 @@ export default function Agenda() {
               </div>
             </div>
 
+            {/* Recurrence - only for new lessons */}
+            {!editing && (
+              <div className="space-y-3 rounded-xl border border-border/60 p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                  <Repeat className="h-3.5 w-3.5" /> Recorrência
+                </div>
+                <Select value={form.recurrence} onValueChange={v => setForm({ ...form, recurrence: v })}>
+                  <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unica">Única</SelectItem>
+                    <SelectItem value="diaria">Diária</SelectItem>
+                    <SelectItem value="semanal">Semanal</SelectItem>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {form.recurrence === "semanal" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Dias da semana</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { day: 1, label: "Seg" }, { day: 2, label: "Ter" }, { day: 3, label: "Qua" },
+                        { day: 4, label: "Qui" }, { day: 5, label: "Sex" }, { day: 6, label: "Sáb" }, { day: 0, label: "Dom" },
+                      ].map(d => (
+                        <button key={d.day} type="button"
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${form.recurrence_days.includes(d.day) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                          onClick={() => {
+                            const days = form.recurrence_days.includes(d.day)
+                              ? form.recurrence_days.filter(x => x !== d.day)
+                              : [...form.recurrence_days, d.day];
+                            setForm({ ...form, recurrence_days: days });
+                          }}>
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {form.recurrence !== "unica" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Repetir até</Label>
+                    <Input type="date" value={form.recurrence_end} onChange={e => setForm({ ...form, recurrence_end: e.target.value })} className="h-10 rounded-xl" />
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Observações</Label>
               <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} className="text-sm rounded-xl" />
