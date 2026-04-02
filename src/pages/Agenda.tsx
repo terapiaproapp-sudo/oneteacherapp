@@ -78,7 +78,8 @@ export default function Agenda() {
   };
 
   const selectedStudentInfo = useMemo(() => form.student_id ? getStudentHoursInfo(form.student_id) : null, [form.student_id, packages]);
-  const getLessonsForDay = (date: Date) => lessons.filter(l => isSameDay(new Date(l.date), date));
+  const parseLocalDate = (dateStr: string) => new Date(dateStr.split("T")[0] + "T00:00:00");
+  const getLessonsForDay = (date: Date) => lessons.filter(l => isSameDay(parseLocalDate(l.date), date));
   const selectedDayLessons = useMemo(() => selectedDate ? getLessonsForDay(selectedDate) : [], [selectedDate, lessons]);
 
   const generateRecurrenceDates = (baseDate: string, recurrence: string, days: number[], endDate: string): string[] => {
@@ -544,6 +545,27 @@ export default function Agenda() {
                     <Input type="date" value={form.recurrence_end} onChange={e => setForm({ ...form, recurrence_end: e.target.value })} className="h-10 rounded-xl" />
                   </div>
                 )}
+
+                {/* Recurrence preview */}
+                {form.recurrence !== "unica" && form.recurrence_end && form.date && (() => {
+                  const previewDates = generateRecurrenceDates(form.date, form.recurrence, form.recurrence_days, form.recurrence_end);
+                  if (previewDates.length <= 1) return null;
+                  return (
+                    <div className="rounded-xl bg-primary/5 border border-primary/15 p-3 space-y-2">
+                      <p className="text-xs font-bold text-primary">📅 Prévia: {previewDates.length} aulas serão criadas</p>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                        {previewDates.map((d, i) => {
+                          const dt = new Date(d + "T12:00:00");
+                          return (
+                            <span key={i} className="text-[11px] bg-primary/10 text-primary rounded-lg px-2 py-0.5 font-medium">
+                              {format(dt, "dd/MM (EEE)", { locale: ptBR })}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
