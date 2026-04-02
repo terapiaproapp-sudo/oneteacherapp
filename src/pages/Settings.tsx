@@ -168,9 +168,14 @@ export default function SettingsPage() {
 
           {notifPermission !== "granted" && (
             <div className="p-3 rounded-xl bg-warning/8 border border-warning/15 mb-4">
-              <p className="text-xs text-warning font-medium mb-2">Notificações não ativadas no navegador.</p>
+              <p className="text-xs text-warning font-medium mb-1">Notificações não ativadas no navegador.</p>
+              <p className="text-[11px] text-muted-foreground mb-2">
+                {notifPermission === "denied"
+                  ? "Permissão negada. Acesse Configurações do navegador > Notificações e permita este site."
+                  : "Clique abaixo para permitir notificações push."}
+              </p>
               <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1 border-warning/30 text-warning hover:bg-warning/10" onClick={requestNotifPermission}>
-                <BellRing className="h-3.5 w-3.5" /> Ativar notificações
+                <BellRing className="h-3.5 w-3.5" /> {notifPermission === "denied" ? "Tentar novamente" : "Ativar notificações"}
               </Button>
             </div>
           )}
