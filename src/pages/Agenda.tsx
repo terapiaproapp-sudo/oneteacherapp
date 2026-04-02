@@ -182,7 +182,7 @@ export default function Agenda() {
       student_id: lesson.student_id, date: lesson.date?.split("T")[0] || "",
       time_start: lesson.time, time_end: `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(Math.round(endMin % 60)).padStart(2, "0")}`,
       duration: lesson.duration, subject: lesson.subject, status: lesson.status, notes: lesson.notes || "", modality: lesson.modality || "online",
-      package_id: lesson.package_id || "",
+      package_id: lesson.package_id || "", recurrence: "unica", recurrence_days: [], recurrence_end: "",
     });
     setDialogOpen(true);
   };
