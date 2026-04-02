@@ -46,6 +46,7 @@ export default function Agenda() {
     student_id: "", date: format(new Date(), "yyyy-MM-dd"),
     time_start: "08:00", time_end: "09:00",
     duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "",
+    recurrence: "unica" as string, recurrence_days: [] as number[], recurrence_end: "",
   });
 
   useEffect(() => { if (user) { loadLessons(); loadStudents(); loadPackages(); } }, [user, currentDate]);
