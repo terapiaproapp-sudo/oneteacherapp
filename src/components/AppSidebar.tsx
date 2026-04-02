@@ -18,7 +18,7 @@ import {
 import logo from "@/assets/logo-oneteacher.png";
 
 const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Alunos", url: "/alunos", icon: Users },
   { title: "Agenda", url: "/agenda", icon: Calendar },
   { title: "Financeiro", url: "/financeiro", icon: DollarSign },
