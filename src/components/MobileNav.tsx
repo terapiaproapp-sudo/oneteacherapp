@@ -3,7 +3,7 @@ import { LayoutDashboard, Users, Calendar, DollarSign, Settings } from "lucide-r
 import { cn } from "@/lib/utils";
 
 const items = [
-  { label: "Início", path: "/", icon: LayoutDashboard },
+  { label: "Início", path: "/dashboard", icon: LayoutDashboard },
   { label: "Alunos", path: "/alunos", icon: Users },
   { label: "Agenda", path: "/agenda", icon: Calendar },
   { label: "Financeiro", path: "/financeiro", icon: DollarSign },
