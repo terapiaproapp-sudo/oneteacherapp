@@ -45,6 +45,18 @@ export default function SettingsPage() {
     };
   });
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem("ot-reminder-time") || "30min");
+
+  const updateNotifPref = (key: string, val: boolean) => {
+    const updated = { ...notifPrefs, [key]: val };
+    setNotifPrefs(updated);
+    localStorage.setItem("ot-notif-prefs", JSON.stringify(updated));
+  };
+
+  const saveReminderTime = (v: string) => {
+    setReminderTime(v);
+    localStorage.setItem("ot-reminder-time", v);
+  };
+
   const [notifPermission, setNotifPermission] = useState<string>("checking");
   const [notifSupported, setNotifSupported] = useState(true);
 
