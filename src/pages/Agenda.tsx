@@ -188,7 +188,7 @@ export default function Agenda() {
   };
   const openNew = (date?: string) => {
     setEditing(null);
-    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "" });
+    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "", recurrence: "unica", recurrence_days: [], recurrence_end: "" });
     setDialogOpen(true);
   };
 
