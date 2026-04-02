@@ -78,7 +78,8 @@ export default function Agenda() {
   };
 
   const selectedStudentInfo = useMemo(() => form.student_id ? getStudentHoursInfo(form.student_id) : null, [form.student_id, packages]);
-  const getLessonsForDay = (date: Date) => lessons.filter(l => isSameDay(new Date(l.date), date));
+  const parseLocalDate = (dateStr: string) => new Date(dateStr.split("T")[0] + "T00:00:00");
+  const getLessonsForDay = (date: Date) => lessons.filter(l => isSameDay(parseLocalDate(l.date), date));
   const selectedDayLessons = useMemo(() => selectedDate ? getLessonsForDay(selectedDate) : [], [selectedDate, lessons]);
 
   const generateRecurrenceDates = (baseDate: string, recurrence: string, days: number[], endDate: string): string[] => {
