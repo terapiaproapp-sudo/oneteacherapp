@@ -64,13 +64,22 @@ export default function SettingsPage() {
 
   const requestNotifPermission = async () => {
     if (!("Notification" in window)) {
-      toast({ title: "Notificações não suportadas", description: "Seu navegador não suporta notificações push.", variant: "destructive" });
+      toast({ title: "Notificações não suportadas", description: "Seu navegador não suporta notificações push. Tente acessar pelo navegador do celular (Chrome ou Safari).", variant: "destructive" });
       return;
     }
-    const perm = await Notification.requestPermission();
-    setNotifPermission(perm);
-    if (perm === "granted") toast({ title: "Notificações ativadas! ✅" });
-    else toast({ title: "Permissão negada", variant: "destructive" });
+    try {
+      const perm = await Notification.requestPermission();
+      setNotifPermission(perm);
+      if (perm === "granted") {
+        toast({ title: "Notificações ativadas! ✅" });
+      } else if (perm === "denied") {
+        toast({ title: "Permissão negada", description: "Acesse as configurações do navegador > Notificações e permita para este site. Depois volte e tente novamente.", variant: "destructive" });
+      } else {
+        toast({ title: "Permissão pendente", description: "Clique em 'Permitir' quando o navegador solicitar.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro ao solicitar permissão", description: "Tente acessar o sistema diretamente pelo navegador (não em iframe). No celular, use Chrome ou Safari.", variant: "destructive" });
+    }
   };
 
   const testNotification = () => {
