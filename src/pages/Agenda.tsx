@@ -138,8 +138,10 @@ export default function Agenda() {
 
     if (pkg) {
       let hoursChange = 0;
-      if (newStatus === "concluida" && prevStatus !== "concluida") hoursChange = lesson.duration;
-      else if (prevStatus === "concluida" && newStatus !== "concluida") hoursChange = -lesson.duration;
+      const deductsHours = newStatus === "concluida" || newStatus === "noshow";
+      const prevDeducted = prevStatus === "concluida" || prevStatus === "noshow";
+      if (deductsHours && !prevDeducted) hoursChange = lesson.duration;
+      else if (prevDeducted && !deductsHours) hoursChange = -lesson.duration;
 
       if (hoursChange !== 0) {
         const newUsed = Math.max(0, pkg.hours_used + hoursChange);
