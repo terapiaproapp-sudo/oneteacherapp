@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, MapPin, Trash2, Check, RotateCcw,
-  Package, X as XIcon, Edit, CalendarPlus, MessageCircle, Upload, FileText, Image as ImageIcon
+  Package, X as XIcon, Edit, CalendarPlus, MessageCircle, Upload, FileText, Image as ImageIcon,
+  UserX, Repeat
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
