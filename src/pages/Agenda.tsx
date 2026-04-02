@@ -402,6 +402,7 @@ export default function Agenda() {
                     {lesson.status === "agendada" && (
                       <>
                         <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 text-accent border-accent/30 hover:bg-accent/10" onClick={() => updateStatus(lesson.id, "concluida")}><Check className="h-3.5 w-3.5" /> Realizada</Button>
+                        <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 font-semibold" onClick={() => updateStatus(lesson.id, "noshow")}><UserX className="h-3.5 w-3.5" /> No-show</Button>
                         <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 text-info border-info/30 hover:bg-info/10" onClick={() => updateStatus(lesson.id, "remarcada")}><RotateCcw className="h-3.5 w-3.5" /> Remarcar</Button>
                         <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => updateStatus(lesson.id, "cancelada")}><XIcon className="h-3.5 w-3.5" /> Cancelar</Button>
                       </>
