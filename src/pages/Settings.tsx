@@ -45,50 +45,69 @@ export default function SettingsPage() {
     };
   });
   const [reminderTime, setReminderTime] = useState(() => localStorage.getItem("ot-reminder-time") || "30min");
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
+  const [notifPermission, setNotifPermission] = useState<string>("checking");
+  const [notifSupported, setNotifSupported] = useState(true);
 
   useEffect(() => {
-    if ("Notification" in window) setNotifPermission(Notification.permission);
+    if (!("Notification" in window)) {
+      setNotifSupported(false);
+      setNotifPermission("unsupported");
+    } else {
+      setNotifPermission(Notification.permission);
+    }
   }, []);
 
-  const updateNotifPref = (key: string, val: boolean) => {
-    const updated = { ...notifPrefs, [key]: val };
-    setNotifPrefs(updated);
-    localStorage.setItem("ot-notif-prefs", JSON.stringify(updated));
-  };
-
-  const saveReminderTime = (v: string) => {
-    setReminderTime(v);
-    localStorage.setItem("ot-reminder-time", v);
-  };
+  const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
 
   const requestNotifPermission = async () => {
-    if (!("Notification" in window)) {
-      toast({ title: "Notificações não suportadas", description: "Seu navegador não suporta notificações push. Tente acessar pelo navegador do celular (Chrome ou Safari).", variant: "destructive" });
+    if (!notifSupported) {
+      toast({ title: "Notificações não suportadas", description: "Seu navegador não suporta notificações. Use Chrome ou Safari no celular.", variant: "destructive" });
+      return;
+    }
+    if (isInIframe) {
+      toast({ title: "Abra no navegador", description: "Notificações não funcionam em iframe. Abra o app diretamente no navegador para ativar.", variant: "destructive" });
       return;
     }
     try {
       const perm = await Notification.requestPermission();
       setNotifPermission(perm);
       if (perm === "granted") {
-        toast({ title: "Notificações ativadas! ✅" });
+        toast({ title: "Notificações ativadas! ✅", description: "Você receberá lembretes e alertas." });
       } else if (perm === "denied") {
-        toast({ title: "Permissão negada", description: "Acesse as configurações do navegador > Notificações e permita para este site. Depois volte e tente novamente.", variant: "destructive" });
+        toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
       } else {
         toast({ title: "Permissão pendente", description: "Clique em 'Permitir' quando o navegador solicitar.", variant: "destructive" });
       }
-    } catch {
-      toast({ title: "Erro ao solicitar permissão", description: "Tente acessar o sistema diretamente pelo navegador (não em iframe). No celular, use Chrome ou Safari.", variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao solicitar permissão", description: "Tente abrir o app diretamente pelo navegador (não em iframe).", variant: "destructive" });
     }
   };
 
   const testNotification = () => {
+    if (!notifSupported) {
+      toast({ title: "❌ Não suportado", description: "Seu navegador não suporta notificações push.", variant: "destructive" });
+      return;
+    }
+    if (isInIframe) {
+      toast({ title: "❌ Iframe detectado", description: "Abra o app diretamente no navegador para testar notificações.", variant: "destructive" });
+      return;
+    }
     if (notifPermission !== "granted") {
+      toast({ title: "⚠️ Permissão necessária", description: "Ative as notificações primeiro clicando no botão acima.", variant: "destructive" });
       requestNotifPermission();
       return;
     }
-    new Notification("OneTeacher 📚", { body: "Esta é uma notificação de teste! Tudo funcionando.", icon: "/favicon.png" });
-    toast({ title: "Notificação de teste enviada! 🔔" });
+    try {
+      const notif = new Notification("OneTeacher 📚", {
+        body: "Suas notificações estão funcionando corretamente! ✅",
+        icon: "/favicon.png",
+        tag: "test-notification",
+      });
+      notif.onclick = () => { window.focus(); notif.close(); };
+      toast({ title: "✅ Notificação enviada!", description: "Verifique a barra de notificações do seu dispositivo." });
+    } catch (err) {
+      toast({ title: "❌ Erro ao enviar", description: "Não foi possível criar a notificação. Tente abrir o app diretamente pelo navegador.", variant: "destructive" });
+    }
   };
 
   const handleSaveProfile = async () => {
