@@ -64,7 +64,7 @@ export default function Landing() {
       </nav>
 
       {/* HERO */}
-      <section className="pt-28 sm:pt-36 pb-16 sm:pb-24 px-4 relative">
+      <section className="pt-32 sm:pt-44 pb-16 sm:pb-24 px-4 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent" />
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/[0.04] rounded-full blur-3xl" />
         <motion.div className="max-w-3xl mx-auto text-center relative" initial="hidden" animate="visible" variants={stagger}>

@@ -42,7 +42,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin, loading, user } = useAdminAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Verificando permissões...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return <AdminLayout>{children}</AdminLayout>;
 }
 
