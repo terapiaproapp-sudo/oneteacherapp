@@ -252,9 +252,6 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" size="sm" className="rounded-xl text-xs gap-1" onClick={testNotification}>
-              <BellRing className="h-3.5 w-3.5" /> Testar notificação
-            </Button>
           </div>
         </CardContent>
       </Card>
