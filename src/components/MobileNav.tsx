@@ -3,7 +3,7 @@ import { LayoutDashboard, Users, Calendar, DollarSign, Settings } from "lucide-r
 import { cn } from "@/lib/utils";
 
 const items = [
-  { label: "Início", path: "/", icon: LayoutDashboard },
+  { label: "Início", path: "/dashboard", icon: LayoutDashboard },
   { label: "Alunos", path: "/alunos", icon: Users },
   { label: "Agenda", path: "/agenda", icon: Calendar },
   { label: "Financeiro", path: "/financeiro", icon: DollarSign },
@@ -17,7 +17,7 @@ export function MobileNav() {
     <nav className="fixed bottom-0 inset-x-0 z-50 bg-card/95 backdrop-blur-md border-t border-border/60 safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-1">
         {items.map((item) => {
-          const active = item.path === "/" ? pathname === "/" : pathname.startsWith(item.path);
+          const active = pathname.startsWith(item.path);
           return (
             <Link
               key={item.path}

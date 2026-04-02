@@ -64,13 +64,22 @@ export default function SettingsPage() {
 
   const requestNotifPermission = async () => {
     if (!("Notification" in window)) {
-      toast({ title: "Notificações não suportadas", description: "Seu navegador não suporta notificações push.", variant: "destructive" });
+      toast({ title: "Notificações não suportadas", description: "Seu navegador não suporta notificações push. Tente acessar pelo navegador do celular (Chrome ou Safari).", variant: "destructive" });
       return;
     }
-    const perm = await Notification.requestPermission();
-    setNotifPermission(perm);
-    if (perm === "granted") toast({ title: "Notificações ativadas! ✅" });
-    else toast({ title: "Permissão negada", variant: "destructive" });
+    try {
+      const perm = await Notification.requestPermission();
+      setNotifPermission(perm);
+      if (perm === "granted") {
+        toast({ title: "Notificações ativadas! ✅" });
+      } else if (perm === "denied") {
+        toast({ title: "Permissão negada", description: "Acesse as configurações do navegador > Notificações e permita para este site. Depois volte e tente novamente.", variant: "destructive" });
+      } else {
+        toast({ title: "Permissão pendente", description: "Clique em 'Permitir' quando o navegador solicitar.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro ao solicitar permissão", description: "Tente acessar o sistema diretamente pelo navegador (não em iframe). No celular, use Chrome ou Safari.", variant: "destructive" });
+    }
   };
 
   const testNotification = () => {
@@ -159,9 +168,14 @@ export default function SettingsPage() {
 
           {notifPermission !== "granted" && (
             <div className="p-3 rounded-xl bg-warning/8 border border-warning/15 mb-4">
-              <p className="text-xs text-warning font-medium mb-2">Notificações não ativadas no navegador.</p>
+              <p className="text-xs text-warning font-medium mb-1">Notificações não ativadas no navegador.</p>
+              <p className="text-[11px] text-muted-foreground mb-2">
+                {notifPermission === "denied"
+                  ? "Permissão negada. Acesse Configurações do navegador > Notificações e permita este site."
+                  : "Clique abaixo para permitir notificações push."}
+              </p>
               <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1 border-warning/30 text-warning hover:bg-warning/10" onClick={requestNotifPermission}>
-                <BellRing className="h-3.5 w-3.5" /> Ativar notificações
+                <BellRing className="h-3.5 w-3.5" /> {notifPermission === "denied" ? "Tentar novamente" : "Ativar notificações"}
               </Button>
             </div>
           )}

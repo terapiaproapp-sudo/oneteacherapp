@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, MapPin, Trash2, Check, RotateCcw,
-  Package, X as XIcon, Edit, CalendarPlus, MessageCircle, Upload, FileText, Image as ImageIcon
+  Package, X as XIcon, Edit, CalendarPlus, MessageCircle, Upload, FileText, Image as ImageIcon,
+  UserX, Repeat
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
@@ -45,6 +46,7 @@ export default function Agenda() {
     student_id: "", date: format(new Date(), "yyyy-MM-dd"),
     time_start: "08:00", time_end: "09:00",
     duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "",
+    recurrence: "unica" as string, recurrence_days: [] as number[], recurrence_end: "",
   });
 
   useEffect(() => { if (user) { loadLessons(); loadStudents(); loadPackages(); } }, [user, currentDate]);
@@ -79,6 +81,29 @@ export default function Agenda() {
   const getLessonsForDay = (date: Date) => lessons.filter(l => isSameDay(new Date(l.date), date));
   const selectedDayLessons = useMemo(() => selectedDate ? getLessonsForDay(selectedDate) : [], [selectedDate, lessons]);
 
+  const generateRecurrenceDates = (baseDate: string, recurrence: string, days: number[], endDate: string): string[] => {
+    if (recurrence === "unica" || !endDate) return [baseDate];
+    const dates: string[] = [];
+    const start = new Date(baseDate + "T12:00:00");
+    const end = new Date(endDate + "T12:00:00");
+    const current = new Date(start);
+    while (current <= end && dates.length < 200) {
+      if (recurrence === "diaria") {
+        dates.push(format(current, "yyyy-MM-dd"));
+        current.setDate(current.getDate() + 1);
+      } else if (recurrence === "semanal") {
+        if (days.length === 0 || days.includes(current.getDay())) {
+          dates.push(format(current, "yyyy-MM-dd"));
+        }
+        current.setDate(current.getDate() + 1);
+      } else if (recurrence === "mensal") {
+        dates.push(format(current, "yyyy-MM-dd"));
+        current.setMonth(current.getMonth() + 1);
+      }
+    }
+    return dates.length > 0 ? dates : [baseDate];
+  };
+
   const handleSave = async () => {
     if (!form.student_id) { toast({ title: "Selecione um aluno", variant: "destructive" }); return; }
     if (form.duration <= 0) { toast({ title: "Duração inválida", variant: "destructive" }); return; }
@@ -92,8 +117,15 @@ export default function Agenda() {
       await supabase.from("lessons").update(payload).eq("id", editing.id);
       toast({ title: "Aula atualizada!" });
     } else {
-      await supabase.from("lessons").insert(payload);
-      toast({ title: "Aula agendada!" });
+      const dates = generateRecurrenceDates(form.date, form.recurrence, form.recurrence_days, form.recurrence_end);
+      if (dates.length > 1) {
+        const rows = dates.map(d => ({ ...payload, date: d }));
+        await supabase.from("lessons").insert(rows);
+        toast({ title: `${dates.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
+      } else {
+        await supabase.from("lessons").insert(payload);
+        toast({ title: "Aula agendada!" });
+      }
     }
     setDialogOpen(false); setEditing(null); loadLessons(); loadPackages();
   };
@@ -106,8 +138,10 @@ export default function Agenda() {
 
     if (pkg) {
       let hoursChange = 0;
-      if (newStatus === "concluida" && prevStatus !== "concluida") hoursChange = lesson.duration;
-      else if (prevStatus === "concluida" && newStatus !== "concluida") hoursChange = -lesson.duration;
+      const deductsHours = newStatus === "concluida" || newStatus === "noshow";
+      const prevDeducted = prevStatus === "concluida" || prevStatus === "noshow";
+      if (deductsHours && !prevDeducted) hoursChange = lesson.duration;
+      else if (prevDeducted && !deductsHours) hoursChange = -lesson.duration;
 
       if (hoursChange !== 0) {
         const newUsed = Math.max(0, pkg.hours_used + hoursChange);
@@ -150,13 +184,13 @@ export default function Agenda() {
       student_id: lesson.student_id, date: lesson.date?.split("T")[0] || "",
       time_start: lesson.time, time_end: `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(Math.round(endMin % 60)).padStart(2, "0")}`,
       duration: lesson.duration, subject: lesson.subject, status: lesson.status, notes: lesson.notes || "", modality: lesson.modality || "online",
-      package_id: lesson.package_id || "",
+      package_id: lesson.package_id || "", recurrence: "unica", recurrence_days: [], recurrence_end: "",
     });
     setDialogOpen(true);
   };
   const openNew = (date?: string) => {
     setEditing(null);
-    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "" });
+    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "", recurrence: "unica", recurrence_days: [], recurrence_end: "" });
     setDialogOpen(true);
   };
 
@@ -221,9 +255,9 @@ export default function Agenda() {
     toast({ title: "Comprovante removido" }); loadLessons();
   };
 
-  const statusStyle = (s: string) => ({ agendada: "bg-primary/10 text-primary border-primary/20", concluida: "bg-accent/10 text-accent border-accent/20", cancelada: "bg-destructive/10 text-destructive border-destructive/20", falta: "bg-warning/10 text-warning border-warning/20", remarcada: "bg-info/10 text-info border-info/20" }[s] || "bg-muted text-muted-foreground");
-  const statusLabel = (s: string) => ({ agendada: "Agendada", concluida: "Realizada", cancelada: "Cancelada", falta: "Falta", remarcada: "Remarcada" }[s] || s);
-  const dotColor = (s: string) => ({ agendada: "bg-primary", concluida: "bg-accent", cancelada: "bg-destructive", falta: "bg-warning", remarcada: "bg-info" }[s] || "bg-muted-foreground");
+  const statusStyle = (s: string) => ({ agendada: "bg-primary/10 text-primary border-primary/20", concluida: "bg-accent/10 text-accent border-accent/20", cancelada: "bg-destructive/10 text-destructive border-destructive/20", falta: "bg-warning/10 text-warning border-warning/20", remarcada: "bg-info/10 text-info border-info/20", noshow: "bg-destructive/10 text-destructive border-destructive/20" }[s] || "bg-muted text-muted-foreground");
+  const statusLabel = (s: string) => ({ agendada: "Agendada", concluida: "Realizada", cancelada: "Cancelada", falta: "Falta", remarcada: "Remarcada", noshow: "No-show" }[s] || s);
+  const dotColor = (s: string) => ({ agendada: "bg-primary", concluida: "bg-accent", cancelada: "bg-destructive", falta: "bg-warning", remarcada: "bg-info", noshow: "bg-destructive" }[s] || "bg-muted-foreground");
 
   const ms = startOfMonth(currentDate);
   const me = endOfMonth(currentDate);
@@ -370,6 +404,7 @@ export default function Agenda() {
                     {lesson.status === "agendada" && (
                       <>
                         <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 text-accent border-accent/30 hover:bg-accent/10" onClick={() => updateStatus(lesson.id, "concluida")}><Check className="h-3.5 w-3.5" /> Realizada</Button>
+                        <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 text-destructive border-destructive/30 hover:bg-destructive/10 font-semibold" onClick={() => updateStatus(lesson.id, "noshow")}><UserX className="h-3.5 w-3.5" /> No-show</Button>
                         <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 text-info border-info/30 hover:bg-info/10" onClick={() => updateStatus(lesson.id, "remarcada")}><RotateCcw className="h-3.5 w-3.5" /> Remarcar</Button>
                         <Button size="sm" variant="outline" className="h-8 text-xs rounded-xl gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => updateStatus(lesson.id, "cancelada")}><XIcon className="h-3.5 w-3.5" /> Cancelar</Button>
                       </>
@@ -463,6 +498,54 @@ export default function Agenda() {
                 </Select>
               </div>
             </div>
+
+            {/* Recurrence - only for new lessons */}
+            {!editing && (
+              <div className="space-y-3 rounded-xl border border-border/60 p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                  <Repeat className="h-3.5 w-3.5" /> Recorrência
+                </div>
+                <Select value={form.recurrence} onValueChange={v => setForm({ ...form, recurrence: v })}>
+                  <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unica">Única</SelectItem>
+                    <SelectItem value="diaria">Diária</SelectItem>
+                    <SelectItem value="semanal">Semanal</SelectItem>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {form.recurrence === "semanal" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Dias da semana</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { day: 1, label: "Seg" }, { day: 2, label: "Ter" }, { day: 3, label: "Qua" },
+                        { day: 4, label: "Qui" }, { day: 5, label: "Sex" }, { day: 6, label: "Sáb" }, { day: 0, label: "Dom" },
+                      ].map(d => (
+                        <button key={d.day} type="button"
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${form.recurrence_days.includes(d.day) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                          onClick={() => {
+                            const days = form.recurrence_days.includes(d.day)
+                              ? form.recurrence_days.filter(x => x !== d.day)
+                              : [...form.recurrence_days, d.day];
+                            setForm({ ...form, recurrence_days: days });
+                          }}>
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {form.recurrence !== "unica" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Repetir até</Label>
+                    <Input type="date" value={form.recurrence_end} onChange={e => setForm({ ...form, recurrence_end: e.target.value })} className="h-10 rounded-xl" />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Observações</Label>

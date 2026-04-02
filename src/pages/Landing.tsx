@@ -54,8 +54,8 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Nav */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <img src={logo} alt="OneTeacher" className="h-7 sm:h-8 object-contain" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 sm:h-24 flex items-center justify-between">
+          <img src={logo} alt="OneTeacher" className="h-12 sm:h-16 lg:h-20 object-contain" />
           <div className="flex items-center gap-2 sm:gap-3">
             <Button variant="ghost" size="sm" className="rounded-xl text-sm" onClick={() => navigate("/login")}>Entrar</Button>
             <Button size="sm" className="rounded-xl text-sm shadow-lg shadow-primary/20" onClick={() => setSignupOpen(true)}>Começar grátis</Button>
@@ -64,7 +64,7 @@ export default function Landing() {
       </nav>
 
       {/* HERO */}
-      <section className="pt-28 sm:pt-36 pb-16 sm:pb-24 px-4 relative">
+      <section className="pt-32 sm:pt-44 pb-16 sm:pb-24 px-4 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-transparent to-transparent" />
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/[0.04] rounded-full blur-3xl" />
         <motion.div className="max-w-3xl mx-auto text-center relative" initial="hidden" animate="visible" variants={stagger}>

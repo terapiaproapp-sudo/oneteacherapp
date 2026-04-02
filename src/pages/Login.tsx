@@ -23,14 +23,14 @@ export default function Login() {
     setLoading(false);
     if (error) { toast({ title: "Erro no login", description: error.message, variant: "destructive" }); return; }
     logActivity("login_realizado");
-    navigate("/");
+    navigate("/dashboard");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <img src={logo} alt="OneTeacher" className="h-10 mx-auto mb-6 object-contain" />
+          <img src={logo} alt="OneTeacher" className="h-14 sm:h-16 mx-auto mb-6 object-contain" />
           <h1 className="text-xl font-bold text-foreground">Bem-vindo de volta</h1>
           <p className="text-sm text-muted-foreground mt-1">Entre na sua conta para continuar</p>
         </div>
