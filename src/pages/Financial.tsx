@@ -228,8 +228,10 @@ export default function Financial() {
                         <p className="text-sm sm:text-base font-bold leading-tight">R$ {formatCurrency(p.amount)}</p>
                         <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border mt-0.5 ${statusBadgeClass(p)}`}>{statusLabel(p)}</Badge>
                       </div>
-                      {p.status !== "pago" && (
+                     {p.status !== "pago" ? (
                         <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-xl text-accent hover:bg-accent/10"><Check className="h-4 w-4" /></Button>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => undoPaid(p)} className="h-8 w-8 p-0 rounded-xl text-warning hover:bg-warning/10" title="Desfazer pagamento"><RotateCcw className="h-4 w-4" /></Button>
                       )}
                     </div>
                   </div>
