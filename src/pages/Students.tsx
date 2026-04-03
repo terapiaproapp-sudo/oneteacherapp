@@ -454,9 +454,9 @@ export default function Students() {
                   {activePkg && (
                     <div className="mb-3 space-y-2">
                       <div className="flex justify-between items-center text-[11px]">
-                        <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{info.usedHours}h / {info.totalHours}h</span>
+                        <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{formatHoursDisplay(info.usedHours)} / {formatHoursDisplay(info.totalHours)}</span>
                         <span className={`font-bold ${lowHours ? "text-destructive" : "text-accent"}`}>
-                          {info.remaining}h restantes
+                          {formatHoursDisplay(info.remaining)} restantes
                           {lowHours && <AlertTriangle className="h-3 w-3 inline ml-0.5" />}
                         </span>
                       </div>
