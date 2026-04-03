@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Search, DollarSign, ArrowUpRight, ArrowDownRight, Check, CreditCard, TrendingUp, CalendarDays } from "lucide-react";
+import { Search, DollarSign, ArrowUpRight, ArrowDownRight, Check, CreditCard, TrendingUp, CalendarDays, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,6 +36,12 @@ export default function Financial() {
   const markPaid = async (p: Payment) => {
     await supabase.from("payments").update({ status: "pago", paid_date: format(new Date(), "yyyy-MM-dd") }).eq("id", p.id);
     toast({ title: "Marcado como pago!" }); loadPayments();
+  };
+
+  const undoPaid = async (p: Payment) => {
+    if (!confirm("Desfazer este pagamento? O status voltará para 'pendente'.")) return;
+    await supabase.from("payments").update({ status: "pendente", paid_date: null }).eq("id", p.id);
+    toast({ title: "Pagamento desfeito", description: "Status alterado para pendente." }); loadPayments();
   };
 
   const today = format(new Date(), "yyyy-MM-dd");
@@ -222,8 +228,10 @@ export default function Financial() {
                         <p className="text-sm sm:text-base font-bold leading-tight">R$ {formatCurrency(p.amount)}</p>
                         <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border mt-0.5 ${statusBadgeClass(p)}`}>{statusLabel(p)}</Badge>
                       </div>
-                      {p.status !== "pago" && (
+                     {p.status !== "pago" ? (
                         <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-xl text-accent hover:bg-accent/10"><Check className="h-4 w-4" /></Button>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => undoPaid(p)} className="h-8 w-8 p-0 rounded-xl text-warning hover:bg-warning/10" title="Desfazer pagamento"><RotateCcw className="h-4 w-4" /></Button>
                       )}
                     </div>
                   </div>

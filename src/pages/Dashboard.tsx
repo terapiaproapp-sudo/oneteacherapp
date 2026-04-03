@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Users, Calendar, DollarSign, Clock, AlertTriangle, TrendingUp, ChevronRight, Package } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { formatHoursDisplay } from "@/lib/formatMinutes";
 
 interface Stats {
   totalStudents: number; activeStudents: number; todayLessons: number;
@@ -58,8 +59,8 @@ export default function Dashboard() {
     { label: "Aulas Hoje", value: stats.todayLessons, icon: Calendar, color: "text-accent", bg: "bg-accent/8" },
     { label: "Recebido (mês)", value: `R$ ${stats.monthRevenue.toFixed(0)}`, icon: TrendingUp, color: "text-accent", bg: "bg-accent/8" },
     { label: "A Receber", value: `R$ ${stats.pendingPayments.toFixed(0)}`, icon: DollarSign, color: "text-warning", bg: "bg-warning/8" },
-    { label: "Horas Vendidas", value: stats.totalHoursSold, icon: Package, color: "text-primary", bg: "bg-primary/8" },
-    { label: "Horas Restantes", value: stats.totalHoursRemaining, icon: Clock, color: "text-muted-foreground", bg: "bg-muted" },
+    { label: "Horas Vendidas", value: formatHoursDisplay(stats.totalHoursSold), icon: Package, color: "text-primary", bg: "bg-primary/8" },
+    { label: "Horas Restantes", value: formatHoursDisplay(stats.totalHoursRemaining), icon: Clock, color: "text-muted-foreground", bg: "bg-muted" },
   ];
 
   return (
@@ -102,7 +103,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="text-center shrink-0">
                         <p className="text-sm font-bold text-primary leading-none">{lesson.time}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{lesson.duration}h</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{formatHoursDisplay(lesson.duration)}</p>
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{lesson.students?.name}</p>

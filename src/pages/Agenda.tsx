@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatHoursDisplay } from "@/lib/formatMinutes";
 
 interface Lesson {
   id: string; student_id: string; teacher_id: string; date: string;
@@ -51,7 +52,7 @@ export default function Agenda() {
 
   useEffect(() => { if (user) { loadLessons(); loadStudents(); loadPackages(); } }, [user, currentDate]);
 
-  const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality,phone").eq("teacher_id", user!.id); setStudents(data || []); };
+  const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality,phone").eq("teacher_id", user!.id).order("name"); setStudents(data || []); };
   const loadPackages = async () => { const { data } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).eq("status", "ativo"); setPackages(data || []); };
   const loadLessons = async () => {
     const start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd");
@@ -60,10 +61,12 @@ export default function Agenda() {
     setLessons(data || []);
   };
 
+  // Duration calculated as decimal hours (e.g. 1.5 = 1h30). Storage uses decimal hours.
   const calcDuration = (start: string, end: string): number => {
     const [sh, sm] = start.split(":").map(Number);
     const [eh, em] = end.split(":").map(Number);
-    return Math.max(0, Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100);
+    const totalMinutes = (eh * 60 + em) - (sh * 60 + sm);
+    return Math.max(0, Math.round(totalMinutes) / 60);
   };
   const updateTimeStart = (v: string) => { const dur = calcDuration(v, form.time_end); setForm({ ...form, time_start: v, duration: dur > 0 ? dur : form.duration }); };
   const updateTimeEnd = (v: string) => { const dur = calcDuration(form.time_start, v); setForm({ ...form, time_end: v, duration: dur > 0 ? dur : form.duration }); };
@@ -150,7 +153,7 @@ export default function Agenda() {
         const { data: studentPkgs } = await supabase.from("packages").select("*").eq("student_id", lesson.student_id).eq("status", "ativo");
         const totalRemaining = (studentPkgs || []).reduce((s: number, p: any) => s + (p.hours_total - p.hours_used), 0);
         await supabase.from("students").update({ hours_remaining: Math.max(0, totalRemaining) }).eq("id", lesson.student_id);
-        toast({ title: hoursChange > 0 ? "Aula realizada!" : "Status atualizado", description: `${Math.abs(hoursChange)}h ${hoursChange > 0 ? "descontada" : "devolvida"} do pacote` });
+        toast({ title: hoursChange > 0 ? "Aula realizada!" : "Status atualizado", description: `${formatHoursDisplay(Math.abs(hoursChange))} ${hoursChange > 0 ? "descontada" : "devolvida"} do pacote` });
         loadPackages();
       } else {
         toast({ title: `Status: ${statusLabel(newStatus)}` });
@@ -165,11 +168,16 @@ export default function Agenda() {
   const handleDelete = async (id: string) => {
     const lesson = lessons.find(l => l.id === id);
     if (!lesson || !confirm("Excluir esta aula?")) return;
-    if (lesson.status === "concluida") {
+   if (lesson.status === "concluida" || lesson.status === "noshow") {
       const pkg = lesson.package_id ? packages.find(p => p.id === lesson.package_id) : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
       if (pkg) {
-        await supabase.from("packages").update({ hours_used: Math.max(0, pkg.hours_used - lesson.duration), status: "ativo" }).eq("id", pkg.id);
-        toast({ description: `${lesson.duration}h devolvida ao pacote` });
+        const newUsed = Math.max(0, pkg.hours_used - lesson.duration);
+        await supabase.from("packages").update({ hours_used: newUsed, status: newUsed < pkg.hours_total ? "ativo" : "concluido" }).eq("id", pkg.id);
+        // Also sync student hours_remaining
+        const { data: studentPkgs } = await supabase.from("packages").select("*").eq("student_id", lesson.student_id).eq("status", "ativo");
+        const totalRemaining = (studentPkgs || []).reduce((s: number, p: any) => s + (p.hours_total - p.hours_used), 0);
+        await supabase.from("students").update({ hours_remaining: Math.max(0, totalRemaining) }).eq("id", lesson.student_id);
+        toast({ description: `${formatHoursDisplay(lesson.duration)} devolvida ao pacote` });
         loadPackages();
       }
     }
@@ -358,7 +366,7 @@ export default function Agenda() {
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.time} – {getEndTime(lesson.time, lesson.duration)}</span>
-                    <span className="font-bold text-foreground">{lesson.duration}h</span>
+                    <span className="font-bold text-foreground">{formatHoursDisplay(lesson.duration)}</span>
                     <span className="flex items-center gap-1 capitalize"><MapPin className="h-3.5 w-3.5" /> {lesson.modality}</span>
                   </div>
                   {lesson.notes && <p className="text-xs text-muted-foreground bg-muted/40 rounded-xl px-3 py-2">{lesson.notes}</p>}
@@ -368,12 +376,12 @@ export default function Agenda() {
                     <div className="rounded-xl bg-primary/5 border border-primary/15 p-3 space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="font-bold text-primary flex items-center gap-1"><Package className="h-3.5 w-3.5" /> Pacote</span>
-                        <span className="text-muted-foreground">{pkgInfo.percentage}% consumido</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div><p className="text-sm font-bold">{pkgInfo.total}h</p><p className="text-[10px] text-muted-foreground">Total</p></div>
-                        <div><p className="text-sm font-bold">{pkgInfo.used}h</p><p className="text-[10px] text-muted-foreground">Abatidas</p></div>
-                        <div><p className={`text-sm font-bold ${pkgInfo.remaining <= 2 ? "text-destructive" : "text-accent"}`}>{pkgInfo.remaining}h</p><p className="text-[10px] text-muted-foreground">Restantes</p></div>
+                         <span className="text-muted-foreground">{pkgInfo.percentage}% consumido</span>
+                       </div>
+                       <div className="grid grid-cols-3 gap-2 text-center">
+                         <div><p className="text-sm font-bold">{formatHoursDisplay(pkgInfo.total)}</p><p className="text-[10px] text-muted-foreground">Total</p></div>
+                         <div><p className="text-sm font-bold">{formatHoursDisplay(pkgInfo.used)}</p><p className="text-[10px] text-muted-foreground">Abatidas</p></div>
+                         <div><p className={`text-sm font-bold ${pkgInfo.remaining <= 2 ? "text-destructive" : "text-accent"}`}>{formatHoursDisplay(pkgInfo.remaining)}</p><p className="text-[10px] text-muted-foreground">Restantes</p></div>
                       </div>
                       <Progress value={pkgInfo.percentage} className="h-1.5" />
                     </div>
@@ -455,12 +463,12 @@ export default function Agenda() {
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-primary flex items-center gap-1"><Package className="h-3.5 w-3.5" /> Pacote do Aluno</span>
-                  <span className="text-muted-foreground">{selectedStudentInfo.percentage}% consumido</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div><p className="text-lg font-bold">{selectedStudentInfo.total}h</p><p className="text-[10px] text-muted-foreground">Contratadas</p></div>
-                  <div><p className="text-lg font-bold">{selectedStudentInfo.used}h</p><p className="text-[10px] text-muted-foreground">Abatidas</p></div>
-                  <div><p className={`text-lg font-bold ${selectedStudentInfo.remaining <= 2 ? "text-destructive" : "text-accent"}`}>{selectedStudentInfo.remaining}h</p><p className="text-[10px] text-muted-foreground">Restantes</p></div>
+                   <span className="text-muted-foreground">{selectedStudentInfo.percentage}% consumido</span>
+                 </div>
+                 <div className="grid grid-cols-3 gap-2 text-center">
+                   <div><p className="text-lg font-bold">{formatHoursDisplay(selectedStudentInfo.total)}</p><p className="text-[10px] text-muted-foreground">Contratadas</p></div>
+                   <div><p className="text-lg font-bold">{formatHoursDisplay(selectedStudentInfo.used)}</p><p className="text-[10px] text-muted-foreground">Abatidas</p></div>
+                   <div><p className={`text-lg font-bold ${selectedStudentInfo.remaining <= 2 ? "text-destructive" : "text-accent"}`}>{formatHoursDisplay(selectedStudentInfo.remaining)}</p><p className="text-[10px] text-muted-foreground">Restantes</p></div>
                 </div>
                 <Progress value={selectedStudentInfo.percentage} className="h-2" />
               </div>
@@ -482,7 +490,7 @@ export default function Agenda() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Duração</Label>
-                <div className="h-10 flex items-center justify-center rounded-xl border border-input bg-muted/50 text-sm font-bold text-primary">{form.duration}h</div>
+                <div className="h-10 flex items-center justify-center rounded-xl border border-input bg-muted/50 text-sm font-bold text-primary">{formatHoursDisplay(form.duration)}</div>
               </div>
             </div>
 

@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
+import { formatHoursDisplay } from "@/lib/formatMinutes";
 
 interface Student {
   id: string; name: string; phone: string; email: string;
@@ -453,9 +454,9 @@ export default function Students() {
                   {activePkg && (
                     <div className="mb-3 space-y-2">
                       <div className="flex justify-between items-center text-[11px]">
-                        <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{info.usedHours}h / {info.totalHours}h</span>
+                        <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{formatHoursDisplay(info.usedHours)} / {formatHoursDisplay(info.totalHours)}</span>
                         <span className={`font-bold ${lowHours ? "text-destructive" : "text-accent"}`}>
-                          {info.remaining}h restantes
+                          {formatHoursDisplay(info.remaining)} restantes
                           {lowHours && <AlertTriangle className="h-3 w-3 inline ml-0.5" />}
                         </span>
                       </div>
@@ -516,9 +517,9 @@ export default function Students() {
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div><p className="text-[11px] text-muted-foreground">Pacote</p><p className="font-bold">{activePkg.name}</p></div>
                       <div><p className="text-[11px] text-muted-foreground">Valor</p><p className="font-bold">R$ {activePkg.total_value.toFixed(2)}</p></div>
-                      <div><p className="text-[11px] text-muted-foreground">Horas Contratadas</p><p className="font-bold text-primary">{info.totalHours}h</p></div>
-                      <div><p className="text-[11px] text-muted-foreground">Horas Abatidas</p><p className="font-bold">{info.usedHours}h</p></div>
-                      <div><p className="text-[11px] text-muted-foreground">Horas Restantes</p><p className="font-bold text-accent">{info.remaining}h</p></div>
+                       <div><p className="text-[11px] text-muted-foreground">Horas Contratadas</p><p className="font-bold text-primary">{formatHoursDisplay(info.totalHours)}</p></div>
+                       <div><p className="text-[11px] text-muted-foreground">Horas Abatidas</p><p className="font-bold">{formatHoursDisplay(info.usedHours)}</p></div>
+                       <div><p className="text-[11px] text-muted-foreground">Horas Restantes</p><p className="font-bold text-accent">{formatHoursDisplay(info.remaining)}</p></div>
                       <div><p className="text-[11px] text-muted-foreground">Consumido</p><p className="font-bold">{info.percentage}%</p></div>
                     </div>
                     <div className="space-y-1">
