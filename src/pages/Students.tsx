@@ -116,6 +116,59 @@ export default function Students() {
 
   const numVal = (v: string | number): number => { const n = typeof v === "string" ? parseFloat(v) : v; return isNaN(n) ? 0 : n; };
 
+  // ===== Student Access Functions =====
+  const createStudentAccess = async (studentId: string, studentName: string) => {
+    if (!accessEmail || !accessPassword) {
+      toast({ title: "E-mail e senha são obrigatórios", variant: "destructive" });
+      return;
+    }
+    if (accessPassword.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
+      return;
+    }
+    setAccessLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("create-student-access", {
+        body: { student_id: studentId, email: accessEmail, password: accessPassword, student_name: studentName },
+      });
+      if (res.error || res.data?.error) throw new Error(res.data?.error || res.error?.message);
+
+      // Update permissions
+      const access = await (supabase.from as any)("student_access")
+        .select("*").eq("student_id", studentId).single();
+      if (access.data) {
+        await (supabase.from as any)("student_access")
+          .update({ permissions: accessPerms }).eq("id", access.data.id);
+      }
+
+      toast({ title: "Acesso do aluno criado com sucesso!" });
+      setAccessEmail(""); setAccessPassword("");
+      loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro ao criar acesso", description: err.message, variant: "destructive" });
+    }
+    setAccessLoading(false);
+  };
+
+  const toggleStudentAccess = async (studentId: string, active: boolean) => {
+    const record = accessRecords[studentId];
+    if (!record) return;
+    await (supabase.from as any)("student_access")
+      .update({ is_active: active }).eq("id", record.id);
+    toast({ title: active ? "Acesso reativado" : "Acesso desativado" });
+    loadAll();
+  };
+
+  const updatePermissions = async (studentId: string, perms: Record<string, boolean>) => {
+    const record = accessRecords[studentId];
+    if (!record) return;
+    await (supabase.from as any)("student_access")
+      .update({ permissions: perms }).eq("id", record.id);
+    toast({ title: "Permissões atualizadas" });
+    loadAll();
+  };
+
   const packageValue = numVal(form.package_value);
   const packageHours = numVal(form.package_hours);
   const discountPercent = numVal(form.discount_percent);
