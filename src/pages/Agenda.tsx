@@ -61,10 +61,12 @@ export default function Agenda() {
     setLessons(data || []);
   };
 
+  // Duration calculated as decimal hours (e.g. 1.5 = 1h30). Storage uses decimal hours.
   const calcDuration = (start: string, end: string): number => {
     const [sh, sm] = start.split(":").map(Number);
     const [eh, em] = end.split(":").map(Number);
-    return Math.max(0, Math.round(((eh * 60 + em) - (sh * 60 + sm)) / 60 * 100) / 100);
+    const totalMinutes = (eh * 60 + em) - (sh * 60 + sm);
+    return Math.max(0, Math.round(totalMinutes) / 60);
   };
   const updateTimeStart = (v: string) => { const dur = calcDuration(v, form.time_end); setForm({ ...form, time_start: v, duration: dur > 0 ? dur : form.duration }); };
   const updateTimeEnd = (v: string) => { const dur = calcDuration(form.time_start, v); setForm({ ...form, time_end: v, duration: dur > 0 ? dur : form.duration }); };
