@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Users, Calendar, DollarSign, Clock, AlertTriangle, TrendingUp, ChevronRight, Package } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { formatHoursDisplay } from "@/lib/formatMinutes";
 
 interface Stats {
   totalStudents: number; activeStudents: number; todayLessons: number;
