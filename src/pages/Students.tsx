@@ -10,10 +10,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil, KeyRound, ShieldCheck, ShieldOff, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
 import { formatHoursDisplay } from "@/lib/formatMinutes";
+
+interface StudentAccessRecord {
+  id: string;
+  student_id: string;
+  user_id: string;
+  teacher_id: string;
+  is_active: boolean;
+  permissions: {
+    view_hours: boolean;
+    view_schedule: boolean;
+    view_history: boolean;
+    view_absences: boolean;
+    view_financial: boolean;
+    view_payments: boolean;
+  };
+}
 
 interface Student {
   id: string; name: string; phone: string; email: string;
