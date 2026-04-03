@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Search, DollarSign, ArrowUpRight, ArrowDownRight, Check, CreditCard, TrendingUp, CalendarDays } from "lucide-react";
+import { Search, DollarSign, ArrowUpRight, ArrowDownRight, Check, CreditCard, TrendingUp, CalendarDays, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";

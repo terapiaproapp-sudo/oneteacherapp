@@ -103,7 +103,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="text-center shrink-0">
                         <p className="text-sm font-bold text-primary leading-none">{lesson.time}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{lesson.duration}h</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{formatHoursDisplay(lesson.duration)}</p>
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{lesson.students?.name}</p>

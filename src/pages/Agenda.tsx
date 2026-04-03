@@ -463,12 +463,12 @@ export default function Agenda() {
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-primary flex items-center gap-1"><Package className="h-3.5 w-3.5" /> Pacote do Aluno</span>
-                  <span className="text-muted-foreground">{selectedStudentInfo.percentage}% consumido</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div><p className="text-lg font-bold">{selectedStudentInfo.total}h</p><p className="text-[10px] text-muted-foreground">Contratadas</p></div>
-                  <div><p className="text-lg font-bold">{selectedStudentInfo.used}h</p><p className="text-[10px] text-muted-foreground">Abatidas</p></div>
-                  <div><p className={`text-lg font-bold ${selectedStudentInfo.remaining <= 2 ? "text-destructive" : "text-accent"}`}>{selectedStudentInfo.remaining}h</p><p className="text-[10px] text-muted-foreground">Restantes</p></div>
+                   <span className="text-muted-foreground">{selectedStudentInfo.percentage}% consumido</span>
+                 </div>
+                 <div className="grid grid-cols-3 gap-2 text-center">
+                   <div><p className="text-lg font-bold">{formatHoursDisplay(selectedStudentInfo.total)}</p><p className="text-[10px] text-muted-foreground">Contratadas</p></div>
+                   <div><p className="text-lg font-bold">{formatHoursDisplay(selectedStudentInfo.used)}</p><p className="text-[10px] text-muted-foreground">Abatidas</p></div>
+                   <div><p className={`text-lg font-bold ${selectedStudentInfo.remaining <= 2 ? "text-destructive" : "text-accent"}`}>{formatHoursDisplay(selectedStudentInfo.remaining)}</p><p className="text-[10px] text-muted-foreground">Restantes</p></div>
                 </div>
                 <Progress value={selectedStudentInfo.percentage} className="h-2" />
               </div>
