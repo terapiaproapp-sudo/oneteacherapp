@@ -38,6 +38,12 @@ export default function Financial() {
     toast({ title: "Marcado como pago!" }); loadPayments();
   };
 
+  const undoPaid = async (p: Payment) => {
+    if (!confirm("Desfazer este pagamento? O status voltará para 'pendente'.")) return;
+    await supabase.from("payments").update({ status: "pendente", paid_date: null }).eq("id", p.id);
+    toast({ title: "Pagamento desfeito", description: "Status alterado para pendente." }); loadPayments();
+  };
+
   const today = format(new Date(), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(new Date()), "yyyy-MM-dd");
