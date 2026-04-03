@@ -83,6 +83,16 @@ export default function Students() {
   const [editingPackage, setEditingPackage] = useState(false);
   const [editingFinancial, setEditingFinancial] = useState(false);
 
+  // Student access state
+  const [accessRecords, setAccessRecords] = useState<Record<string, StudentAccessRecord>>({});
+  const [accessEmail, setAccessEmail] = useState("");
+  const [accessPassword, setAccessPassword] = useState("");
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [accessPerms, setAccessPerms] = useState({
+    view_hours: true, view_schedule: true, view_history: true,
+    view_absences: true, view_financial: false, view_payments: false,
+  });
+
   useEffect(() => { if (user) loadAll(); }, [user]);
 
   const loadAll = async () => {
