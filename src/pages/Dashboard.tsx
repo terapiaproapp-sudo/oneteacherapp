@@ -59,8 +59,8 @@ export default function Dashboard() {
     { label: "Aulas Hoje", value: stats.todayLessons, icon: Calendar, color: "text-accent", bg: "bg-accent/8" },
     { label: "Recebido (mês)", value: `R$ ${stats.monthRevenue.toFixed(0)}`, icon: TrendingUp, color: "text-accent", bg: "bg-accent/8" },
     { label: "A Receber", value: `R$ ${stats.pendingPayments.toFixed(0)}`, icon: DollarSign, color: "text-warning", bg: "bg-warning/8" },
-    { label: "Horas Vendidas", value: stats.totalHoursSold, icon: Package, color: "text-primary", bg: "bg-primary/8" },
-    { label: "Horas Restantes", value: stats.totalHoursRemaining, icon: Clock, color: "text-muted-foreground", bg: "bg-muted" },
+    { label: "Horas Vendidas", value: formatHoursDisplay(stats.totalHoursSold), icon: Package, color: "text-primary", bg: "bg-primary/8" },
+    { label: "Horas Restantes", value: formatHoursDisplay(stats.totalHoursRemaining), icon: Clock, color: "text-muted-foreground", bg: "bg-muted" },
   ];
 
   return (
