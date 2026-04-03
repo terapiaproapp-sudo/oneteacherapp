@@ -52,7 +52,7 @@ export default function Agenda() {
 
   useEffect(() => { if (user) { loadLessons(); loadStudents(); loadPackages(); } }, [user, currentDate]);
 
-  const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality,phone").eq("teacher_id", user!.id); setStudents(data || []); };
+  const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality,phone").eq("teacher_id", user!.id).order("name"); setStudents(data || []); };
   const loadPackages = async () => { const { data } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).eq("status", "ativo"); setPackages(data || []); };
   const loadLessons = async () => {
     const start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd");
