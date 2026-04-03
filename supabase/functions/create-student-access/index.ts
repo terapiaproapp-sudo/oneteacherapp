@@ -1,0 +1,75 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Não autenticado");
+
+    // Verify the calling user (teacher)
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user: caller } } = await supabaseClient.auth.getUser();
+    if (!caller) throw new Error("Não autenticado");
+
+    const { student_id, email, password, student_name } = await req.json();
+    if (!student_id || !email || !password) throw new Error("E-mail e senha são obrigatórios");
+
+    // Verify caller is the teacher of this student
+    const { data: student } = await supabaseClient
+      .from("students")
+      .select("teacher_id")
+      .eq("id", student_id)
+      .single();
+    if (!student || student.teacher_id !== caller.id) throw new Error("Sem permissão");
+
+    // Admin client to create user
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Create auth user
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: student_name || "" },
+    });
+    if (createError) throw createError;
+
+    // Create student_access record
+    const { error: accessError } = await supabaseAdmin
+      .from("student_access")
+      .insert({
+        student_id,
+        user_id: newUser.user.id,
+        teacher_id: caller.id,
+      });
+
+    if (accessError) {
+      // Cleanup on failure
+      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+      throw accessError;
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, user_id: newUser.user.id }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error: any) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
