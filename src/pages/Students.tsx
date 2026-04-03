@@ -10,10 +10,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil, KeyRound, ShieldCheck, ShieldOff, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
 import { formatHoursDisplay } from "@/lib/formatMinutes";
+
+interface StudentAccessRecord {
+  id: string;
+  student_id: string;
+  user_id: string;
+  teacher_id: string;
+  is_active: boolean;
+  permissions: {
+    view_hours: boolean;
+    view_schedule: boolean;
+    view_history: boolean;
+    view_absences: boolean;
+    view_financial: boolean;
+    view_payments: boolean;
+  };
+}
 
 interface Student {
   id: string; name: string; phone: string; email: string;
@@ -66,6 +83,16 @@ export default function Students() {
   const [editingPackage, setEditingPackage] = useState(false);
   const [editingFinancial, setEditingFinancial] = useState(false);
 
+  // Student access state
+  const [accessRecords, setAccessRecords] = useState<Record<string, StudentAccessRecord>>({});
+  const [accessEmail, setAccessEmail] = useState("");
+  const [accessPassword, setAccessPassword] = useState("");
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [accessPerms, setAccessPerms] = useState({
+    view_hours: true, view_schedule: true, view_history: true,
+    view_absences: true, view_financial: false, view_payments: false,
+  });
+
   useEffect(() => { if (user) loadAll(); }, [user]);
 
   const loadAll = async () => {
@@ -79,9 +106,68 @@ export default function Students() {
     const payGrouped: Record<string, Payment[]> = {};
     (pays || []).forEach((p: any) => { if (!payGrouped[p.student_id]) payGrouped[p.student_id] = []; payGrouped[p.student_id].push(p); });
     setPayments(payGrouped);
+    // Load student access records
+    const { data: accesses } = await (supabase.from as any)("student_access")
+      .select("*").eq("teacher_id", user!.id);
+    const accessMap: Record<string, StudentAccessRecord> = {};
+    (accesses || []).forEach((a: any) => { accessMap[a.student_id] = a; });
+    setAccessRecords(accessMap);
   };
 
   const numVal = (v: string | number): number => { const n = typeof v === "string" ? parseFloat(v) : v; return isNaN(n) ? 0 : n; };
+
+  // ===== Student Access Functions =====
+  const createStudentAccess = async (studentId: string, studentName: string) => {
+    if (!accessEmail || !accessPassword) {
+      toast({ title: "E-mail e senha são obrigatórios", variant: "destructive" });
+      return;
+    }
+    if (accessPassword.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
+      return;
+    }
+    setAccessLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("create-student-access", {
+        body: { student_id: studentId, email: accessEmail, password: accessPassword, student_name: studentName },
+      });
+      if (res.error || res.data?.error) throw new Error(res.data?.error || res.error?.message);
+
+      // Update permissions
+      const access = await (supabase.from as any)("student_access")
+        .select("*").eq("student_id", studentId).single();
+      if (access.data) {
+        await (supabase.from as any)("student_access")
+          .update({ permissions: accessPerms }).eq("id", access.data.id);
+      }
+
+      toast({ title: "Acesso do aluno criado com sucesso!" });
+      setAccessEmail(""); setAccessPassword("");
+      loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro ao criar acesso", description: err.message, variant: "destructive" });
+    }
+    setAccessLoading(false);
+  };
+
+  const toggleStudentAccess = async (studentId: string, active: boolean) => {
+    const record = accessRecords[studentId];
+    if (!record) return;
+    await (supabase.from as any)("student_access")
+      .update({ is_active: active }).eq("id", record.id);
+    toast({ title: active ? "Acesso reativado" : "Acesso desativado" });
+    loadAll();
+  };
+
+  const updatePermissions = async (studentId: string, perms: Record<string, boolean>) => {
+    const record = accessRecords[studentId];
+    if (!record) return;
+    await (supabase.from as any)("student_access")
+      .update({ permissions: perms }).eq("id", record.id);
+    toast({ title: "Permissões atualizadas" });
+    loadAll();
+  };
 
   const packageValue = numVal(form.package_value);
   const packageHours = numVal(form.package_hours);
@@ -564,6 +650,97 @@ export default function Students() {
                     </div>
                   </div>
                 )}
+
+                {/* Student Access Section */}
+                {(() => {
+                  const access = accessRecords[detailStudent.id];
+                  const permLabels: { key: string; label: string }[] = [
+                    { key: "view_hours", label: "Ver horas do pacote" },
+                    { key: "view_schedule", label: "Ver próximas aulas" },
+                    { key: "view_history", label: "Ver histórico de aulas" },
+                    { key: "view_absences", label: "Ver faltas e no-show" },
+                    { key: "view_financial", label: "Ver financeiro" },
+                    { key: "view_payments", label: "Ver pagamentos e parcelas" },
+                  ];
+
+                  if (access) {
+                    const perms = access.permissions as any;
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                            <KeyRound className="h-3 w-3" /> Acesso do Aluno
+                          </h3>
+                          <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${access.is_active ? "bg-accent/10 text-accent border-accent/30" : "bg-destructive/10 text-destructive border-destructive/30"}`}>
+                            {access.is_active ? "Ativo" : "Desativado"}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          {permLabels.map(p => (
+                            <div key={p.key} className="flex items-center justify-between py-1">
+                              <span className="text-xs">{p.label}</span>
+                              <Switch
+                                checked={!!perms[p.key]}
+                                onCheckedChange={(checked) => {
+                                  const newPerms = { ...perms, [p.key]: checked };
+                                  updatePermissions(detailStudent.id, newPerms);
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          variant={access.is_active ? "destructive" : "default"}
+                          size="sm"
+                          className="w-full h-9 rounded-xl text-xs gap-1"
+                          onClick={() => toggleStudentAccess(detailStudent.id, !access.is_active)}
+                        >
+                          {access.is_active ? <><ShieldOff className="h-3.5 w-3.5" /> Desativar Acesso</> : <><ShieldCheck className="h-3.5 w-3.5" /> Reativar Acesso</>}
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/40">
+                      <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                        <KeyRound className="h-3 w-3" /> Criar Acesso do Aluno
+                      </h3>
+                      <p className="text-xs text-muted-foreground">Crie uma conta para o aluno acessar o portal com informações das aulas e pacotes.</p>
+                      <div className="space-y-2">
+                        <Input
+                          type="email" placeholder="E-mail do aluno"
+                          value={accessEmail} onChange={e => setAccessEmail(e.target.value)}
+                          className="h-9 rounded-xl text-sm"
+                        />
+                        <Input
+                          type="password" placeholder="Senha (mín. 6 caracteres)"
+                          value={accessPassword} onChange={e => setAccessPassword(e.target.value)}
+                          className="h-9 rounded-xl text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2 pt-1">
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Permissões</p>
+                        {permLabels.map(p => (
+                          <div key={p.key} className="flex items-center justify-between py-0.5">
+                            <span className="text-xs">{p.label}</span>
+                            <Switch
+                              checked={!!(accessPerms as any)[p.key]}
+                              onCheckedChange={(checked) => setAccessPerms(prev => ({ ...prev, [p.key]: checked }))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        size="sm" className="w-full h-9 rounded-xl text-xs gap-1"
+                        disabled={accessLoading}
+                        onClick={() => createStudentAccess(detailStudent.id, detailStudent.name)}
+                      >
+                        {accessLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Criando...</> : <><KeyRound className="h-3.5 w-3.5" /> Criar Acesso</>}
+                      </Button>
+                    </div>
+                  );
+                })()}
 
                 {detailStudent.notes && (
                   <div>
