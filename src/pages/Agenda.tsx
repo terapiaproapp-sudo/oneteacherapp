@@ -168,11 +168,16 @@ export default function Agenda() {
   const handleDelete = async (id: string) => {
     const lesson = lessons.find(l => l.id === id);
     if (!lesson || !confirm("Excluir esta aula?")) return;
-    if (lesson.status === "concluida") {
+   if (lesson.status === "concluida" || lesson.status === "noshow") {
       const pkg = lesson.package_id ? packages.find(p => p.id === lesson.package_id) : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
       if (pkg) {
-        await supabase.from("packages").update({ hours_used: Math.max(0, pkg.hours_used - lesson.duration), status: "ativo" }).eq("id", pkg.id);
-        toast({ description: `${lesson.duration}h devolvida ao pacote` });
+        const newUsed = Math.max(0, pkg.hours_used - lesson.duration);
+        await supabase.from("packages").update({ hours_used: newUsed, status: newUsed < pkg.hours_total ? "ativo" : "concluido" }).eq("id", pkg.id);
+        // Also sync student hours_remaining
+        const { data: studentPkgs } = await supabase.from("packages").select("*").eq("student_id", lesson.student_id).eq("status", "ativo");
+        const totalRemaining = (studentPkgs || []).reduce((s: number, p: any) => s + (p.hours_total - p.hours_used), 0);
+        await supabase.from("students").update({ hours_remaining: Math.max(0, totalRemaining) }).eq("id", lesson.student_id);
+        toast({ description: `${formatHoursDisplay(lesson.duration)} devolvida ao pacote` });
         loadPackages();
       }
     }
