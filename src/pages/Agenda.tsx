@@ -153,7 +153,7 @@ export default function Agenda() {
         const { data: studentPkgs } = await supabase.from("packages").select("*").eq("student_id", lesson.student_id).eq("status", "ativo");
         const totalRemaining = (studentPkgs || []).reduce((s: number, p: any) => s + (p.hours_total - p.hours_used), 0);
         await supabase.from("students").update({ hours_remaining: Math.max(0, totalRemaining) }).eq("id", lesson.student_id);
-        toast({ title: hoursChange > 0 ? "Aula realizada!" : "Status atualizado", description: `${Math.abs(hoursChange)}h ${hoursChange > 0 ? "descontada" : "devolvida"} do pacote` });
+        toast({ title: hoursChange > 0 ? "Aula realizada!" : "Status atualizado", description: `${formatHoursDisplay(Math.abs(hoursChange))} ${hoursChange > 0 ? "descontada" : "devolvida"} do pacote` });
         loadPackages();
       } else {
         toast({ title: `Status: ${statusLabel(newStatus)}` });
