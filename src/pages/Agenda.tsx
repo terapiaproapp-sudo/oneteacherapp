@@ -366,7 +366,7 @@ export default function Agenda() {
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.time} – {getEndTime(lesson.time, lesson.duration)}</span>
-                    <span className="font-bold text-foreground">{lesson.duration}h</span>
+                    <span className="font-bold text-foreground">{formatHoursDisplay(lesson.duration)}</span>
                     <span className="flex items-center gap-1 capitalize"><MapPin className="h-3.5 w-3.5" /> {lesson.modality}</span>
                   </div>
                   {lesson.notes && <p className="text-xs text-muted-foreground bg-muted/40 rounded-xl px-3 py-2">{lesson.notes}</p>}
