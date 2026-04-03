@@ -230,6 +230,7 @@ export type Database = {
           full_name: string | null
           id: string
           last_sign_in: string | null
+          phone: string | null
           plan: string | null
           status: string | null
         }
@@ -239,6 +240,7 @@ export type Database = {
           full_name?: string | null
           id: string
           last_sign_in?: string | null
+          phone?: string | null
           plan?: string | null
           status?: string | null
         }
@@ -248,6 +250,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_sign_in?: string | null
+          phone?: string | null
           plan?: string | null
           status?: string | null
         }
