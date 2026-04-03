@@ -490,7 +490,7 @@ export default function Agenda() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Duração</Label>
-                <div className="h-10 flex items-center justify-center rounded-xl border border-input bg-muted/50 text-sm font-bold text-primary">{form.duration}h</div>
+                <div className="h-10 flex items-center justify-center rounded-xl border border-input bg-muted/50 text-sm font-bold text-primary">{formatHoursDisplay(form.duration)}</div>
               </div>
             </div>
 
