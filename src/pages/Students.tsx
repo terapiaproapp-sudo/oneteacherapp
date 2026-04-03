@@ -651,6 +651,97 @@ export default function Students() {
                   </div>
                 )}
 
+                {/* Student Access Section */}
+                {(() => {
+                  const access = accessRecords[detailStudent.id];
+                  const permLabels: { key: string; label: string }[] = [
+                    { key: "view_hours", label: "Ver horas do pacote" },
+                    { key: "view_schedule", label: "Ver próximas aulas" },
+                    { key: "view_history", label: "Ver histórico de aulas" },
+                    { key: "view_absences", label: "Ver faltas e no-show" },
+                    { key: "view_financial", label: "Ver financeiro" },
+                    { key: "view_payments", label: "Ver pagamentos e parcelas" },
+                  ];
+
+                  if (access) {
+                    const perms = access.permissions as any;
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                            <KeyRound className="h-3 w-3" /> Acesso do Aluno
+                          </h3>
+                          <Badge variant="outline" className={`text-[10px] h-5 px-1.5 ${access.is_active ? "bg-accent/10 text-accent border-accent/30" : "bg-destructive/10 text-destructive border-destructive/30"}`}>
+                            {access.is_active ? "Ativo" : "Desativado"}
+                          </Badge>
+                        </div>
+                        <div className="space-y-2">
+                          {permLabels.map(p => (
+                            <div key={p.key} className="flex items-center justify-between py-1">
+                              <span className="text-xs">{p.label}</span>
+                              <Switch
+                                checked={!!perms[p.key]}
+                                onCheckedChange={(checked) => {
+                                  const newPerms = { ...perms, [p.key]: checked };
+                                  updatePermissions(detailStudent.id, newPerms);
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <Button
+                          variant={access.is_active ? "destructive" : "default"}
+                          size="sm"
+                          className="w-full h-9 rounded-xl text-xs gap-1"
+                          onClick={() => toggleStudentAccess(detailStudent.id, !access.is_active)}
+                        >
+                          {access.is_active ? <><ShieldOff className="h-3.5 w-3.5" /> Desativar Acesso</> : <><ShieldCheck className="h-3.5 w-3.5" /> Reativar Acesso</>}
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/40">
+                      <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                        <KeyRound className="h-3 w-3" /> Criar Acesso do Aluno
+                      </h3>
+                      <p className="text-xs text-muted-foreground">Crie uma conta para o aluno acessar o portal com informações das aulas e pacotes.</p>
+                      <div className="space-y-2">
+                        <Input
+                          type="email" placeholder="E-mail do aluno"
+                          value={accessEmail} onChange={e => setAccessEmail(e.target.value)}
+                          className="h-9 rounded-xl text-sm"
+                        />
+                        <Input
+                          type="password" placeholder="Senha (mín. 6 caracteres)"
+                          value={accessPassword} onChange={e => setAccessPassword(e.target.value)}
+                          className="h-9 rounded-xl text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2 pt-1">
+                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Permissões</p>
+                        {permLabels.map(p => (
+                          <div key={p.key} className="flex items-center justify-between py-0.5">
+                            <span className="text-xs">{p.label}</span>
+                            <Switch
+                              checked={!!(accessPerms as any)[p.key]}
+                              onCheckedChange={(checked) => setAccessPerms(prev => ({ ...prev, [p.key]: checked }))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        size="sm" className="w-full h-9 rounded-xl text-xs gap-1"
+                        disabled={accessLoading}
+                        onClick={() => createStudentAccess(detailStudent.id, detailStudent.name)}
+                      >
+                        {accessLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Criando...</> : <><KeyRound className="h-3.5 w-3.5" /> Criar Acesso</>}
+                      </Button>
+                    </div>
+                  );
+                })()}
+
                 {detailStudent.notes && (
                   <div>
                     <p className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1">Observações</p>
