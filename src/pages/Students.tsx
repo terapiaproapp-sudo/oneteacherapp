@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
+import { formatHoursDisplay } from "@/lib/formatMinutes";
 
 interface Student {
   id: string; name: string; phone: string; email: string;
