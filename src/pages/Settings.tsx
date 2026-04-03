@@ -7,11 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor } from "lucide-react";
+import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor, ExternalLink, CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
 type ThemeMode = "light" | "dark" | "system";
+
+const PUBLISHED_URL = "https://oneteacherapp.lovable.app";
+
+function getEnvironmentInfo() {
+  const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  const hostname = window.location.hostname;
+  const isPreview = hostname.includes("id-preview--") || hostname.includes("lovableproject.com");
+  const isLovableDev = hostname.includes("lovable.dev");
+  const isPublished = hostname === "oneteacherapp.lovable.app" || (!isPreview && !isLovableDev && !isInIframe && !hostname.includes("localhost"));
+  const isRestricted = isInIframe || isPreview || isLovableDev;
+  return { isInIframe, isPreview, isLovableDev, isPublished, isRestricted };
+}
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
@@ -19,15 +31,12 @@ export default function SettingsPage() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || "");
 
-  // Theme
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    return (localStorage.getItem("ot-theme") as ThemeMode) || "light";
-  });
+  const [theme, setTheme] = useState<ThemeMode>(() => (localStorage.getItem("ot-theme") as ThemeMode) || "light");
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === "dark") { root.classList.add("dark"); }
-    else if (theme === "light") { root.classList.remove("dark"); }
+    if (theme === "dark") root.classList.add("dark");
+    else if (theme === "light") root.classList.remove("dark");
     else {
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       prefersDark ? root.classList.add("dark") : root.classList.remove("dark");
@@ -52,74 +61,104 @@ export default function SettingsPage() {
     localStorage.setItem("ot-notif-prefs", JSON.stringify(updated));
   };
 
-  const saveReminderTime = (v: string) => {
-    setReminderTime(v);
-    localStorage.setItem("ot-reminder-time", v);
-  };
+  const saveReminderTime = (v: string) => { setReminderTime(v); localStorage.setItem("ot-reminder-time", v); };
 
+  // Notification diagnostics
+  const env = getEnvironmentInfo();
   const [notifPermission, setNotifPermission] = useState<string>("checking");
   const [notifSupported, setNotifSupported] = useState(true);
+  const [swStatus, setSwStatus] = useState<"checking" | "active" | "inactive" | "unsupported">("checking");
+  const [diagLogs, setDiagLogs] = useState<{ label: string; status: "ok" | "warn" | "error" }[]>([]);
+  const [testingNotif, setTestingNotif] = useState(false);
 
   useEffect(() => {
-    if (!("Notification" in window)) {
-      setNotifSupported(false);
-      setNotifPermission("unsupported");
+    if (!("Notification" in window)) { setNotifSupported(false); setNotifPermission("unsupported"); }
+    else setNotifPermission(Notification.permission);
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        setSwStatus(regs.length > 0 ? "active" : "inactive");
+      }).catch(() => setSwStatus("inactive"));
     } else {
-      setNotifPermission(Notification.permission);
+      setSwStatus("unsupported");
     }
   }, []);
 
-  const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
+  const allReady = !env.isRestricted && notifSupported && notifPermission === "granted";
 
   const requestNotifPermission = async () => {
-    if (!notifSupported) {
-      toast({ title: "Notificações não suportadas", description: "Seu navegador não suporta notificações. Use Chrome ou Safari no celular.", variant: "destructive" });
+    if (env.isRestricted) {
+      toast({ title: "Ambiente restrito", description: "Abra a versão pública do app para ativar notificações.", variant: "destructive" });
       return;
     }
-    if (isInIframe) {
-      toast({ title: "Abra no navegador", description: "Notificações não funcionam em iframe. Abra o app diretamente no navegador para ativar.", variant: "destructive" });
+    if (!notifSupported) {
+      toast({ title: "Não suportado", description: "Seu navegador não suporta notificações.", variant: "destructive" });
       return;
     }
     try {
       const perm = await Notification.requestPermission();
       setNotifPermission(perm);
-      if (perm === "granted") {
-        toast({ title: "Notificações ativadas! ✅", description: "Você receberá lembretes e alertas." });
-      } else if (perm === "denied") {
-        toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
-      } else {
-        toast({ title: "Permissão pendente", description: "Clique em 'Permitir' quando o navegador solicitar.", variant: "destructive" });
-      }
-    } catch (err) {
-      toast({ title: "Erro ao solicitar permissão", description: "Tente abrir o app diretamente pelo navegador (não em iframe).", variant: "destructive" });
+      if (perm === "granted") toast({ title: "Notificações ativadas! ✅" });
+      else if (perm === "denied") toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
+    } catch {
+      toast({ title: "Erro ao solicitar permissão", variant: "destructive" });
     }
   };
 
-  const testNotification = () => {
+  const testNotification = async () => {
+    setTestingNotif(true);
+    const logs: typeof diagLogs = [];
+
+    // 1. Environment
+    if (env.isRestricted) {
+      logs.push({ label: "Ambiente: preview/iframe detectado — notificações bloqueadas", status: "error" });
+      setDiagLogs(logs); setTestingNotif(false); return;
+    }
+    logs.push({ label: "Ambiente: versão pública ✓", status: "ok" });
+
+    // 2. Browser support
     if (!notifSupported) {
-      toast({ title: "❌ Não suportado", description: "Seu navegador não suporta notificações push.", variant: "destructive" });
-      return;
+      logs.push({ label: "Navegador: não suporta notificações", status: "error" });
+      setDiagLogs(logs); setTestingNotif(false); return;
     }
-    if (isInIframe) {
-      toast({ title: "❌ Iframe detectado", description: "Abra o app diretamente no navegador para testar notificações.", variant: "destructive" });
-      return;
+    logs.push({ label: "Navegador: suporta notificações ✓", status: "ok" });
+
+    // 3. Permission
+    const perm = Notification.permission;
+    setNotifPermission(perm);
+    if (perm !== "granted") {
+      logs.push({ label: `Permissão: ${perm === "denied" ? "negada pelo usuário" : "não solicitada ainda"}`, status: perm === "denied" ? "error" : "warn" });
+      setDiagLogs(logs); setTestingNotif(false); return;
     }
-    if (notifPermission !== "granted") {
-      toast({ title: "⚠️ Permissão necessária", description: "Ative as notificações primeiro clicando no botão acima.", variant: "destructive" });
-      requestNotifPermission();
-      return;
+    logs.push({ label: "Permissão: concedida ✓", status: "ok" });
+
+    // 4. Service worker
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (regs.length > 0) {
+        logs.push({ label: "Service Worker: ativo ✓", status: "ok" });
+      } else {
+        logs.push({ label: "Service Worker: não registrado (notificações simples funcionam)", status: "warn" });
+      }
+    } else {
+      logs.push({ label: "Service Worker: não suportado", status: "warn" });
     }
+
+    // 5. Send test
     try {
       const notif = new Notification("OneTeacher 📚", {
-        body: "Suas notificações estão funcionando corretamente! ✅",
+        body: "Suas notificações estão funcionando! ✅",
         icon: "/favicon.png",
-        tag: "test-notification",
+        tag: "test-" + Date.now(),
       });
       notif.onclick = () => { window.focus(); notif.close(); };
-      toast({ title: "✅ Notificação enviada!", description: "Verifique a barra de notificações do seu dispositivo." });
-    } catch (err) {
-      toast({ title: "❌ Erro ao enviar", description: "Não foi possível criar a notificação. Tente abrir o app diretamente pelo navegador.", variant: "destructive" });
+      logs.push({ label: "Notificação enviada com sucesso ✓", status: "ok" });
+    } catch (err: any) {
+      logs.push({ label: `Erro ao enviar: ${err?.message || "desconhecido"}`, status: "error" });
     }
+
+    setDiagLogs(logs);
+    setTestingNotif(false);
   };
 
   const handleSaveProfile = async () => {
@@ -139,6 +178,11 @@ export default function SettingsPage() {
     { key: "pacoteBaixo", label: "Pacotes com poucas horas" },
     { key: "pacoteAcabando", label: "Pacotes próximos de acabar" },
   ];
+
+  const DiagIcon = ({ s }: { s: "ok" | "warn" | "error" }) =>
+    s === "ok" ? <CheckCircle2 className="h-3.5 w-3.5 text-accent shrink-0" /> :
+    s === "warn" ? <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0" /> :
+    <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />;
 
   return (
     <div className="space-y-4 animate-fade-in max-w-2xl">
@@ -197,34 +241,62 @@ export default function SettingsPage() {
             <div><h2 className="text-sm font-bold">Notificações</h2><p className="text-[11px] text-muted-foreground">Lembretes e alertas</p></div>
           </div>
 
-          {/* Status display */}
-          <div className={`p-3 rounded-xl mb-4 ${notifPermission === "granted" ? "bg-accent/8 border border-accent/15" : "bg-warning/8 border border-warning/15"}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`w-2 h-2 rounded-full ${notifPermission === "granted" ? "bg-accent" : notifPermission === "denied" ? "bg-destructive" : "bg-warning"}`} />
-              <p className={`text-xs font-medium ${notifPermission === "granted" ? "text-accent" : "text-warning"}`}>
-                {notifPermission === "granted" ? "Notificações ativadas ✅" : notifPermission === "denied" ? "Permissão negada" : notifPermission === "unsupported" ? "Navegador não suporta" : isInIframe ? "Abra no navegador para ativar" : "Notificações não ativadas"}
-              </p>
-            </div>
-            {notifPermission !== "granted" && (
+          {/* Environment warning */}
+          {env.isRestricted && (
+            <div className="p-3 rounded-xl mb-4 bg-warning/8 border border-warning/15">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertCircle className="h-4 w-4 text-warning" />
+                <p className="text-xs font-medium text-warning">Ambiente de preview detectado</p>
+              </div>
               <p className="text-[11px] text-muted-foreground mb-2">
-                {notifPermission === "denied"
-                  ? "Acesse Configurações do navegador > Notificações e permita este site."
-                  : isInIframe
-                  ? "Notificações não funcionam dentro de iframes. Abra o app diretamente no navegador."
-                  : "Clique abaixo para permitir notificações push."}
+                Notificações só funcionam na versão pública do app, aberta diretamente no navegador.
+                {env.isInIframe && " (iframe detectado)"}
+                {env.isPreview && " (preview)"}
+                {env.isLovableDev && " (editor)"}
               </p>
-            )}
-            <div className="flex gap-2">
-              {notifPermission !== "granted" && (
-                <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1 border-warning/30 text-warning hover:bg-warning/10" onClick={requestNotifPermission}>
-                  <BellRing className="h-3.5 w-3.5" /> {notifPermission === "denied" ? "Tentar novamente" : "Ativar notificações"}
-                </Button>
-              )}
-              <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={testNotification}>
-                <BellRing className="h-3.5 w-3.5" /> Testar notificação
+              <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={() => window.open(PUBLISHED_URL, "_blank")}>
+                <ExternalLink className="h-3.5 w-3.5" /> Abrir versão pública do app
               </Button>
             </div>
-          </div>
+          )}
+
+          {/* Status (only in public env) */}
+          {!env.isRestricted && (
+            <div className={`p-3 rounded-xl mb-4 ${notifPermission === "granted" ? "bg-accent/8 border border-accent/15" : "bg-warning/8 border border-warning/15"}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`w-2 h-2 rounded-full ${notifPermission === "granted" ? "bg-accent" : notifPermission === "denied" ? "bg-destructive" : "bg-warning"}`} />
+                <p className={`text-xs font-medium ${notifPermission === "granted" ? "text-accent" : "text-warning"}`}>
+                  {notifPermission === "granted" ? "Notificações ativadas ✅" : notifPermission === "denied" ? "Permissão negada pelo navegador" : !notifSupported ? "Navegador não suporta" : "Notificações não ativadas"}
+                </p>
+              </div>
+              {notifPermission === "denied" && (
+                <p className="text-[11px] text-muted-foreground mb-2">Acesse Configurações do navegador → Notificações → Permita este site.</p>
+              )}
+              <div className="flex gap-2 flex-wrap">
+                {notifPermission !== "granted" && (
+                  <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1 border-warning/30 text-warning hover:bg-warning/10" onClick={requestNotifPermission}>
+                    <BellRing className="h-3.5 w-3.5" /> {notifPermission === "denied" ? "Tentar novamente" : "Ativar notificações"}
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={testNotification} disabled={testingNotif || !allReady}>
+                  {testingNotif ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />} Testar notificação
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Diagnostic logs */}
+          {diagLogs.length > 0 && (
+            <div className="p-3 rounded-xl mb-4 bg-muted/30 border border-border/40 space-y-1.5">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase">Diagnóstico</p>
+              {diagLogs.map((log, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <DiagIcon s={log.status} />
+                  <span className="text-xs">{log.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="space-y-3">
             {notifOptions.map(opt => (
@@ -253,6 +325,30 @@ export default function SettingsPage() {
               </Select>
             </div>
           </div>
+
+          {/* Detailed diagnostic section */}
+          <Separator className="my-4" />
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-muted-foreground uppercase">Status técnico</p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                {env.isRestricted ? <XCircle className="h-3 w-3 text-destructive" /> : <CheckCircle2 className="h-3 w-3 text-accent" />}
+                <span>Ambiente: {env.isRestricted ? "restrito" : "público"}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {notifSupported ? <CheckCircle2 className="h-3 w-3 text-accent" /> : <XCircle className="h-3 w-3 text-destructive" />}
+                <span>API: {notifSupported ? "suportada" : "ausente"}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {notifPermission === "granted" ? <CheckCircle2 className="h-3 w-3 text-accent" /> : notifPermission === "denied" ? <XCircle className="h-3 w-3 text-destructive" /> : <AlertCircle className="h-3 w-3 text-warning" />}
+                <span>Permissão: {notifPermission}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {swStatus === "active" ? <CheckCircle2 className="h-3 w-3 text-accent" /> : swStatus === "unsupported" ? <XCircle className="h-3 w-3 text-destructive" /> : <AlertCircle className="h-3 w-3 text-warning" />}
+                <span>SW: {swStatus === "active" ? "ativo" : swStatus === "inactive" ? "inativo" : swStatus === "unsupported" ? "ausente" : "..."}</span>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -263,7 +359,6 @@ export default function SettingsPage() {
             <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center"><Palette className="h-4 w-4 text-primary" /></div>
             <div><h2 className="text-sm font-bold">Aparência</h2><p className="text-[11px] text-muted-foreground">Tema e personalização</p></div>
           </div>
-
           <div className="grid grid-cols-3 gap-2">
             {([
               { value: "light" as ThemeMode, icon: Sun, label: "Claro" },
