@@ -376,12 +376,12 @@ export default function Agenda() {
                     <div className="rounded-xl bg-primary/5 border border-primary/15 p-3 space-y-2">
                       <div className="flex items-center justify-between text-[11px]">
                         <span className="font-bold text-primary flex items-center gap-1"><Package className="h-3.5 w-3.5" /> Pacote</span>
-                        <span className="text-muted-foreground">{pkgInfo.percentage}% consumido</span>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div><p className="text-sm font-bold">{pkgInfo.total}h</p><p className="text-[10px] text-muted-foreground">Total</p></div>
-                        <div><p className="text-sm font-bold">{pkgInfo.used}h</p><p className="text-[10px] text-muted-foreground">Abatidas</p></div>
-                        <div><p className={`text-sm font-bold ${pkgInfo.remaining <= 2 ? "text-destructive" : "text-accent"}`}>{pkgInfo.remaining}h</p><p className="text-[10px] text-muted-foreground">Restantes</p></div>
+                         <span className="text-muted-foreground">{pkgInfo.percentage}% consumido</span>
+                       </div>
+                       <div className="grid grid-cols-3 gap-2 text-center">
+                         <div><p className="text-sm font-bold">{formatHoursDisplay(pkgInfo.total)}</p><p className="text-[10px] text-muted-foreground">Total</p></div>
+                         <div><p className="text-sm font-bold">{formatHoursDisplay(pkgInfo.used)}</p><p className="text-[10px] text-muted-foreground">Abatidas</p></div>
+                         <div><p className={`text-sm font-bold ${pkgInfo.remaining <= 2 ? "text-destructive" : "text-accent"}`}>{formatHoursDisplay(pkgInfo.remaining)}</p><p className="text-[10px] text-muted-foreground">Restantes</p></div>
                       </div>
                       <Progress value={pkgInfo.percentage} className="h-1.5" />
                     </div>
