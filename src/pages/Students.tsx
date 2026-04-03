@@ -106,6 +106,12 @@ export default function Students() {
     const payGrouped: Record<string, Payment[]> = {};
     (pays || []).forEach((p: any) => { if (!payGrouped[p.student_id]) payGrouped[p.student_id] = []; payGrouped[p.student_id].push(p); });
     setPayments(payGrouped);
+    // Load student access records
+    const { data: accesses } = await (supabase.from as any)("student_access")
+      .select("*").eq("teacher_id", user!.id);
+    const accessMap: Record<string, StudentAccessRecord> = {};
+    (accesses || []).forEach((a: any) => { accessMap[a.student_id] = a; });
+    setAccessRecords(accessMap);
   };
 
   const numVal = (v: string | number): number => { const n = typeof v === "string" ? parseFloat(v) : v; return isNaN(n) ? 0 : n; };
