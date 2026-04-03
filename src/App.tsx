@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AppLayout from "@/components/AppLayout";
 import AdminLayout from "@/components/AdminLayout";
+import StudentLayout from "@/components/StudentLayout";
 import Dashboard from "@/pages/Dashboard";
 import Students from "@/pages/Students";
 import Agenda from "@/pages/Agenda";
@@ -21,19 +22,23 @@ import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminActivity from "@/pages/admin/AdminActivity";
 import AdminFinancial from "@/pages/admin/AdminFinancial";
+import StudentPortal from "@/pages/student/StudentPortal";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Carregando...</div></div>;
+  const { user, loading, role } = useAuth();
+  if (loading || (user && !role)) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Carregando...</div></div>;
   if (!user) return <Navigate to="/login" replace />;
+  if (role === "student") return <Navigate to="/portal" replace />;
   return <AppLayout>{children}</AppLayout>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, role } = useAuth();
   if (loading) return null;
+  if (user && !role) return null;
+  if (user && role === "student") return <Navigate to="/portal" replace />;
   if (user) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
@@ -44,6 +49,14 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return <AdminLayout>{children}</AdminLayout>;
+}
+
+function StudentRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, role } = useAuth();
+  if (loading || (user && !role)) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Carregando...</div></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (role !== "student") return <Navigate to="/dashboard" replace />;
+  return <StudentLayout>{children}</StudentLayout>;
 }
 
 const App = () => (
@@ -64,6 +77,7 @@ const App = () => (
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/financeiro" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/portal" element={<StudentRoute><StudentPortal /></StudentRoute>} />
             {/* Admin routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/usuarios" element={<AdminRoute><AdminUsers /></AdminRoute>} />
