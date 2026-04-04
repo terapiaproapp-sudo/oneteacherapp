@@ -240,6 +240,41 @@ export default function AdminUsers() {
               </div>
 
               <div className="space-y-2">
+                <h3 className="font-semibold text-foreground text-sm flex items-center gap-1"><DollarSign className="h-4 w-4" /> Financeiro</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-accent/10 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Recebido</p>
+                    <p className="font-bold text-accent">R$ {selectedUser.totalRevenue.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-primary/10 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Pendente</p>
+                    <p className="font-bold text-primary">R$ {selectedUser.pendingRevenue.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-destructive/10 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Atrasado</p>
+                    <p className="font-bold text-destructive">R$ {selectedUser.overdueRevenue.toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold text-foreground text-sm flex items-center gap-1"><Users className="h-4 w-4" /> Alunos ({selectedUser.studentsList.length})</h3>
+                {selectedUser.studentsList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum aluno cadastrado</p>
+                ) : (
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {selectedUser.studentsList.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-muted/20">
+                        <span className="text-foreground">{s.name}</span>
+                        <Badge variant="outline" className={s.status === "ativo" ? "border-accent/30 text-accent text-xs" : "border-muted text-muted-foreground text-xs"}>
+                          {s.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
                 <h3 className="font-semibold text-foreground text-sm">Engajamento</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
