@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Eye, Ban, Trash2, Edit, Users, BookOpen, Calendar, CheckCircle } from "lucide-react";
+import { Search, Eye, Ban, Trash2, Edit, Users, BookOpen, Calendar, CheckCircle, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
