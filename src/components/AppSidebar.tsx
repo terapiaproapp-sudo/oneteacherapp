@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Calendar, DollarSign, Settings, LogOut
+  LayoutDashboard, Users, Calendar, DollarSign, Settings, LogOut, Shield
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
