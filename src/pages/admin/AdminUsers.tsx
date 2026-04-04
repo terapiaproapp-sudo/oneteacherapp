@@ -49,10 +49,11 @@ export default function AdminUsers() {
   };
 
   const viewDetail = async (profile: Profile) => {
-    const [students, lessons, logs] = await Promise.all([
-      supabase.from("students").select("id", { count: "exact" }).eq("teacher_id", profile.id),
+    const [students, lessons, logs, payments] = await Promise.all([
+      supabase.from("students").select("id, name, status").eq("teacher_id", profile.id),
       supabase.from("lessons").select("id, status", { count: "exact" }).eq("teacher_id", profile.id),
       supabase.from("activity_logs").select("id", { count: "exact" }).eq("user_id", profile.id),
+      supabase.from("payments").select("amount, status, due_date").eq("teacher_id", profile.id),
     ]);
 
     const lessonsCompleted = lessons.data?.filter(l => l.status === "realizada").length || 0;
@@ -64,14 +65,23 @@ export default function AdminUsers() {
     if ((logs.count || 0) > 50) engagement = "alto";
     else if ((logs.count || 0) > 10) engagement = "médio";
 
+    const today = new Date().toISOString().slice(0, 10);
+    const totalRevenue = (payments.data || []).filter(p => p.status === "pago").reduce((s, p) => s + (p.amount || 0), 0);
+    const pendingRevenue = (payments.data || []).filter(p => p.status === "pendente").reduce((s, p) => s + (p.amount || 0), 0);
+    const overdueRevenue = (payments.data || []).filter(p => p.status === "pendente" && p.due_date < today).reduce((s, p) => s + (p.amount || 0), 0);
+
     setSelectedUser({
       ...profile,
-      studentsCount: students.count || 0,
+      studentsCount: students.data?.length || 0,
       lessonsCount: lessons.count || 0,
       lessonsCompleted,
       logsCount: logs.count || 0,
       daysSinceLogin,
       engagement,
+      totalRevenue,
+      pendingRevenue,
+      overdueRevenue,
+      studentsList: (students.data || []).map(s => ({ name: s.name, status: s.status || "ativo" })),
     });
     setDetailOpen(true);
   };
