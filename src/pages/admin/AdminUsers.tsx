@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Eye, Ban, Trash2, Edit, Users, BookOpen, Calendar, CheckCircle } from "lucide-react";
+import { Search, Eye, Ban, Trash2, Edit, Users, BookOpen, Calendar, CheckCircle, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,6 +27,10 @@ interface UserDetail extends Profile {
   logsCount: number;
   daysSinceLogin: number;
   engagement: string;
+  totalRevenue: number;
+  pendingRevenue: number;
+  overdueRevenue: number;
+  studentsList: { name: string; status: string }[];
 }
 
 export default function AdminUsers() {
@@ -45,10 +49,11 @@ export default function AdminUsers() {
   };
 
   const viewDetail = async (profile: Profile) => {
-    const [students, lessons, logs] = await Promise.all([
-      supabase.from("students").select("id", { count: "exact" }).eq("teacher_id", profile.id),
+    const [students, lessons, logs, payments] = await Promise.all([
+      supabase.from("students").select("id, name, status").eq("teacher_id", profile.id),
       supabase.from("lessons").select("id, status", { count: "exact" }).eq("teacher_id", profile.id),
       supabase.from("activity_logs").select("id", { count: "exact" }).eq("user_id", profile.id),
+      supabase.from("payments").select("amount, status, due_date").eq("teacher_id", profile.id),
     ]);
 
     const lessonsCompleted = lessons.data?.filter(l => l.status === "realizada").length || 0;
@@ -60,14 +65,23 @@ export default function AdminUsers() {
     if ((logs.count || 0) > 50) engagement = "alto";
     else if ((logs.count || 0) > 10) engagement = "médio";
 
+    const today = new Date().toISOString().slice(0, 10);
+    const totalRevenue = (payments.data || []).filter(p => p.status === "pago").reduce((s, p) => s + (p.amount || 0), 0);
+    const pendingRevenue = (payments.data || []).filter(p => p.status === "pendente").reduce((s, p) => s + (p.amount || 0), 0);
+    const overdueRevenue = (payments.data || []).filter(p => p.status === "pendente" && p.due_date < today).reduce((s, p) => s + (p.amount || 0), 0);
+
     setSelectedUser({
       ...profile,
-      studentsCount: students.count || 0,
+      studentsCount: students.data?.length || 0,
       lessonsCount: lessons.count || 0,
       lessonsCompleted,
       logsCount: logs.count || 0,
       daysSinceLogin,
       engagement,
+      totalRevenue,
+      pendingRevenue,
+      overdueRevenue,
+      studentsList: (students.data || []).map(s => ({ name: s.name, status: s.status || "ativo" })),
     });
     setDetailOpen(true);
   };
@@ -225,6 +239,41 @@ export default function AdminUsers() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <h3 className="font-semibold text-foreground text-sm flex items-center gap-1"><DollarSign className="h-4 w-4" /> Financeiro</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-accent/10 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Recebido</p>
+                    <p className="font-bold text-accent">R$ {selectedUser.totalRevenue.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-primary/10 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Pendente</p>
+                    <p className="font-bold text-primary">R$ {selectedUser.pendingRevenue.toFixed(2)}</p>
+                  </div>
+                  <div className="bg-destructive/10 rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Atrasado</p>
+                    <p className="font-bold text-destructive">R$ {selectedUser.overdueRevenue.toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold text-foreground text-sm flex items-center gap-1"><Users className="h-4 w-4" /> Alunos ({selectedUser.studentsList.length})</h3>
+                {selectedUser.studentsList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum aluno cadastrado</p>
+                ) : (
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {selectedUser.studentsList.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-muted/20">
+                        <span className="text-foreground">{s.name}</span>
+                        <Badge variant="outline" className={s.status === "ativo" ? "border-accent/30 text-accent text-xs" : "border-muted text-muted-foreground text-xs"}>
+                          {s.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="space-y-2">
                 <h3 className="font-semibold text-foreground text-sm">Engajamento</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
