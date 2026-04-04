@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Calendar, DollarSign, Settings, LogOut
+  LayoutDashboard, Users, Calendar, DollarSign, Settings, LogOut, Shield
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,7 +28,7 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { signOut, user } = useAuth();
+  const { signOut, user, role } = useAuth();
 
   return (
     <Sidebar collapsible="icon">
@@ -63,6 +63,20 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {role === "admin" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to="/admin"
+                      className="hover:bg-sidebar-accent/40 rounded-lg transition-colors"
+                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                    >
+                      <Shield className="mr-2.5 h-[18px] w-[18px] shrink-0" />
+                      {!collapsed && <span className="text-sm">Admin</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
