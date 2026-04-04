@@ -27,6 +27,10 @@ interface UserDetail extends Profile {
   logsCount: number;
   daysSinceLogin: number;
   engagement: string;
+  totalRevenue: number;
+  pendingRevenue: number;
+  overdueRevenue: number;
+  studentsList: { name: string; status: string }[];
 }
 
 export default function AdminUsers() {
