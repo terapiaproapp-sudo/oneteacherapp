@@ -28,7 +28,7 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { signOut, user } = useAuth();
+  const { signOut, user, role } = useAuth();
 
   return (
     <Sidebar collapsible="icon">
