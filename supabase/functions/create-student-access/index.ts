@@ -71,16 +71,31 @@ Deno.serve(async (req) => {
       createdNow = true;
     }
 
-    // Check if student_access already exists for this student
-    const { data: existingAccess } = await supabaseAdmin
+    // Check if student_access already exists for this student or user
+    const { data: existingForStudent } = await supabaseAdmin
       .from("student_access")
-      .select("id, user_id")
+      .select("id")
       .eq("student_id", student_id)
       .maybeSingle();
 
-    if (existingAccess) {
+    if (existingForStudent) {
       return new Response(
         JSON.stringify({ error: "Este aluno já possui acesso configurado" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: existingForUser } = await supabaseAdmin
+      .from("student_access")
+      .select("id, student_id, teacher_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingForUser) {
+      return new Response(
+        JSON.stringify({
+          error: "Este e-mail já está vinculado a outro aluno. Use um e-mail diferente.",
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
