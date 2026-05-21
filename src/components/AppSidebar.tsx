@@ -15,6 +15,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useGreeting } from "@/hooks/use-greeting";
 import logo from "@/assets/logo-oneteacher.png";
 
 const navItems = [
@@ -29,13 +30,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { signOut, user, role } = useAuth();
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Bom dia";
-    if (hour >= 12 && hour < 18) return "Boa tarde";
-    return "Boa noite";
-  };
+  const greeting = useGreeting();
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "Professor";
 
@@ -47,7 +42,7 @@ export function AppSidebar() {
           {!collapsed ? (
             <div className="animate-fade-in">
               <p className="text-xs font-medium text-sidebar-foreground/60 mb-0.5">
-                {getGreeting()},
+                {greeting},
               </p>
               <h2 className="text-lg font-bold text-sidebar-foreground leading-tight truncate">
                 {firstName}

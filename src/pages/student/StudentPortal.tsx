@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useGreeting } from "@/hooks/use-greeting";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -26,6 +27,7 @@ interface TeacherProfile { full_name: string | null; phone: string | null; }
 export default function StudentPortal() {
   const { user } = useAuth();
   const { studentAccess } = useStudentAuth();
+  const greeting = useGreeting();
   const [student, setStudent] = useState<StudentData | null>(null);
   const [packages, setPackages] = useState<PackageData[]>([]);
   const [lessons, setLessons] = useState<LessonData[]>([]);
@@ -155,9 +157,7 @@ export default function StudentPortal() {
     window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
   };
 
-  // Dynamic greeting
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  // Dynamic greeting handled by useGreeting hook
 
   // Dynamic message
   let dynamicMsg = "";
