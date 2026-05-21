@@ -746,7 +746,7 @@ export default function Students() {
                   <div><p className="text-[11px] text-muted-foreground uppercase tracking-wider">E-mail</p><p className="font-semibold">{detailStudent.email || "—"}</p></div>
                 </div>
 
-                {activePkg && (
+                {detailStudent.enrollment_type === "pacote" && activePkg && (
                   <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 space-y-3">
                     <h3 className="text-[11px] font-bold text-primary uppercase tracking-widest">Resumo do Pacote</h3>
                     <div className="grid grid-cols-2 gap-3 text-sm">
@@ -764,6 +764,22 @@ export default function Students() {
                       </div>
                       <Progress value={info.percentage} className="h-2.5" />
                     </div>
+                  </div>
+                )}
+
+                {detailStudent.enrollment_type === "avulsa" && (
+                  <div className="p-4 rounded-xl bg-accent/5 border border-accent/15 space-y-2">
+                    <h3 className="text-[11px] font-bold text-accent uppercase tracking-widest">Aula Avulsa</h3>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm">Valor por aula:</p>
+                      <p className="text-lg font-bold text-accent">R$ {(detailStudent.hourly_rate || 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {detailStudent.enrollment_type === "sem_pacote" && (
+                  <div className="p-4 rounded-xl bg-muted border border-border/40 text-center">
+                    <p className="text-sm font-medium text-muted-foreground italic">Nenhum pacote definido</p>
                   </div>
                 )}
 
@@ -1003,25 +1019,47 @@ export default function Students() {
                 {/* Metrics Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Contratadas</p>
-                    <p className="text-lg font-bold text-primary">{formatHoursDisplay(info.totalHours)}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Tipo</p>
+                    <p className="text-sm font-bold capitalize">
+                      {summaryStudent.enrollment_type === "pacote" ? "Pacote de horas" : 
+                       summaryStudent.enrollment_type === "avulsa" ? "Aula avulsa" : "Sem pacote"}
+                    </p>
                   </div>
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumidas</p>
-                    <p className="text-lg font-bold text-green-600">{formatHoursDisplay(info.usedHours)}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Em Aberto</p>
-                    <p className="text-lg font-bold text-accent">{formatHoursDisplay(info.remaining)}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Uso</p>
-                    <p className="text-lg font-bold">{info.percentage}%</p>
-                  </div>
+                  {summaryStudent.enrollment_type === "pacote" ? (
+                    <>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Contratadas</p>
+                        <p className="text-lg font-bold text-primary">{formatHoursDisplay(info.totalHours)}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumidas</p>
+                        <p className="text-lg font-bold text-green-600">{formatHoursDisplay(info.usedHours)}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Em Aberto</p>
+                        <p className="text-lg font-bold text-accent">{formatHoursDisplay(info.remaining)}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Valor/Aula</p>
+                        <p className="text-lg font-bold text-primary">R$ {(summaryStudent.hourly_rate || 0).toFixed(2)}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Realizadas</p>
+                        <p className="text-lg font-bold text-green-600">{studentLessons.filter(l => l.status === "concluida").length}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Status</p>
+                        <p className="text-sm font-bold uppercase">{summaryStudent.status}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Package Progress */}
-                {activePkg && (
+                {summaryStudent.enrollment_type === "pacote" && activePkg && (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
