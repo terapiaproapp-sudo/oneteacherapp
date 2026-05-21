@@ -63,7 +63,7 @@ export default function Agenda() {
   const loadLessons = async () => {
     const start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd");
     const end = format(endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd") + "T23:59:59";
-    const { data } = await supabase.from("lessons").select("*, students(name, phone)").eq("teacher_id", user!.id).gte("date", start).lte("date", end).order("date").order("time");
+    const { data } = await supabase.from("lessons").select("*, students(name, phone)").eq("teacher_id", user!.id).gte("date", start).lte("date", end).order("date").order("time") as any;
     setLessons(data || []);
   };
 
@@ -349,6 +349,7 @@ export default function Agenda() {
   const statusLabel = (s: string) => ({ agendada: "Agendada", concluida: "Realizada", cancelada: "Cancelada", falta: "Falta", remarcada: "Remarcada", noshow: "No-show" }[s] || s);
   const dotColor = (s: string) => ({ agendada: "bg-primary", concluida: "bg-accent", cancelada: "bg-destructive", falta: "bg-warning", remarcada: "bg-info", noshow: "bg-destructive" }[s] || "bg-muted-foreground");
 
+
   const ms = startOfMonth(currentDate);
   const me = endOfMonth(currentDate);
   const calendarDays = eachDayOfInterval({ start: startOfWeek(ms, { weekStartsOn: 1 }), end: endOfWeek(me, { weekStartsOn: 1 }) });
@@ -435,10 +436,22 @@ export default function Agenda() {
                 <div key={lesson.id} className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold">{lesson.students?.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold">{lesson.students?.name}</p>
+                        <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
+                          {lesson.lesson_type === "avulsa" ? "Avulsa" : "Pacote"}
+                        </Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground">{lesson.subject || "Sem disciplina"}</p>
                     </div>
-                    <Badge variant="outline" className={`text-[10px] h-5 px-2 border shrink-0 ${statusStyle(lesson.status)}`}>{statusLabel(lesson.status)}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className={`text-[10px] h-5 px-2 border shrink-0 ${statusStyle(lesson.status)}`}>{statusLabel(lesson.status)}</Badge>
+                      {lesson.lesson_type === "avulsa" && (
+                        <Badge variant="outline" className={`text-[9px] h-4 px-1.5 border-accent/20 ${lesson.payment_status === "pago" ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"}`}>
+                          {lesson.payment_status === "pago" ? "Pago" : lesson.payment_status === "atrasado" ? "Atrasado" : "Pendente"}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.time} – {calculateEndTime(lesson.time, lesson.duration)}</span>
@@ -528,12 +541,46 @@ export default function Agenda() {
               <Select value={form.student_id} onValueChange={v => {
                 const st = students.find(s => s.id === v);
                 const stPkgs = getStudentPackages(v);
-                setForm({ ...form, student_id: v, subject: st?.subject || form.subject, modality: st?.modality || form.modality, package_id: stPkgs.length > 0 ? stPkgs[0].id : "" });
+                setForm({ ...form, student_id: v, subject: st?.subject || form.subject, modality: st?.modality || form.modality, package_id: stPkgs.length > 0 ? stPkgs[0].id : "", amount: st?.hourly_rate || "" });
               }}>
                 <SelectTrigger className="h-10 rounded-xl"><SelectValue placeholder="Selecione o aluno" /></SelectTrigger>
                 <SelectContent>{students.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Tipo de aula *</Label>
+              <Select value={form.lesson_type} onValueChange={(v: "pacote" | "avulsa") => setForm({ ...form, lesson_type: v })}>
+                <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pacote">Consumir do pacote</SelectItem>
+                  <SelectItem value="avulsa">Aula avulsa / pagamento à parte</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {form.lesson_type === "avulsa" && (
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-accent/5 border border-accent/20">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Valor da aula</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                    <Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="h-10 pl-8 rounded-xl" placeholder="0,00" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Status Pagamento</Label>
+                  <Select value={form.payment_status} onValueChange={(v: "pendente" | "pago" | "atrasado") => setForm({ ...form, payment_status: v })}>
+                    <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="pago">Pago</SelectItem>
+                      <SelectItem value="atrasado">Em atraso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             {form.student_id && selectedStudentInfo && selectedStudentInfo.total > 0 && (
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 space-y-2">

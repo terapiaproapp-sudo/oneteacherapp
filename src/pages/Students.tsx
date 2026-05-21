@@ -95,6 +95,12 @@ export default function Students() {
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
   const [summaryStudent, setSummaryStudent] = useState<Student | null>(null);
   const [studentLessons, setStudentLessons] = useState<any[]>([]);
+  const [studentLessonsSummary, setStudentLessonsSummary] = useState({
+    packageHoursConsumed: 0,
+    avulsaCount: 0,
+    avulsaPaid: 0,
+    avulsaPending: 0
+  });
   const [editingPackage, setEditingPackage] = useState(false);
   const [editingFinancial, setEditingFinancial] = useState(false);
 
