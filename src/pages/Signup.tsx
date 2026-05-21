@@ -181,7 +181,7 @@ export default function Signup() {
                       country={formData.country}
                       value={formData.region}
                       onChange={(val) => updateField("region", val)}
-                      classes="flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-base focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all outline-none disabled:opacity-50"
+                      className="flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-base focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all outline-none disabled:opacity-50"
                       defaultOptionLabel="Selecione a região"
                       blankOptionLabel="Selecione o país primeiro"
                     />
