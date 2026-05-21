@@ -667,21 +667,28 @@ export default function Agenda() {
                       </div>
                     </div>
                   </div>
-                )}
-              </div>
             )}
-              </div>
+          </div>
+
+          <div className="space-y-1.5 mt-4">
+            <Label className="text-xs font-medium">Observações</Label>
+            <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} className="text-sm rounded-xl" />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button variant="outline" className="flex-1 h-11 rounded-xl" onClick={() => {
+              if (showRecurrencePreview) setShowRecurrencePreview(false);
+              else setDialogOpen(false);
+            }}>Cancelar</Button>
+            <Button className="flex-1 h-11 rounded-xl font-bold shadow-md shadow-primary/20" onClick={handleSave}>
+              {showRecurrencePreview ? "Confirmar Agendamento" : (editing ? "Salvar Alterações" : "Agendar")}
+            </Button>
+            {editing && !showRecurrencePreview && (
+              <Button variant="outline" onClick={() => handleDelete(editing.id)} className="text-destructive h-11 rounded-xl w-12 p-0">
+                <Trash2 className="h-4 w-4" />
+              </Button>
             )}
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Observações</Label>
-              <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} className="text-sm rounded-xl" />
-            </div>
-
-            <div className="flex gap-2">
-              <Button onClick={handleSave} className="flex-1 h-11 rounded-xl font-semibold">{editing ? "Salvar" : "Agendar"}</Button>
-              {editing && <Button variant="outline" onClick={() => handleDelete(editing.id)} className="text-destructive h-11 rounded-xl"><Trash2 className="h-4 w-4" /></Button>}
-            </div>
+          </div>
           </div>
         </DialogContent>
       </Dialog>
