@@ -1051,7 +1051,7 @@ export default function Students() {
                 {/* Metrics Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Tipo</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Tipo de Contrato</p>
                     <p className="text-sm font-bold capitalize">
                       {summaryStudent.enrollment_type === "pacote" ? "Pacote de horas" : 
                        summaryStudent.enrollment_type === "avulsa" ? "Aula avulsa" : "Sem pacote"}
@@ -1060,16 +1060,16 @@ export default function Students() {
                   {summaryStudent.enrollment_type === "pacote" ? (
                     <>
                       <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Contratadas</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Total do Pacote</p>
                         <p className="text-lg font-bold text-primary">{formatHoursDisplay(info.totalHours)}</p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumidas</p>
-                        <p className="text-lg font-bold text-green-600">{formatHoursDisplay(info.usedHours)}</p>
+                        <p className="text-lg font-bold text-green-600">{formatHoursDisplay(studentLessonsSummary.packageHoursConsumed)}</p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Em Aberto</p>
-                        <p className="text-lg font-bold text-accent">{formatHoursDisplay(info.remaining)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Saldo Restante</p>
+                        <p className="text-lg font-bold text-accent">{formatHoursDisplay(info.totalHours - studentLessonsSummary.packageHoursConsumed)}</p>
                       </div>
                     </>
                   ) : (
@@ -1079,15 +1079,26 @@ export default function Students() {
                         <p className="text-lg font-bold text-primary">R$ {(summaryStudent.hourly_rate || 0).toFixed(2)}</p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Realizadas</p>
-                        <p className="text-lg font-bold text-green-600">{studentLessons.filter(l => l.status === "concluida").length}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Aulas Avulsas</p>
+                        <p className="text-lg font-bold text-green-600">{studentLessonsSummary.avulsaCount}</p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Status</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Status Aluno</p>
                         <p className="text-sm font-bold uppercase">{summaryStudent.status}</p>
                       </div>
                     </>
                   )}
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl bg-accent/5 border border-accent/20">
+                    <p className="text-[10px] text-accent uppercase font-bold tracking-wider mb-1">Pagos (Avulsas)</p>
+                    <p className="text-lg font-bold text-accent">R$ {studentLessonsSummary.avulsaPaid.toFixed(2)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-warning/5 border border-warning/20">
+                    <p className="text-[10px] text-warning uppercase font-bold tracking-wider mb-1">Pendentes (Avulsas)</p>
+                    <p className="text-lg font-bold text-warning">R$ {studentLessonsSummary.avulsaPending.toFixed(2)}</p>
+                  </div>
                 </div>
 
                 {/* Package Progress */}
@@ -1124,6 +1135,7 @@ export default function Students() {
                               <th className="px-4 py-3 font-bold">Início</th>
                               <th className="px-4 py-3 font-bold">Fim</th>
                               <th className="px-4 py-3 font-bold">Duração</th>
+                              <th className="px-4 py-3 font-bold">Tipo</th>
                               <th className="px-4 py-3 font-bold">Status</th>
                             </tr>
                           </thead>
@@ -1136,6 +1148,11 @@ export default function Students() {
                                   <td className="px-4 py-3">{lesson.time}</td>
                                   <td className="px-4 py-3">{endTime}</td>
                                   <td className="px-4 py-3 text-muted-foreground">{formatHoursDisplay(lesson.duration)}</td>
+                                  <td className="px-4 py-3">
+                                    <Badge variant="secondary" className="text-[10px]">
+                                      {lesson.lesson_type === "avulsa" ? "Avulsa" : "Pacote"}
+                                    </Badge>
+                                  </td>
                                   <td className="px-4 py-3">
                                     <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border-none ${getStatusColor(lesson.status)}`}>
                                       {lesson.status}
