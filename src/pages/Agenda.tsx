@@ -30,7 +30,7 @@ interface Lesson {
   payment_status?: "pendente" | "pago" | "atrasado";
   students?: { name: string; phone?: string };
 }
-interface Student { id: string; name: string; subject: string; modality: string; phone?: string; enrollment_type?: string; }
+interface Student { id: string; name: string; subject: string; modality: string; phone?: string; enrollment_type?: string; hourly_rate?: number; }
 interface StudentPackage { id: string; student_id: string; name: string; hours_total: number; hours_used: number; status: string; total_value: number; }
 
 export default function Agenda() {

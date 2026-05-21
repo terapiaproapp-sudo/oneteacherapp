@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 interface StudentData { id: string; name: string; subject: string; modality: string; enrollment_type?: string; hourly_rate?: number; }
 interface PackageData { id: string; hours_total: number; hours_used: number; name: string; total_value: number; status: string; }
-interface LessonData { id: string; date: string; time: string; duration: number; status: string; subject: string; }
+interface LessonData { id: string; date: string; time: string; duration: number; status: string; subject: string; lesson_type?: string; amount?: number; payment_status?: string; }
 interface PaymentData { id: string; amount: number; due_date: string; status: string; installment_number: number | null; total_installments: number | null; }
 interface TeacherProfile { full_name: string | null; phone: string | null; }
 
@@ -299,12 +299,17 @@ export default function StudentPortal() {
             <h2 className="text-sm font-bold flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> Próximas Aulas</h2>
             {allUpcoming.slice(0, 5).map(l => (
               <div key={l.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30">
-                <div>
-                  <p className="text-sm font-semibold">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy (EEE)", { locale: ptBR })}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {l.time} — {calculateEndTime(l.time, l.duration)} · {formatHoursDisplay(l.duration)} · {l.subject || student?.subject || "Aula"}
-                  </p>
-                </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-semibold">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy (EEE)", { locale: ptBR })}</p>
+                      <Badge variant="secondary" className="text-[9px] h-3.5 px-1">
+                        {l.lesson_type === "avulsa" ? "Avulsa" : "Pacote"}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {l.time} — {calculateEndTime(l.time, l.duration)} · {formatHoursDisplay(l.duration)} · {l.subject || student?.subject || "Aula"}
+                    </p>
+                  </div>
                 <Badge variant="outline" className={`text-[10px] ${statusStyle(l.status)}`}>{statusLabel(l.status)}</Badge>
               </div>
             ))}
