@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatHoursDisplay } from "@/lib/formatMinutes";
+import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 
 interface Lesson {
   id: string; student_id: string; teacher_id: string; date: string;
