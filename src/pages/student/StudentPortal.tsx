@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { formatHoursDisplay } from "@/lib/formatMinutes";
+import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 import {
   Clock, Calendar, BookOpen, Package, Check, X, UserX,
   MessageCircle, AlertTriangle, CreditCard, TrendingUp,
