@@ -85,53 +85,117 @@ export default function Agenda() {
   const getLessonsForDay = (date: Date) => lessons.filter(l => isSameDay(parseLocalDate(l.date), date));
   const selectedDayLessons = useMemo(() => selectedDate ? getLessonsForDay(selectedDate) : [], [selectedDate, lessons]);
 
-  const generateRecurrenceDates = (baseDate: string, recurrence: string, days: number[], endDate: string): string[] => {
-    if (recurrence === "unica" || !endDate) return [baseDate];
-    const dates: string[] = [];
+  const generateRecurrenceDates = (
+    baseDate: string,
+    recurrence: string,
+    days: number[],
+    endDate: string | null,
+    maxOccurrences: number | null,
+    duration: number,
+    availableHours: number | null
+  ): { date: string; studentRemainingHours: number }[] => {
+    if (recurrence === "unica") return [{ date: baseDate, studentRemainingHours: availableHours !== null ? availableHours - duration : 0 }];
+    
+    const dates: { date: string; studentRemainingHours: number }[] = [];
     const start = new Date(baseDate + "T12:00:00");
-    const end = new Date(endDate + "T12:00:00");
     const current = new Date(start);
-    while (current <= end && dates.length < 200) {
+    let remaining = availableHours !== null ? availableHours : 999999;
+    
+    const limitDate = endDate ? new Date(endDate + "T12:00:00") : null;
+    const limitOccurrences = maxOccurrences || 500; // Safety limit
+    
+    while (dates.length < limitOccurrences) {
+      if (limitDate && current > limitDate) break;
+      if (availableHours !== null && remaining < duration - 0.01) break; // Use small epsilon for float precision
+
+      let shouldAdd = false;
       if (recurrence === "diaria") {
-        dates.push(format(current, "yyyy-MM-dd"));
-        current.setDate(current.getDate() + 1);
+        shouldAdd = true;
       } else if (recurrence === "semanal") {
         if (days.length === 0 || days.includes(current.getDay())) {
-          dates.push(format(current, "yyyy-MM-dd"));
+          shouldAdd = true;
         }
+      } else if (recurrence === "mensal") {
+        shouldAdd = true;
+      }
+
+      if (shouldAdd) {
+        remaining -= duration;
+        dates.push({ 
+          date: format(current, "yyyy-MM-dd"), 
+          studentRemainingHours: Math.max(0, remaining)
+        });
+      }
+
+      if (recurrence === "diaria") {
+        current.setDate(current.getDate() + 1);
+      } else if (recurrence === "semanal") {
         current.setDate(current.getDate() + 1);
       } else if (recurrence === "mensal") {
-        dates.push(format(current, "yyyy-MM-dd"));
         current.setMonth(current.getMonth() + 1);
       }
+      
+      if (dates.length >= 500) break; // Absolute safety limit
     }
-    return dates.length > 0 ? dates : [baseDate];
+    
+    return dates.length > 0 ? dates : [{ date: baseDate, studentRemainingHours: remaining }];
   };
+
+  const [showRecurrencePreview, setShowRecurrencePreview] = useState(false);
+  const [recurrencePreviewData, setRecurrencePreviewData] = useState<{ date: string; studentRemainingHours: number }[]>([]);
 
   const handleSave = async () => {
     if (!form.student_id) { toast({ title: "Selecione um aluno", variant: "destructive" }); return; }
     if (form.duration <= 0) { toast({ title: "Duração inválida", variant: "destructive" }); return; }
+    
+    const student = students.find(s => s.id === form.student_id);
+    const hasPackage = student?.enrollment_type === "pacote";
+    const hoursInfo = getStudentHoursInfo(form.student_id);
+    
+    if (form.recurrence !== "unica" && !showRecurrencePreview) {
+      if (!hasPackage && !form.recurrence_end) {
+        toast({ title: "Atenção", description: "Informe uma data final para criar a recorrência.", variant: "destructive" });
+        return;
+      }
+      
+      const availableHours = hasPackage ? hoursInfo.remaining : null;
+      const preview = generateRecurrenceDates(
+        form.date, 
+        form.recurrence, 
+        form.recurrence_days, 
+        form.recurrence_end,
+        null, // No max occurrences field currently
+        form.duration,
+        availableHours
+      );
+      
+      setRecurrencePreviewData(preview);
+      setShowRecurrencePreview(true);
+      return;
+    }
+
     const payload: any = {
       student_id: form.student_id, date: form.date, time: form.time_start,
       duration: form.duration, subject: form.subject, status: form.status,
       notes: form.notes, modality: form.modality, teacher_id: user!.id,
       package_id: form.package_id || null,
     };
+
     if (editing) {
       await supabase.from("lessons").update(payload).eq("id", editing.id);
       toast({ title: "Aula atualizada!" });
     } else {
-      const dates = generateRecurrenceDates(form.date, form.recurrence, form.recurrence_days, form.recurrence_end);
-      if (dates.length > 1) {
-        const rows = dates.map(d => ({ ...payload, date: d }));
+      if (form.recurrence !== "unica") {
+        const rows = recurrencePreviewData.map(d => ({ ...payload, date: d.date }));
         await supabase.from("lessons").insert(rows);
-        toast({ title: `${dates.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
+        toast({ title: `${recurrencePreviewData.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
       } else {
         await supabase.from("lessons").insert(payload);
         toast({ title: "Aula agendada!" });
       }
     }
-    setDialogOpen(false); setEditing(null); loadLessons(); loadPackages();
+    
+    setDialogOpen(false); setEditing(null); setShowRecurrencePreview(false); loadLessons(); loadPackages();
   };
 
   const updateStatus = async (id: string, newStatus: string) => {
@@ -201,6 +265,7 @@ export default function Agenda() {
   };
   const openNew = (date?: string) => {
     setEditing(null);
+    setShowRecurrencePreview(false);
     setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "", recurrence: "unica", recurrence_days: [], recurrence_end: "" });
     setDialogOpen(true);
   };
@@ -511,66 +576,100 @@ export default function Agenda() {
                 <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                   <Repeat className="h-3.5 w-3.5" /> Recorrência
                 </div>
-                <Select value={form.recurrence} onValueChange={v => setForm({ ...form, recurrence: v })}>
-                  <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unica">Única</SelectItem>
-                    <SelectItem value="diaria">Diária</SelectItem>
-                    <SelectItem value="semanal">Semanal</SelectItem>
-                    <SelectItem value="mensal">Mensal</SelectItem>
-                  </SelectContent>
-                </Select>
+                
+                {!showRecurrencePreview ? (
+                  <>
+                    <Select value={form.recurrence} onValueChange={v => setForm({ ...form, recurrence: v })}>
+                      <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unica">Única</SelectItem>
+                        <SelectItem value="diaria">Diária</SelectItem>
+                        <SelectItem value="semanal">Semanal</SelectItem>
+                        <SelectItem value="mensal">Mensal</SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                {form.recurrence === "semanal" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Dias da semana</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        { day: 1, label: "Seg" }, { day: 2, label: "Ter" }, { day: 3, label: "Qua" },
-                        { day: 4, label: "Qui" }, { day: 5, label: "Sex" }, { day: 6, label: "Sáb" }, { day: 0, label: "Dom" },
-                      ].map(d => (
-                        <button key={d.day} type="button"
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${form.recurrence_days.includes(d.day) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
-                          onClick={() => {
-                            const days = form.recurrence_days.includes(d.day)
-                              ? form.recurrence_days.filter(x => x !== d.day)
-                              : [...form.recurrence_days, d.day];
-                            setForm({ ...form, recurrence_days: days });
-                          }}>
-                          {d.label}
-                        </button>
-                      ))}
+                    {form.recurrence === "semanal" && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Dias da semana</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { day: 1, label: "Seg" }, { day: 2, label: "Ter" }, { day: 3, label: "Qua" },
+                            { day: 4, label: "Qui" }, { day: 5, label: "Sex" }, { day: 6, label: "Sáb" }, { day: 0, label: "Dom" },
+                          ].map(d => (
+                            <button key={d.day} type="button"
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${form.recurrence_days.includes(d.day) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                              onClick={() => {
+                                const days = form.recurrence_days.includes(d.day)
+                                  ? form.recurrence_days.filter(x => x !== d.day)
+                                  : [...form.recurrence_days, d.day];
+                                setForm({ ...form, recurrence_days: days });
+                              }}>
+                              {d.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {form.recurrence !== "unica" && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-medium">Repetir até {students.find(s => s.id === form.student_id)?.enrollment_type === "pacote" && "(Opcional se houver pacote)"}</Label>
+                        <Input type="date" value={form.recurrence_end} onChange={e => setForm({ ...form, recurrence_end: e.target.value })} className="h-10 rounded-xl" />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
+                      <div className="flex items-center justify-between border-b border-primary/10 pb-2">
+                        <h3 className="text-sm font-bold text-primary">Resumo da Recorrência</h3>
+                        <Button variant="ghost" size="sm" className="h-7 text-[10px] rounded-lg" onClick={() => setShowRecurrencePreview(false)}>Alterar</Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-y-2 text-xs">
+                        <div className="text-muted-foreground">Pacote do aluno:</div>
+                        <div className="font-bold text-right">{selectedStudentInfo ? formatHoursDisplay(selectedStudentInfo.remaining) : "N/A"}</div>
+                        
+                        <div className="text-muted-foreground">Duração por aula:</div>
+                        <div className="font-bold text-right">{formatHoursDisplay(form.duration)}</div>
+                        
+                        <div className="text-muted-foreground">Aulas a serem criadas:</div>
+                        <div className="font-bold text-right text-primary">{recurrencePreviewData.length}</div>
+                        
+                        <div className="text-muted-foreground">Total de horas:</div>
+                        <div className="font-bold text-right">{formatHoursDisplay(recurrencePreviewData.length * form.duration)}</div>
+                        
+                        <div className="text-muted-foreground border-t border-primary/10 pt-2 mt-1">Saldo restante:</div>
+                        <div className={`font-bold text-right border-t border-primary/10 pt-2 mt-1 ${recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours < form.duration ? "text-destructive" : "text-accent"}`}>
+                          {formatHoursDisplay(recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours)}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {form.recurrence !== "unica" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Repetir até</Label>
-                    <Input type="date" value={form.recurrence_end} onChange={e => setForm({ ...form, recurrence_end: e.target.value })} className="h-10 rounded-xl" />
-                  </div>
-                )}
-
-                {/* Recurrence preview */}
-                {form.recurrence !== "unica" && form.recurrence_end && form.date && (() => {
-                  const previewDates = generateRecurrenceDates(form.date, form.recurrence, form.recurrence_days, form.recurrence_end);
-                  if (previewDates.length <= 1) return null;
-                  return (
-                    <div className="rounded-xl bg-primary/5 border border-primary/15 p-3 space-y-2">
-                      <p className="text-xs font-bold text-primary">📅 Prévia: {previewDates.length} aulas serão criadas</p>
-                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                        {previewDates.map((d, i) => {
-                          const dt = new Date(d + "T12:00:00");
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Datas previstas</Label>
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {recurrencePreviewData.map((d, i) => {
+                          const dt = new Date(d.date + "T12:00:00");
                           return (
-                            <span key={i} className="text-[11px] bg-primary/10 text-primary rounded-lg px-2 py-0.5 font-medium">
-                              {format(dt, "dd/MM (EEE)", { locale: ptBR })}
-                            </span>
+                            <div key={i} className="flex items-center justify-between text-[11px] bg-muted/40 rounded-lg p-2 border border-border/50">
+                              <div className="flex items-center gap-2">
+                                <span className="w-5 h-5 flex items-center justify-center bg-primary/10 text-primary rounded-full font-bold">{i + 1}</span>
+                                <span className="font-medium">{format(dt, "dd/MM/yyyy")} — <span className="capitalize">{format(dt, "EEEE", { locale: ptBR })}</span></span>
+                              </div>
+                              <div className="text-muted-foreground font-medium">
+                                {form.time_start} às {form.time_end} ({formatHoursDisplay(form.duration)})
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
                     </div>
-                  );
-                })()}
+                  </div>
+                )}
+              </div>
+            )}
               </div>
             )}
 
