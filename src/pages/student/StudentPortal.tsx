@@ -203,10 +203,19 @@ export default function StudentPortal() {
             <p className="text-lg font-bold">
               {format(new Date(nextLesson.date + "T12:00:00"), "dd 'de' MMMM (EEEE)", { locale: ptBR })}
             </p>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span>🕐 {nextLesson.time}</span>
-              <span>📖 {nextLesson.subject || student.subject || "Aula"}</span>
-              <span>⏱ {formatHoursDisplay(nextLesson.duration)}</span>
+            <div className="text-sm text-muted-foreground mt-2 space-y-1">
+              <p className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5" /> 
+                <span className="font-medium text-foreground/80">Horário:</span> {nextLesson.time} às {calculateEndTime(nextLesson.time, nextLesson.duration)}
+              </p>
+              <p className="flex items-center gap-2">
+                <BookOpen className="h-3.5 w-3.5" /> 
+                <span className="font-medium text-foreground/80">Disciplina:</span> {nextLesson.subject || student?.subject || "Aula"}
+              </p>
+              <p className="flex items-center gap-2">
+                <Package className="h-3.5 w-3.5" /> 
+                <span className="font-medium text-foreground/80">Duração:</span> {formatHoursDisplay(nextLesson.duration)}
+              </p>
             </div>
             <Badge variant="outline" className={`text-[10px] mt-1 ${statusStyle(nextLesson.status)}`}>{statusLabel(nextLesson.status)}</Badge>
           </CardContent>
