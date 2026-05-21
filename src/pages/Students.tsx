@@ -228,7 +228,38 @@ export default function Students() {
     await (supabase.from as any)("student_access")
       .update({ permissions: perms }).eq("id", record.id);
     toast({ title: "Permissões atualizadas" });
+    setEditingAccessPerms(false);
     loadAll();
+  };
+
+  const resetStudentPassword = async (userId: string) => {
+    if (!newAccessPassword) {
+      toast({ title: "Nova senha é obrigatória", variant: "destructive" });
+      return;
+    }
+    if (newAccessPassword.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
+      return;
+    }
+    
+    setAccessLoading(true);
+    try {
+      const res = await supabase.functions.invoke("reset-student-password", {
+        body: { user_id: userId, new_password: newAccessPassword },
+      });
+      
+      if (res.error || res.data?.error) {
+        throw new Error(res.data?.error || res.error?.message || "Erro ao redefinir senha");
+      }
+      
+      toast({ title: "Senha redefinida com sucesso" });
+      setNewAccessPassword("");
+      setEditingAccessPassword(false);
+      loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro ao redefinir senha", description: err.message, variant: "destructive" });
+    }
+    setAccessLoading(false);
   };
 
   const packageValue = numVal(form.package_value);
