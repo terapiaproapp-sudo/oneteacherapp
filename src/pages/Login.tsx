@@ -81,7 +81,7 @@ export default function Login() {
                   <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                     <Lock className="w-4 h-4 text-slate-400" /> Senha
                   </Label>
-                  <Link to="/forgot-password" size="sm" className="text-xs text-primary font-semibold hover:underline decoration-2">Esqueci a senha</Link>
+                  <Link to="/forgot-password" className="text-xs text-primary font-semibold hover:underline decoration-2">Esqueci a senha</Link>
                 </div>
                 <div className="relative">
                   <motion.div variants={inputVariants} whileFocus="focus" whileTap="tap">
