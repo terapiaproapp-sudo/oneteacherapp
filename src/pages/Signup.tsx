@@ -165,7 +165,7 @@ export default function Signup() {
                     <CountryDropdown
                       value={formData.country}
                       onChange={(val) => updateField("country", val)}
-                      classes="flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-base focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                      className="flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-base focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                       defaultOptionLabel="Selecione o país"
                     />
                   </motion.div>
