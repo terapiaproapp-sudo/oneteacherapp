@@ -40,13 +40,16 @@ export type Database = {
       }
       lessons: {
         Row: {
+          amount: number | null
           created_at: string
           date: string
           duration: number
           id: string
+          lesson_type: string | null
           modality: string | null
           notes: string | null
           package_id: string | null
+          payment_status: string | null
           receipt_url: string | null
           status: string | null
           student_id: string
@@ -56,13 +59,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amount?: number | null
           created_at?: string
           date: string
           duration?: number
           id?: string
+          lesson_type?: string | null
           modality?: string | null
           notes?: string | null
           package_id?: string | null
+          payment_status?: string | null
           receipt_url?: string | null
           status?: string | null
           student_id: string
@@ -72,13 +78,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amount?: number | null
           created_at?: string
           date?: string
           duration?: number
           id?: string
+          lesson_type?: string | null
           modality?: string | null
           notes?: string | null
           package_id?: string | null
+          payment_status?: string | null
           receipt_url?: string | null
           status?: string | null
           student_id?: string
