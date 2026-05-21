@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil, KeyRound, ShieldCheck, ShieldOff, Loader2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil, KeyRound, ShieldCheck, ShieldOff, Loader2, FileText, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
 import { formatHoursDisplay } from "@/lib/formatMinutes";
@@ -80,6 +80,8 @@ export default function Students() {
   const [editing, setEditing] = useState<Student | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
+  const [summaryStudent, setSummaryStudent] = useState<Student | null>(null);
+  const [studentLessons, setStudentLessons] = useState<any[]>([]);
   const [editingPackage, setEditingPackage] = useState(false);
   const [editingFinancial, setEditingFinancial] = useState(false);
 
@@ -304,6 +306,32 @@ export default function Students() {
     const matchStatus = filterStatus === "todos" || s.status === filterStatus;
     return matchSearch && matchStatus;
   });
+
+  const loadStudentLessons = async (studentId: string) => {
+    const { data } = await supabase
+      .from("lessons")
+      .select("*")
+      .eq("student_id", studentId)
+      .order("date", { ascending: false })
+      .order("time", { ascending: false });
+    setStudentLessons(data || []);
+  };
+
+  const openSummary = (student: Student) => {
+    setSummaryStudent(student);
+    loadStudentLessons(student.id);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "realizada": return "bg-green-100 text-green-700 border-green-200";
+      case "no-show": return "bg-red-100 text-red-700 border-red-200";
+      case "agendada": return "bg-blue-100 text-blue-700 border-blue-200";
+      case "remarcada": return "bg-orange-100 text-orange-700 border-orange-200";
+      case "cancelada": return "bg-gray-100 text-gray-700 border-gray-200";
+      default: return "bg-gray-100 text-gray-700 border-gray-200";
+    }
+  };
 
   const statusBadge = (s: string) =>
     s === "ativo" ? "bg-accent/10 text-accent border-accent/30" :
@@ -560,9 +588,14 @@ export default function Students() {
                   {s.phone && <p className="text-[11px] text-muted-foreground mb-3 flex items-center gap-1"><Phone className="h-3 w-3" /> {s.phone}</p>}
 
                   <div className="flex items-center justify-between pt-3 border-t border-border/40">
-                    <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-primary hover:bg-primary/10 gap-1" onClick={() => setDetailStudent(s)}>
-                      <Eye className="h-3.5 w-3.5" /> Detalhes
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-primary hover:bg-primary/10 gap-1" onClick={() => setDetailStudent(s)}>
+                        <Eye className="h-3.5 w-3.5" /> Detalhes
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-accent hover:bg-accent/10 gap-1" onClick={() => openSummary(s)}>
+                        <FileText className="h-3.5 w-3.5" /> Resumo
+                      </Button>
+                    </div>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10" onClick={() => openEdit(s)}>
                         <Edit className="h-3.5 w-3.5 text-muted-foreground" />
@@ -753,6 +786,117 @@ export default function Students() {
                   <Button variant="outline" size="sm" className="flex-1 h-9 rounded-xl text-xs gap-1" onClick={() => { setDetailStudent(null); openEdit(detailStudent); }}>
                     <Edit className="h-3.5 w-3.5" /> Editar
                   </Button>
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Student Summary Dialog */}
+      <Dialog open={!!summaryStudent} onOpenChange={() => setSummaryStudent(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">Resumo Operacional: {summaryStudent?.name}</DialogTitle>
+          </DialogHeader>
+          {summaryStudent && (() => {
+            const info = getHoursInfo(summaryStudent.id);
+            const activePkg = getActivePackage(summaryStudent.id);
+            
+            return (
+              <div className="space-y-6 py-2">
+                {/* Metrics Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Contratadas</p>
+                    <p className="text-lg font-bold text-primary">{formatHoursDisplay(info.totalHours)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumidas</p>
+                    <p className="text-lg font-bold text-green-600">{formatHoursDisplay(info.usedHours)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Em Aberto</p>
+                    <p className="text-lg font-bold text-accent">{formatHoursDisplay(info.remaining)}</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Uso</p>
+                    <p className="text-lg font-bold">{info.percentage}%</p>
+                  </div>
+                </div>
+
+                {/* Package Progress */}
+                {activePkg && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                        <Package className="h-3 w-3" /> Pacote: {activePkg.name}
+                      </h3>
+                      <span className="text-[11px] font-medium">{info.percentage}% consumido</span>
+                    </div>
+                    <Progress value={info.percentage} className="h-3" />
+                  </div>
+                )}
+
+                {/* Lesson History */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                    <CalendarIcon className="h-3 w-3" /> Histórico de Aulas
+                  </h3>
+                  
+                  {studentLessons.length === 0 ? (
+                    <div className="py-8 text-center bg-muted/20 rounded-xl border border-dashed border-border">
+                      <p className="text-sm text-muted-foreground">Nenhuma aula registrada.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Desktop Table */}
+                      <div className="hidden sm:block border rounded-xl overflow-hidden">
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-muted/50 text-muted-foreground text-[11px] uppercase tracking-wider">
+                            <tr>
+                              <th className="px-4 py-3 font-bold">Data</th>
+                              <th className="px-4 py-3 font-bold">Horário</th>
+                              <th className="px-4 py-3 font-bold">Duração</th>
+                              <th className="px-4 py-3 font-bold">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {studentLessons.map((lesson) => (
+                              <tr key={lesson.id} className="hover:bg-muted/30 transition-colors">
+                                <td className="px-4 py-3 font-medium">{format(new Date(lesson.date + "T12:00:00"), "dd/MM/yyyy")}</td>
+                                <td className="px-4 py-3">{lesson.time} - {lesson.end_time || "—"}</td>
+                                <td className="px-4 py-3 text-muted-foreground">{formatHoursDisplay(lesson.duration)}</td>
+                                <td className="px-4 py-3">
+                                  <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border-none ${getStatusColor(lesson.status)}`}>
+                                    {lesson.status}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile List */}
+                      <div className="sm:hidden space-y-2">
+                        {studentLessons.map((lesson) => (
+                          <div key={lesson.id} className="p-3 rounded-xl bg-card border border-border/60 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <p className="text-sm font-bold">{format(new Date(lesson.date + "T12:00:00"), "dd/MM/yyyy")}</p>
+                              <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border-none ${getStatusColor(lesson.status)}`}>
+                                {lesson.status}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>{lesson.time} - {lesson.end_time || "—"}</span>
+                              <span>{formatHoursDisplay(lesson.duration)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             );
