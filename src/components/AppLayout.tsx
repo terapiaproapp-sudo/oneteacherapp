@@ -4,6 +4,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
+import logo from "@/assets/logo-oneteacher.png";
+
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
@@ -48,9 +50,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center border-b border-border/60 bg-card/80 backdrop-blur-sm px-5 shrink-0 sticky top-0 z-10">
-            <SidebarTrigger />
+          <header className="h-14 flex items-center justify-between border-b border-border/60 bg-card/80 backdrop-blur-sm px-5 shrink-0 sticky top-0 z-10">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <img src={logo} alt="OneTeacher" className="h-4 opacity-30 object-contain grayscale" />
+            </div>
           </header>
+
           <main className="flex-1 overflow-auto p-6 lg:p-8">
             {children}
           </main>
