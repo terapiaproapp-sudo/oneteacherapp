@@ -425,14 +425,6 @@ export default function Students() {
     }
   };
 
-  const calculateEndTime = (startTime: string, durationHours: number) => {
-    if (!startTime) return "";
-    const [hours, minutes] = startTime.split(":").map(Number);
-    const totalMinutes = hours * 60 + minutes + Math.round(durationHours * 60);
-    const endHours = Math.floor(totalMinutes / 60) % 24;
-    const endMinutes = totalMinutes % 60;
-    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
-  };
 
   const statusBadge = (s: string) =>
     s === "ativo" ? "bg-accent/10 text-accent border-accent/30" :
