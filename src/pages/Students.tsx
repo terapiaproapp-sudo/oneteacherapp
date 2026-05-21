@@ -51,13 +51,25 @@ interface Payment {
   package_id: string | null; notes: string;
 }
 
-const PRESET_PACKAGES = [
-  { label: "5h", hours: 5 },
-  { label: "8h", hours: 8 },
-  { label: "10h", hours: 10 },
-  { label: "12h", hours: 12 },
-  { label: "20h", hours: 20 },
-];
+const parseHoursToMinutes = (hoursStr: string): number => {
+  if (!hoursStr) return 0;
+  if (hoursStr.includes("h")) {
+    const parts = hoursStr.split("h");
+    const h = parseInt(parts[0]) || 0;
+    const m = parseInt(parts[1]) || 0;
+    return h * 60 + m;
+  }
+  const floatVal = parseFloat(hoursStr.replace(",", "."));
+  return isNaN(floatVal) ? 0 : Math.round(floatVal * 60);
+};
+
+const formatMinutesToHoursInput = (minutes: number): string => {
+  if (!minutes || minutes <= 0) return "";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return `${h}h`;
+  return `${h}h${String(m).padStart(2, '0')}`;
+};
 
 const emptyForm = {
   name: "", phone: "", email: "", subject: "", modality: "online",
@@ -172,7 +184,8 @@ export default function Students() {
   };
 
   const packageValue = numVal(form.package_value);
-  const packageHours = numVal(form.package_hours);
+  const packageMinutes = parseHoursToMinutes(String(form.package_hours));
+  const packageHours = packageMinutes / 60;
   const discountPercent = numVal(form.discount_percent);
   const installments = Math.max(1, Math.round(numVal(form.installments)) || 1);
   const hourlyRate = packageHours > 0 && packageValue > 0 ? packageValue / packageHours : 0;
@@ -192,7 +205,7 @@ export default function Students() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
-    if (!editing && packageHours <= 0) { toast({ title: "Selecione um pacote de horas", variant: "destructive" }); return; }
+    if (!editing && packageMinutes <= 0) { toast({ title: "Informe a quantidade de horas", variant: "destructive" }); return; }
 
     const studentData = {
       name: form.name, phone: form.phone, email: form.email,
@@ -207,12 +220,12 @@ export default function Students() {
       if (editingPackage) {
         const activePkg = getActivePackage(editing.id);
         if (activePkg) {
-          const newHourlyRate = packageHours > 0 && finalValue > 0 ? finalValue / packageHours : 0;
+          const newHourlyRate = packageMinutes > 0 && finalValue > 0 ? finalValue / (packageMinutes / 60) : 0;
           await supabase.from("packages").update({
-            name: `Pacote ${packageHours}h`, hours_total: packageHours,
+            name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageMinutes / 60,
             total_value: finalValue, hourly_rate: Math.round(newHourlyRate * 100) / 100,
           }).eq("id", activePkg.id);
-          await supabase.from("students").update({ hours_contracted: packageHours }).eq("id", editing.id);
+          await supabase.from("students").update({ hours_contracted: packageMinutes / 60 }).eq("id", editing.id);
         }
       }
 
@@ -231,7 +244,7 @@ export default function Students() {
 
       const { data: newPkg } = await supabase.from("packages").insert({
         teacher_id: user!.id, student_id: newStudent.id,
-        name: `Pacote ${packageHours}h`, hours_total: packageHours,
+        name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageHours,
         hours_used: 0, total_value: finalValue,
         hourly_rate: Math.round((finalValue / packageHours) * 100) / 100,
         expires_at: null, status: "ativo",
@@ -276,7 +289,7 @@ export default function Students() {
     setForm({
       name: student.name, phone: student.phone, email: student.email,
       subject: student.subject, modality: student.modality, notes: student.notes, status: student.status,
-      package_hours: activePkg?.hours_total || "",
+      package_hours: activePkg ? formatMinutesToHoursInput(activePkg.hours_total * 60) : "",
       package_value: activePkg?.total_value || "",
       payment_method: stuPayments[0]?.payment_method || "avista",
       installments: stuPayments[0]?.total_installments || "",
@@ -420,28 +433,22 @@ export default function Students() {
               {showPackageFields && (
                 <fieldset className="space-y-3">
                   <legend className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Pacote de Horas</legend>
-                  <div>
-                    <Label className="text-xs font-medium mb-2 block">Escolha o pacote *</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {PRESET_PACKAGES.map(p => (
-                        <button key={p.hours} onClick={() => setForm({ ...form, package_hours: p.hours })}
-                          className={`px-4 py-2.5 text-sm font-semibold rounded-xl border-2 transition-all ${numVal(form.package_hours) === p.hours ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-card border-border hover:border-primary/40 hover:bg-primary/5"}`}>
-                          {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-medium">Horas</Label>
-                      <Input type="number" value={form.package_hours} onChange={e => setForm({ ...form, package_hours: e.target.value })} className="h-10 rounded-xl" placeholder="0" />
+                      <Label className="text-xs font-medium">Horas Contratadas</Label>
+                      <Input 
+                        value={form.package_hours} 
+                        onChange={e => setForm({ ...form, package_hours: e.target.value })} 
+                        className="h-10 rounded-xl" 
+                        placeholder="Ex: 10h ou 10h30" 
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium">Valor do Pacote (R$)</Label>
                       <Input type="number" value={form.package_value} onChange={e => setForm({ ...form, package_value: e.target.value })} className="h-10 rounded-xl" placeholder="0,00" />
                     </div>
                   </div>
-                  {packageHours > 0 && packageValue > 0 && (
+                  {packageMinutes > 0 && packageValue > 0 && (
                     <div className="p-3 rounded-xl bg-primary/5 border border-primary/15">
                       <p className="text-xs text-muted-foreground">Valor por hora: <span className="font-bold text-primary text-base">R$ {hourlyRate.toFixed(2)}</span></p>
                     </div>
