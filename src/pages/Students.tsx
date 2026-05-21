@@ -106,6 +106,9 @@ export default function Students() {
     view_hours: true, view_schedule: true, view_history: true,
     view_absences: true, view_financial: false, view_payments: false,
   });
+  const [editingAccessPerms, setEditingAccessPerms] = useState(false);
+  const [editingAccessPassword, setEditingAccessPassword] = useState(false);
+  const [newAccessPassword, setNewAccessPassword] = useState("");
 
   useEffect(() => { if (user) loadAll(); }, [user]);
 
