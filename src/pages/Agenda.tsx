@@ -365,7 +365,7 @@ export default function Agenda() {
                     <Badge variant="outline" className={`text-[10px] h-5 px-2 border shrink-0 ${statusStyle(lesson.status)}`}>{statusLabel(lesson.status)}</Badge>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.time} – {getEndTime(lesson.time, lesson.duration)}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.time} – {calculateEndTime(lesson.time, lesson.duration)}</span>
                     <span className="font-bold text-foreground">{formatHoursDisplay(lesson.duration)}</span>
                     <span className="flex items-center gap-1 capitalize"><MapPin className="h-3.5 w-3.5" /> {lesson.modality}</span>
                   </div>
