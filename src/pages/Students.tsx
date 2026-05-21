@@ -220,12 +220,12 @@ export default function Students() {
       if (editingPackage) {
         const activePkg = getActivePackage(editing.id);
         if (activePkg) {
-          const newHourlyRate = packageHours > 0 && finalValue > 0 ? finalValue / packageHours : 0;
+          const newHourlyRate = packageMinutes > 0 && finalValue > 0 ? finalValue / (packageMinutes / 60) : 0;
           await supabase.from("packages").update({
-            name: `Pacote ${packageHours}h`, hours_total: packageHours,
+            name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageMinutes / 60,
             total_value: finalValue, hourly_rate: Math.round(newHourlyRate * 100) / 100,
           }).eq("id", activePkg.id);
-          await supabase.from("students").update({ hours_contracted: packageHours }).eq("id", editing.id);
+          await supabase.from("students").update({ hours_contracted: packageMinutes / 60 }).eq("id", editing.id);
         }
       }
 
@@ -244,7 +244,7 @@ export default function Students() {
 
       const { data: newPkg } = await supabase.from("packages").insert({
         teacher_id: user!.id, student_id: newStudent.id,
-        name: `Pacote ${packageHours}h`, hours_total: packageHours,
+        name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageHours,
         hours_used: 0, total_value: finalValue,
         hourly_rate: Math.round((finalValue / packageHours) * 100) / 100,
         expires_at: null, status: "ativo",
