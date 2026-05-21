@@ -279,11 +279,6 @@ export default function Agenda() {
     else openNew(format(day, "yyyy-MM-dd"));
   };
 
-  const getEndTime = (time: string, duration: number) => {
-    const [h, m] = (time || "08:00").split(":").map(Number);
-    const endMin = h * 60 + m + duration * 60;
-    return `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(Math.round(endMin % 60)).padStart(2, "0")}`;
-  };
 
   return (
     <div className="space-y-4 animate-fade-in max-w-3xl mx-auto">
