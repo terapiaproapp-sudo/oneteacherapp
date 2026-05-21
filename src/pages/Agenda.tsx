@@ -690,7 +690,6 @@ export default function Agenda() {
               </Button>
             )}
           </div>
-          </div>
         </DialogContent>
       </Dialog>
     </div>
