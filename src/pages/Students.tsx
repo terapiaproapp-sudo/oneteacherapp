@@ -136,17 +136,41 @@ export default function Students() {
       toast({ title: "E-mail e senha são obrigatórios", variant: "destructive" });
       return;
     }
+    if (accessEmail.trim() === "") {
+      toast({ title: "E-mail não pode estar vazio", variant: "destructive" });
+      return;
+    }
     if (accessPassword.length < 6) {
       toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
       return;
     }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(accessEmail)) {
+      toast({ title: "E-mail inválido", variant: "destructive" });
+      return;
+    }
+    
     setAccessLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("create-student-access", {
         body: { student_id: studentId, email: accessEmail, password: accessPassword, student_name: studentName },
       });
-      if (res.error || res.data?.error) throw new Error(res.data?.error || res.error?.message);
+      
+      // Check for errors in the response
+      if (res.error) {
+        const errorMsg = res.error?.message || "Erro ao criar acesso";
+        throw new Error(errorMsg);
+      }
+      
+      if (res.data?.error) {
+        throw new Error(res.data.error);
+      }
+      
+      if (!res.data?.success) {
+        throw new Error("Erro desconhecido ao criar acesso do aluno");
+      }
 
       // Update permissions
       const access = await (supabase.from as any)("student_access")
@@ -156,11 +180,32 @@ export default function Students() {
           .update({ permissions: accessPerms }).eq("id", access.data.id);
       }
 
-      toast({ title: "Acesso do aluno criado com sucesso!" });
-      setAccessEmail(""); setAccessPassword("");
+      const reused = res.data.reused || false;
+      const reactivated = res.data.reactivated || false;
+      
+      let successMsg = res.data.message || "Acesso do aluno criado com sucesso!";
+      if (reactivated) {
+        successMsg = "Acesso do aluno reativado com sucesso!";
+      } else if (reused && !reactivated) {
+        successMsg = "Acesso do aluno já estava ativo.";
+      }
+      
+      toast({ title: successMsg });
+      setAccessEmail(""); 
+      setAccessPassword("");
+      setAccessPerms({
+        view_hours: true,
+        view_schedule: true,
+        view_history: true,
+        view_absences: true,
+        view_financial: false,
+        view_payments: false,
+      });
       loadAll();
     } catch (err: any) {
-      toast({ title: "Erro ao criar acesso", description: err.message, variant: "destructive" });
+      const errorMsg = err.message || "Erro desconhecido ao criar acesso";
+      console.error("Student access error:", err);
+      toast({ title: "Erro ao criar acesso", description: errorMsg, variant: "destructive" });
     }
     setAccessLoading(false);
   };
