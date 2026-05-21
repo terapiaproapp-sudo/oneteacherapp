@@ -293,6 +293,7 @@ export type Database = {
         Row: {
           created_at: string
           email: string | null
+          enrollment_type: string | null
           guardian_name: string | null
           guardian_phone: string | null
           hourly_rate: number | null
@@ -312,6 +313,7 @@ export type Database = {
         Insert: {
           created_at?: string
           email?: string | null
+          enrollment_type?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
           hourly_rate?: number | null
@@ -331,6 +333,7 @@ export type Database = {
         Update: {
           created_at?: string
           email?: string | null
+          enrollment_type?: string | null
           guardian_name?: string | null
           guardian_phone?: string | null
           hourly_rate?: number | null
