@@ -25,9 +25,12 @@ interface Lesson {
   time: string; duration: number; subject: string; status: string;
   notes: string; modality: string; package_id: string | null;
   receipt_url?: string | null;
+  lesson_type: "pacote" | "avulsa";
+  amount?: number;
+  payment_status?: "pendente" | "pago" | "atrasado";
   students?: { name: string; phone?: string };
 }
-interface Student { id: string; name: string; subject: string; modality: string; phone?: string; enrollment_type?: string; }
+interface Student { id: string; name: string; subject: string; modality: string; phone?: string; enrollment_type?: string; hourly_rate?: number; }
 interface StudentPackage { id: string; student_id: string; name: string; hours_total: number; hours_used: number; status: string; total_value: number; }
 
 export default function Agenda() {
@@ -47,6 +50,9 @@ export default function Agenda() {
     student_id: "", date: format(new Date(), "yyyy-MM-dd"),
     time_start: "08:00", time_end: "09:00",
     duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "",
+    lesson_type: "pacote" as "pacote" | "avulsa",
+    amount: "" as string | number,
+    payment_status: "pendente" as "pendente" | "pago" | "atrasado",
     recurrence: "unica" as string, recurrence_days: [] as number[], recurrence_end: "",
   });
 
@@ -57,7 +63,7 @@ export default function Agenda() {
   const loadLessons = async () => {
     const start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd");
     const end = format(endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd") + "T23:59:59";
-    const { data } = await supabase.from("lessons").select("*, students(name, phone)").eq("teacher_id", user!.id).gte("date", start).lte("date", end).order("date").order("time");
+    const { data } = await supabase.from("lessons").select("*, students(name, phone)").eq("teacher_id", user!.id).gte("date", start).lte("date", end).order("date").order("time") as any;
     setLessons(data || []);
   };
 
@@ -179,6 +185,9 @@ export default function Agenda() {
       duration: form.duration, subject: form.subject, status: form.status,
       notes: form.notes, modality: form.modality, teacher_id: user!.id,
       package_id: form.package_id || null,
+      lesson_type: form.lesson_type,
+      amount: form.lesson_type === "avulsa" ? Number(form.amount) || 0 : 0,
+      payment_status: form.lesson_type === "avulsa" ? form.payment_status : "pendente",
     };
 
     if (editing) {
@@ -204,8 +213,9 @@ export default function Agenda() {
     const prevStatus = lesson.status;
     const student = students.find(s => s.id === lesson.student_id);
     const pkg = lesson.package_id ? packages.find(p => p.id === lesson.package_id) : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
+    const isPackageLesson = lesson.lesson_type === "pacote";
 
-    if (pkg && student?.enrollment_type === "pacote") {
+    if (pkg && student?.enrollment_type === "pacote" && isPackageLesson) {
       let hoursChange = 0;
       const deductsHours = newStatus === "concluida" || newStatus === "noshow";
       const prevDeducted = prevStatus === "concluida" || prevStatus === "noshow";
@@ -233,7 +243,7 @@ export default function Agenda() {
   const handleDelete = async (id: string) => {
     const lesson = lessons.find(l => l.id === id);
     if (!lesson || !confirm("Excluir esta aula?")) return;
-   if (lesson.status === "concluida" || lesson.status === "noshow") {
+   if ((lesson.status === "concluida" || lesson.status === "noshow") && lesson.lesson_type === "pacote") {
       const student = students.find(s => s.id === lesson.student_id);
       const pkg = lesson.package_id ? packages.find(p => p.id === lesson.package_id) : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
       if (pkg && student?.enrollment_type === "pacote") {
@@ -259,14 +269,18 @@ export default function Agenda() {
       student_id: lesson.student_id, date: lesson.date?.split("T")[0] || "",
       time_start: lesson.time, time_end: `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(Math.round(endMin % 60)).padStart(2, "0")}`,
       duration: lesson.duration, subject: lesson.subject, status: lesson.status, notes: lesson.notes || "", modality: lesson.modality || "online",
-      package_id: lesson.package_id || "", recurrence: "unica", recurrence_days: [], recurrence_end: "",
+      package_id: lesson.package_id || "", 
+      lesson_type: lesson.lesson_type || "pacote",
+      amount: lesson.amount || "",
+      payment_status: lesson.payment_status || "pendente",
+      recurrence: "unica", recurrence_days: [], recurrence_end: "",
     });
     setDialogOpen(true);
   };
   const openNew = (date?: string) => {
     setEditing(null);
     setShowRecurrencePreview(false);
-    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "", recurrence: "unica", recurrence_days: [], recurrence_end: "" });
+    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "", lesson_type: "pacote", amount: "", payment_status: "pendente", recurrence: "unica", recurrence_days: [], recurrence_end: "" });
     setDialogOpen(true);
   };
 
@@ -334,6 +348,7 @@ export default function Agenda() {
   const statusStyle = (s: string) => ({ agendada: "bg-primary/10 text-primary border-primary/20", concluida: "bg-accent/10 text-accent border-accent/20", cancelada: "bg-destructive/10 text-destructive border-destructive/20", falta: "bg-warning/10 text-warning border-warning/20", remarcada: "bg-info/10 text-info border-info/20", noshow: "bg-destructive/10 text-destructive border-destructive/20" }[s] || "bg-muted text-muted-foreground");
   const statusLabel = (s: string) => ({ agendada: "Agendada", concluida: "Realizada", cancelada: "Cancelada", falta: "Falta", remarcada: "Remarcada", noshow: "No-show" }[s] || s);
   const dotColor = (s: string) => ({ agendada: "bg-primary", concluida: "bg-accent", cancelada: "bg-destructive", falta: "bg-warning", remarcada: "bg-info", noshow: "bg-destructive" }[s] || "bg-muted-foreground");
+
 
   const ms = startOfMonth(currentDate);
   const me = endOfMonth(currentDate);
@@ -421,10 +436,22 @@ export default function Agenda() {
                 <div key={lesson.id} className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold">{lesson.students?.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold">{lesson.students?.name}</p>
+                        <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
+                          {lesson.lesson_type === "avulsa" ? "Avulsa" : "Pacote"}
+                        </Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground">{lesson.subject || "Sem disciplina"}</p>
                     </div>
-                    <Badge variant="outline" className={`text-[10px] h-5 px-2 border shrink-0 ${statusStyle(lesson.status)}`}>{statusLabel(lesson.status)}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className={`text-[10px] h-5 px-2 border shrink-0 ${statusStyle(lesson.status)}`}>{statusLabel(lesson.status)}</Badge>
+                      {lesson.lesson_type === "avulsa" && (
+                        <Badge variant="outline" className={`text-[9px] h-4 px-1.5 border-accent/20 ${lesson.payment_status === "pago" ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"}`}>
+                          {lesson.payment_status === "pago" ? "Pago" : lesson.payment_status === "atrasado" ? "Atrasado" : "Pendente"}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.time} – {calculateEndTime(lesson.time, lesson.duration)}</span>
@@ -514,12 +541,46 @@ export default function Agenda() {
               <Select value={form.student_id} onValueChange={v => {
                 const st = students.find(s => s.id === v);
                 const stPkgs = getStudentPackages(v);
-                setForm({ ...form, student_id: v, subject: st?.subject || form.subject, modality: st?.modality || form.modality, package_id: stPkgs.length > 0 ? stPkgs[0].id : "" });
+                setForm({ ...form, student_id: v, subject: st?.subject || form.subject, modality: st?.modality || form.modality, package_id: stPkgs.length > 0 ? stPkgs[0].id : "", amount: st?.hourly_rate || "" });
               }}>
                 <SelectTrigger className="h-10 rounded-xl"><SelectValue placeholder="Selecione o aluno" /></SelectTrigger>
                 <SelectContent>{students.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Tipo de aula *</Label>
+              <Select value={form.lesson_type} onValueChange={(v: "pacote" | "avulsa") => setForm({ ...form, lesson_type: v })}>
+                <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pacote">Consumir do pacote</SelectItem>
+                  <SelectItem value="avulsa">Aula avulsa / pagamento à parte</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {form.lesson_type === "avulsa" && (
+              <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-accent/5 border border-accent/20">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Valor da aula</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                    <Input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="h-10 pl-8 rounded-xl" placeholder="0,00" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Status Pagamento</Label>
+                  <Select value={form.payment_status} onValueChange={(v: "pendente" | "pago" | "atrasado") => setForm({ ...form, payment_status: v })}>
+                    <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="pago">Pago</SelectItem>
+                      <SelectItem value="atrasado">Em atraso</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             {form.student_id && selectedStudentInfo && selectedStudentInfo.total > 0 && (
               <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 space-y-2">
