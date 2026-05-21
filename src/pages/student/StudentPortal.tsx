@@ -306,8 +306,18 @@ export default function StudentPortal() {
                   <div key={l.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/20 border border-border/20">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(l.status)}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy (EEE)", { locale: ptBR })}</p>
-                      <p className="text-[11px] text-muted-foreground">{l.time} · {formatHoursDisplay(l.duration)} · {l.subject || ""}</p>
+                      <p className="text-xs font-semibold mb-1.5">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy (EEE)", { locale: ptBR })}</p>
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground/70">Horário:</span> {l.time} às {calculateEndTime(l.time, l.duration)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground/70">Duração:</span> {formatHoursDisplay(l.duration)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground/70">Disciplina:</span> {l.subject || student?.subject || "Aula"}
+                        </p>
+                      </div>
                     </div>
                     <Badge variant="outline" className={`text-[10px] shrink-0 ${statusStyle(l.status)}`}>{statusLabel(l.status)}</Badge>
                   </div>
