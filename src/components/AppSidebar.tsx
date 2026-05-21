@@ -30,20 +30,41 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const { signOut, user, role } = useAuth();
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Bom dia";
+    if (hour >= 12 && hour < 18) return "Boa tarde";
+    return "Boa noite";
+  };
+
+  const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "Professor";
+
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 h-14 border-b border-sidebar-border shrink-0">
-          {!collapsed && (
-            <img src={logo} alt="OneTeacher" className="h-7 object-contain brightness-0 invert opacity-90" />
-          )}
-          {collapsed && (
-            <div className="w-8 h-8 rounded-lg bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary font-bold text-xs">
-              OT
+        {/* User Greeting Area */}
+        <div className="flex flex-col justify-center px-4 h-24 border-b border-sidebar-border shrink-0 transition-all duration-300 overflow-hidden">
+          {!collapsed ? (
+            <div className="animate-fade-in">
+              <p className="text-xs font-medium text-sidebar-foreground/60 mb-0.5">
+                {getGreeting()},
+              </p>
+              <h2 className="text-lg font-bold text-sidebar-foreground leading-tight truncate">
+                {firstName}
+              </h2>
+              <p className="text-[10px] text-primary/80 mt-1 font-medium bg-primary/10 px-2 py-0.5 rounded-full inline-block">
+                Seu painel de aulas
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center w-full">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                {firstName.charAt(0)}
+              </div>
             </div>
           )}
         </div>
+
 
         <SidebarGroup className="mt-2">
           <SidebarGroupContent>
@@ -82,9 +103,16 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border">
-        {!collapsed && user && (
-          <p className="px-4 py-2 text-[11px] text-sidebar-foreground/50 truncate">{user.email}</p>
+      <SidebarFooter className="border-t border-sidebar-border py-4">
+        {!collapsed && (
+          <div className="px-4 mb-4 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <img src={logo} alt="OneTeacher" className="h-4 object-contain brightness-0 invert opacity-30" />
+            </div>
+            {user && (
+              <p className="text-[10px] text-sidebar-foreground/40 truncate font-medium">{user.email}</p>
+            )}
+          </div>
         )}
         <SidebarMenu>
           <SidebarMenuItem>
