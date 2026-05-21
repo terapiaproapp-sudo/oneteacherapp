@@ -670,6 +670,7 @@ export default function Agenda() {
                 )}
               </div>
             )}
+          </div>
 
           <div className="space-y-1.5 mt-4">
             <Label className="text-xs font-medium">Observações</Label>
