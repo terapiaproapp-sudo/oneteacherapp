@@ -418,7 +418,33 @@ export default function Students() {
       .eq("student_id", studentId)
       .order("date", { ascending: false })
       .order("time", { ascending: false });
-    setStudentLessons(data || []);
+    
+    const lessons = data || [];
+    setStudentLessons(lessons);
+
+    const summary = lessons.reduce((acc, l) => {
+      if (l.lesson_type === "avulsa") {
+        acc.avulsaCount++;
+        const amount = Number(l.amount) || 0;
+        if (l.payment_status === "pago") {
+          acc.avulsaPaid += amount;
+        } else {
+          acc.avulsaPending += amount;
+        }
+      } else {
+        if (l.status === "concluida" || l.status === "noshow") {
+          acc.packageHoursConsumed += Number(l.duration) || 0;
+        }
+      }
+      return acc;
+    }, {
+      packageHoursConsumed: 0,
+      avulsaCount: 0,
+      avulsaPaid: 0,
+      avulsaPending: 0
+    });
+    
+    setStudentLessonsSummary(summary);
   };
 
   const openSummary = (student: Student) => {
