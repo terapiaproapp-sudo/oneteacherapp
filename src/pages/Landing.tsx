@@ -1,19 +1,19 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Users, CalendarDays, DollarSign, Clock, Zap, Percent, Check,
   ChevronRight, Shield, Smartphone, ArrowRight, Star, BarChart3, Package
 } from "lucide-react";
 import logo from "@/assets/logo-oneteacher.png";
 
-const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } } };
+const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
 const stagger = { visible: { transition: { staggerChildren: 0.12 } } };
 
 const features = [
@@ -309,7 +309,7 @@ export default function Landing() {
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">Crie sua conta gratuita</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">10 dias grátis. Sem cartão de crédito.</DialogDescription>
+            <p className="text-xs text-muted-foreground">10 dias grátis. Sem cartão de crédito.</p>
           </DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="space-y-1.5">
