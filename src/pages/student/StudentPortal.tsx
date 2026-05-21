@@ -166,7 +166,7 @@ export default function StudentPortal() {
     if (isToday(d)) dynamicMsg = `Você tem aula hoje às ${nextLesson.time} 📚`;
     else if (isTomorrow(d)) dynamicMsg = `Você tem aula amanhã às ${nextLesson.time} 📚`;
     else dynamicMsg = `Próxima aula: ${format(d, "dd/MM (EEE)", { locale: ptBR })} às ${nextLesson.time}`;
-  } else if (remaining > 0) {
+  } else if (student.enrollment_type === "pacote" && remaining > 0) {
     dynamicMsg = `Faltam ${formatHoursDisplay(remaining)} para finalizar seu pacote`;
   }
 
