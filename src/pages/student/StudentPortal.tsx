@@ -282,7 +282,9 @@ export default function StudentPortal() {
               <div key={l.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30">
                 <div>
                   <p className="text-sm font-semibold">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy (EEE)", { locale: ptBR })}</p>
-                  <p className="text-xs text-muted-foreground">{l.time} · {formatHoursDisplay(l.duration)} · {l.subject || "Aula"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {l.time} — {calculateEndTime(l.time, l.duration)} · {formatHoursDisplay(l.duration)} · {l.subject || student?.subject || "Aula"}
+                  </p>
                 </div>
                 <Badge variant="outline" className={`text-[10px] ${statusStyle(l.status)}`}>{statusLabel(l.status)}</Badge>
               </div>
