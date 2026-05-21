@@ -18,7 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatHoursDisplay } from "@/lib/formatMinutes";
+import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 
 interface Lesson {
   id: string; student_id: string; teacher_id: string; date: string;
@@ -279,11 +279,6 @@ export default function Agenda() {
     else openNew(format(day, "yyyy-MM-dd"));
   };
 
-  const getEndTime = (time: string, duration: number) => {
-    const [h, m] = (time || "08:00").split(":").map(Number);
-    const endMin = h * 60 + m + duration * 60;
-    return `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(Math.round(endMin % 60)).padStart(2, "0")}`;
-  };
 
   return (
     <div className="space-y-4 animate-fade-in max-w-3xl mx-auto">
@@ -365,7 +360,7 @@ export default function Agenda() {
                     <Badge variant="outline" className={`text-[10px] h-5 px-2 border shrink-0 ${statusStyle(lesson.status)}`}>{statusLabel(lesson.status)}</Badge>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.time} – {getEndTime(lesson.time, lesson.duration)}</span>
+                    <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {lesson.time} – {calculateEndTime(lesson.time, lesson.duration)}</span>
                     <span className="font-bold text-foreground">{formatHoursDisplay(lesson.duration)}</span>
                     <span className="flex items-center gap-1 capitalize"><MapPin className="h-3.5 w-3.5" /> {lesson.modality}</span>
                   </div>

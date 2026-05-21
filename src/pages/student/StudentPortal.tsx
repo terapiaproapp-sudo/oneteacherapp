@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { formatHoursDisplay } from "@/lib/formatMinutes";
+import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 import {
   Clock, Calendar, BookOpen, Package, Check, X, UserX,
   MessageCircle, AlertTriangle, CreditCard, TrendingUp,
@@ -203,10 +203,19 @@ export default function StudentPortal() {
             <p className="text-lg font-bold">
               {format(new Date(nextLesson.date + "T12:00:00"), "dd 'de' MMMM (EEEE)", { locale: ptBR })}
             </p>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
-              <span>🕐 {nextLesson.time}</span>
-              <span>📖 {nextLesson.subject || student.subject || "Aula"}</span>
-              <span>⏱ {formatHoursDisplay(nextLesson.duration)}</span>
+            <div className="text-sm text-muted-foreground mt-2 space-y-1">
+              <p className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5" /> 
+                <span className="font-medium text-foreground/80">Horário:</span> {nextLesson.time} às {calculateEndTime(nextLesson.time, nextLesson.duration)}
+              </p>
+              <p className="flex items-center gap-2">
+                <BookOpen className="h-3.5 w-3.5" /> 
+                <span className="font-medium text-foreground/80">Disciplina:</span> {nextLesson.subject || student?.subject || "Aula"}
+              </p>
+              <p className="flex items-center gap-2">
+                <Package className="h-3.5 w-3.5" /> 
+                <span className="font-medium text-foreground/80">Duração:</span> {formatHoursDisplay(nextLesson.duration)}
+              </p>
             </div>
             <Badge variant="outline" className={`text-[10px] mt-1 ${statusStyle(nextLesson.status)}`}>{statusLabel(nextLesson.status)}</Badge>
           </CardContent>
@@ -273,7 +282,9 @@ export default function StudentPortal() {
               <div key={l.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30">
                 <div>
                   <p className="text-sm font-semibold">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy (EEE)", { locale: ptBR })}</p>
-                  <p className="text-xs text-muted-foreground">{l.time} · {formatHoursDisplay(l.duration)} · {l.subject || "Aula"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {l.time} — {calculateEndTime(l.time, l.duration)} · {formatHoursDisplay(l.duration)} · {l.subject || student?.subject || "Aula"}
+                  </p>
                 </div>
                 <Badge variant="outline" className={`text-[10px] ${statusStyle(l.status)}`}>{statusLabel(l.status)}</Badge>
               </div>
@@ -295,8 +306,18 @@ export default function StudentPortal() {
                   <div key={l.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/20 border border-border/20">
                     <span className={`w-2 h-2 rounded-full shrink-0 ${statusDot(l.status)}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy (EEE)", { locale: ptBR })}</p>
-                      <p className="text-[11px] text-muted-foreground">{l.time} · {formatHoursDisplay(l.duration)} · {l.subject || ""}</p>
+                      <p className="text-xs font-semibold mb-1.5">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy (EEE)", { locale: ptBR })}</p>
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground/70">Horário:</span> {l.time} às {calculateEndTime(l.time, l.duration)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground/70">Duração:</span> {formatHoursDisplay(l.duration)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          <span className="font-medium text-foreground/70">Disciplina:</span> {l.subject || student?.subject || "Aula"}
+                        </p>
+                      </div>
                     </div>
                     <Badge variant="outline" className={`text-[10px] shrink-0 ${statusStyle(l.status)}`}>{statusLabel(l.status)}</Badge>
                   </div>

@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil, KeyRound, ShieldCheck, ShieldOff, Loader2, FileText, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
-import { formatHoursDisplay } from "@/lib/formatMinutes";
+import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 
 interface StudentAccessRecord {
   id: string;
@@ -425,14 +425,6 @@ export default function Students() {
     }
   };
 
-  const calculateEndTime = (startTime: string, durationHours: number) => {
-    if (!startTime) return "";
-    const [hours, minutes] = startTime.split(":").map(Number);
-    const totalMinutes = hours * 60 + minutes + Math.round(durationHours * 60);
-    const endHours = Math.floor(totalMinutes / 60) % 24;
-    const endMinutes = totalMinutes % 60;
-    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
-  };
 
   const statusBadge = (s: string) =>
     s === "ativo" ? "bg-accent/10 text-accent border-accent/30" :
