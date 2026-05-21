@@ -106,6 +106,9 @@ export default function Students() {
     view_hours: true, view_schedule: true, view_history: true,
     view_absences: true, view_financial: false, view_payments: false,
   });
+  const [editingAccessPerms, setEditingAccessPerms] = useState(false);
+  const [editingAccessPassword, setEditingAccessPassword] = useState(false);
+  const [newAccessPassword, setNewAccessPassword] = useState("");
 
   useEffect(() => { if (user) loadAll(); }, [user]);
 
@@ -136,17 +139,41 @@ export default function Students() {
       toast({ title: "E-mail e senha são obrigatórios", variant: "destructive" });
       return;
     }
+    if (accessEmail.trim() === "") {
+      toast({ title: "E-mail não pode estar vazio", variant: "destructive" });
+      return;
+    }
     if (accessPassword.length < 6) {
       toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
       return;
     }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(accessEmail)) {
+      toast({ title: "E-mail inválido", variant: "destructive" });
+      return;
+    }
+    
     setAccessLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const res = await supabase.functions.invoke("create-student-access", {
         body: { student_id: studentId, email: accessEmail, password: accessPassword, student_name: studentName },
       });
-      if (res.error || res.data?.error) throw new Error(res.data?.error || res.error?.message);
+      
+      // Check for errors in the response
+      if (res.error) {
+        const errorMsg = res.error?.message || "Erro ao criar acesso";
+        throw new Error(errorMsg);
+      }
+      
+      if (res.data?.error) {
+        throw new Error(res.data.error);
+      }
+      
+      if (!res.data?.success) {
+        throw new Error("Erro desconhecido ao criar acesso do aluno");
+      }
 
       // Update permissions
       const access = await (supabase.from as any)("student_access")
@@ -156,11 +183,32 @@ export default function Students() {
           .update({ permissions: accessPerms }).eq("id", access.data.id);
       }
 
-      toast({ title: "Acesso do aluno criado com sucesso!" });
-      setAccessEmail(""); setAccessPassword("");
+      const reused = res.data.reused || false;
+      const reactivated = res.data.reactivated || false;
+      
+      let successMsg = res.data.message || "Acesso do aluno criado com sucesso!";
+      if (reactivated) {
+        successMsg = "Acesso do aluno reativado com sucesso!";
+      } else if (reused && !reactivated) {
+        successMsg = "Acesso do aluno já estava ativo.";
+      }
+      
+      toast({ title: successMsg });
+      setAccessEmail(""); 
+      setAccessPassword("");
+      setAccessPerms({
+        view_hours: true,
+        view_schedule: true,
+        view_history: true,
+        view_absences: true,
+        view_financial: false,
+        view_payments: false,
+      });
       loadAll();
     } catch (err: any) {
-      toast({ title: "Erro ao criar acesso", description: err.message, variant: "destructive" });
+      const errorMsg = err.message || "Erro desconhecido ao criar acesso";
+      console.error("Student access error:", err);
+      toast({ title: "Erro ao criar acesso", description: errorMsg, variant: "destructive" });
     }
     setAccessLoading(false);
   };
@@ -180,7 +228,38 @@ export default function Students() {
     await (supabase.from as any)("student_access")
       .update({ permissions: perms }).eq("id", record.id);
     toast({ title: "Permissões atualizadas" });
+    setEditingAccessPerms(false);
     loadAll();
+  };
+
+  const resetStudentPassword = async (userId: string) => {
+    if (!newAccessPassword) {
+      toast({ title: "Nova senha é obrigatória", variant: "destructive" });
+      return;
+    }
+    if (newAccessPassword.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
+      return;
+    }
+    
+    setAccessLoading(true);
+    try {
+      const res = await supabase.functions.invoke("reset-student-password", {
+        body: { user_id: userId, new_password: newAccessPassword },
+      });
+      
+      if (res.error || res.data?.error) {
+        throw new Error(res.data?.error || res.error?.message || "Erro ao redefinir senha");
+      }
+      
+      toast({ title: "Senha redefinida com sucesso" });
+      setNewAccessPassword("");
+      setEditingAccessPassword(false);
+      loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro ao redefinir senha", description: err.message, variant: "destructive" });
+    }
+    setAccessLoading(false);
   };
 
   const packageValue = numVal(form.package_value);
@@ -724,28 +803,107 @@ export default function Students() {
                             {access.is_active ? "Ativo" : "Desativado"}
                           </Badge>
                         </div>
-                        <div className="space-y-2">
-                          {permLabels.map(p => (
-                            <div key={p.key} className="flex items-center justify-between py-1">
-                              <span className="text-xs">{p.label}</span>
-                              <Switch
-                                checked={!!perms[p.key]}
-                                onCheckedChange={(checked) => {
-                                  const newPerms = { ...perms, [p.key]: checked };
-                                  updatePermissions(detailStudent.id, newPerms);
-                                }}
-                              />
-                            </div>
-                          ))}
+                        
+                        {/* Email do Acesso */}
+                        <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">E-mail de Acesso</p>
+                          <p className="text-sm font-medium text-foreground break-all">{access.id === "" ? "—" : "***@***.com"}</p>
                         </div>
-                        <Button
-                          variant={access.is_active ? "destructive" : "default"}
-                          size="sm"
-                          className="w-full h-9 rounded-xl text-xs gap-1"
-                          onClick={() => toggleStudentAccess(detailStudent.id, !access.is_active)}
-                        >
-                          {access.is_active ? <><ShieldOff className="h-3.5 w-3.5" /> Desativar Acesso</> : <><ShieldCheck className="h-3.5 w-3.5" /> Reativar Acesso</>}
-                        </Button>
+                        
+                        {!editingAccessPerms && (
+                          <div className="space-y-2">
+                            {permLabels.slice(0, 3).map(p => (
+                              <div key={p.key} className="flex items-center justify-between py-1">
+                                <span className="text-xs">{p.label}</span>
+                                <div className="h-4 w-4 rounded border border-border flex items-center justify-center">
+                                  {!!perms[p.key] && <div className="h-2.5 w-2.5 bg-accent rounded-sm" />}
+                                </div>
+                              </div>
+                            ))}
+                            <button 
+                              onClick={() => setEditingAccessPerms(!editingAccessPerms)}
+                              className="text-[11px] text-accent hover:text-accent/80 font-medium mt-2"
+                            >
+                              Ver todas as permissões →
+                            </button>
+                          </div>
+                        )}
+                        
+                        {editingAccessPerms && (
+                          <div className="space-y-2 p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                            {permLabels.map(p => (
+                              <div key={p.key} className="flex items-center justify-between py-1">
+                                <span className="text-xs">{p.label}</span>
+                                <Switch
+                                  checked={!!perms[p.key]}
+                                  onCheckedChange={(checked) => {
+                                    const newPerms = { ...perms, [p.key]: checked };
+                                    updatePermissions(detailStudent.id, newPerms);
+                                  }}
+                                  disabled={accessLoading}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {editingAccessPassword && (
+                          <div className="space-y-2 p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                            <Input
+                              type="password"
+                              placeholder="Nova senha (mín. 6 caracteres)"
+                              value={newAccessPassword}
+                              onChange={e => setNewAccessPassword(e.target.value)}
+                              className="h-8 rounded-lg text-sm"
+                              disabled={accessLoading}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="flex-1 h-8 rounded-lg text-xs"
+                                disabled={accessLoading || newAccessPassword.length < 6}
+                                onClick={() => resetStudentPassword(access.user_id)}
+                              >
+                                {accessLoading ? <><Loader2 className="h-3 w-3 animate-spin" /> Redefinindo...</> : "Redefinir"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 h-8 rounded-lg text-xs"
+                                disabled={accessLoading}
+                                onClick={() => {
+                                  setEditingAccessPassword(false);
+                                  setNewAccessPassword("");
+                                }}
+                              >
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex flex-col gap-2 pt-2">
+                          {!editingAccessPassword && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full h-9 rounded-xl text-xs gap-1"
+                              disabled={accessLoading}
+                              onClick={() => setEditingAccessPassword(!editingAccessPassword)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> Redefinir Senha
+                            </Button>
+                          )}
+                          <Button
+                            variant={access.is_active ? "destructive" : "default"}
+                            size="sm"
+                            className="w-full h-9 rounded-xl text-xs gap-1"
+                            disabled={accessLoading}
+                            onClick={() => toggleStudentAccess(detailStudent.id, !access.is_active)}
+                          >
+                            {access.is_active ? <><ShieldOff className="h-3.5 w-3.5" /> Desativar Acesso</> : <><ShieldCheck className="h-3.5 w-3.5" /> Reativar Acesso</>}
+                          </Button>
+                        </div>
                       </div>
                     );
                   }
