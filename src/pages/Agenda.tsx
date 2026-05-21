@@ -27,7 +27,7 @@ interface Lesson {
   receipt_url?: string | null;
   students?: { name: string; phone?: string };
 }
-interface Student { id: string; name: string; subject: string; modality: string; phone?: string; }
+interface Student { id: string; name: string; subject: string; modality: string; phone?: string; enrollment_type?: string; }
 interface StudentPackage { id: string; student_id: string; name: string; hours_total: number; hours_used: number; status: string; total_value: number; }
 
 export default function Agenda() {
@@ -52,7 +52,7 @@ export default function Agenda() {
 
   useEffect(() => { if (user) { loadLessons(); loadStudents(); loadPackages(); } }, [user, currentDate]);
 
-  const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality,phone").eq("teacher_id", user!.id).order("name"); setStudents(data || []); };
+  const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality,phone,enrollment_type").eq("teacher_id", user!.id).order("name"); setStudents(data || []); };
   const loadPackages = async () => { const { data } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).eq("status", "ativo"); setPackages(data || []); };
   const loadLessons = async () => {
     const start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd");
@@ -138,9 +138,10 @@ export default function Agenda() {
     const lesson = lessons.find(l => l.id === id);
     if (!lesson) return;
     const prevStatus = lesson.status;
+    const student = students.find(s => s.id === lesson.student_id);
     const pkg = lesson.package_id ? packages.find(p => p.id === lesson.package_id) : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
 
-    if (pkg) {
+    if (pkg && student?.enrollment_type === "pacote") {
       let hoursChange = 0;
       const deductsHours = newStatus === "concluida" || newStatus === "noshow";
       const prevDeducted = prevStatus === "concluida" || prevStatus === "noshow";
@@ -169,8 +170,9 @@ export default function Agenda() {
     const lesson = lessons.find(l => l.id === id);
     if (!lesson || !confirm("Excluir esta aula?")) return;
    if (lesson.status === "concluida" || lesson.status === "noshow") {
+      const student = students.find(s => s.id === lesson.student_id);
       const pkg = lesson.package_id ? packages.find(p => p.id === lesson.package_id) : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
-      if (pkg) {
+      if (pkg && student?.enrollment_type === "pacote") {
         const newUsed = Math.max(0, pkg.hours_used - lesson.duration);
         await supabase.from("packages").update({ hours_used: newUsed, status: newUsed < pkg.hours_total ? "ativo" : "concluido" }).eq("id", pkg.id);
         // Also sync student hours_remaining

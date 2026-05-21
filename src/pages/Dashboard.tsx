@@ -39,7 +39,7 @@ export default function Dashboard() {
     const pending = payments.filter((p: any) => p.status === "pendente").reduce((s: number, p: any) => s + (p.amount || 0), 0);
     const overdue = payments.filter((p: any) => p.status === "pendente" && p.due_date < today).reduce((s: number, p: any) => s + (p.amount || 0), 0);
     const totalHoursSold = pkgs.reduce((s: number, p: any) => s + (p.hours_total || 0), 0);
-    const totalHoursRemaining = pkgs.filter((p: any) => p.status === "ativo").reduce((s: number, p: any) => s + ((p.hours_total || 0) - (p.hours_used || 0)), 0);
+    const totalHoursRemaining = pkgs.filter((p: any) => p.status === "ativo" && students.find(s => s.id === p.student_id)?.enrollment_type === "pacote").reduce((s: number, p: any) => s + ((p.hours_total || 0) - (p.hours_used || 0)), 0);
     const lowHoursPkgs = pkgs.filter((p: any) => p.status === "ativo" && (p.hours_total - p.hours_used) <= 2 && (p.hours_total - p.hours_used) > 0);
 
     const alertsList: Alert[] = [];
