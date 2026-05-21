@@ -37,7 +37,7 @@ interface Student {
   guardian_name: string; guardian_phone: string; subject: string;
   lesson_content: string; modality: string; hourly_rate: number;
   notes: string; status: string; hours_contracted: number;
-  hours_remaining: number; teacher_id: string;
+  hours_remaining: number; teacher_id: string; enrollment_type: string;
 }
 interface StudentPackage {
   id: string; student_id: string; teacher_id: string; name: string;
@@ -73,11 +73,12 @@ const formatMinutesToHoursInput = (minutes: number): string => {
 
 const emptyForm = {
   name: "", phone: "", email: "", subject: "", modality: "online",
-  notes: "", status: "ativo",
+  notes: "", status: "ativo", enrollment_type: "pacote",
   package_hours: "" as string | number, package_value: "" as string | number,
   payment_method: "avista", installments: "" as string | number,
   payment_date: format(new Date(), "yyyy-MM-dd"),
   discount_percent: "" as string | number,
+  hourly_rate: "" as string | number,
 };
 
 export default function Students() {
@@ -284,13 +285,14 @@ export default function Students() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
-    if (!editing && packageMinutes <= 0) { toast({ title: "Informe a quantidade de horas", variant: "destructive" }); return; }
 
     const studentData = {
       name: form.name, phone: form.phone, email: form.email,
       subject: form.subject, modality: form.modality, notes: form.notes,
       status: form.status, guardian_name: "", guardian_phone: "",
-      lesson_content: "", hourly_rate: hourlyRate,
+      lesson_content: "", 
+      enrollment_type: form.enrollment_type,
+      hourly_rate: form.enrollment_type === "avulsa" ? numVal(form.hourly_rate) : hourlyRate,
     };
 
     if (editing) {
@@ -317,19 +319,21 @@ export default function Students() {
       toast({ title: "Aluno atualizado!" });
     } else {
       const { data: newStudent, error } = await supabase.from("students")
-        .insert({ ...studentData, teacher_id: user!.id, hours_contracted: packageHours, hours_remaining: packageHours })
+        .insert({ ...studentData, teacher_id: user!.id, hours_contracted: form.enrollment_type === "pacote" ? packageHours : 0, hours_remaining: form.enrollment_type === "pacote" ? packageHours : 0 })
         .select().single();
       if (error || !newStudent) { toast({ title: "Erro", description: error?.message, variant: "destructive" }); return; }
 
-      const { data: newPkg } = await supabase.from("packages").insert({
-        teacher_id: user!.id, student_id: newStudent.id,
-        name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageHours,
-        hours_used: 0, total_value: finalValue,
-        hourly_rate: Math.round((finalValue / packageHours) * 100) / 100,
-        expires_at: null, status: "ativo",
-      }).select().single();
+      if (form.enrollment_type === "pacote" && packageMinutes > 0) {
+        const { data: newPkg } = await supabase.from("packages").insert({
+          teacher_id: user!.id, student_id: newStudent.id,
+          name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageHours,
+          hours_used: 0, total_value: finalValue,
+          hourly_rate: Math.round((finalValue / packageHours) * 100) / 100,
+          expires_at: null, status: "ativo",
+        }).select().single();
 
-      if (finalValue > 0) await createPayments(newStudent.id, newPkg?.id || null);
+        if (finalValue > 0) await createPayments(newStudent.id, newPkg?.id || null);
+      }
       toast({ title: "Aluno cadastrado com sucesso!" });
     }
     setDialogOpen(false); setEditing(null); setEditingPackage(false); setEditingFinancial(false); setForm(emptyForm); loadAll();
@@ -368,6 +372,8 @@ export default function Students() {
     setForm({
       name: student.name, phone: student.phone, email: student.email,
       subject: student.subject, modality: student.modality, notes: student.notes, status: student.status,
+      enrollment_type: student.enrollment_type || "pacote",
+      hourly_rate: student.enrollment_type === "avulsa" ? student.hourly_rate : "",
       package_hours: activePkg ? formatMinutesToHoursInput(activePkg.hours_total * 60) : "",
       package_value: activePkg?.total_value || "",
       payment_method: stuPayments[0]?.payment_method || "avista",
@@ -431,8 +437,8 @@ export default function Students() {
     s === "pausado" ? "bg-warning/10 text-warning border-warning/30" :
     "bg-muted text-muted-foreground border-border";
 
-  const showPackageFields = !editing || editingPackage;
-  const showPaymentFields = (!editing || editingFinancial) && finalValue > 0;
+  const showPackageFields = (!editing || editingPackage) && form.enrollment_type === "pacote";
+  const showPaymentFields = (!editing || editingFinancial) && finalValue > 0 && form.enrollment_type === "pacote";
 
   return (
     <div className="space-y-5 animate-fade-in max-w-6xl">
@@ -486,6 +492,29 @@ export default function Students() {
                     </Select>
                   </div>
                 </div>
+              </fieldset>
+
+              {/* Enrollment Type */}
+              <fieldset className="space-y-3">
+                <legend className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Tipo de Contratação</legend>
+                <div className="space-y-1.5">
+                  <Select value={form.enrollment_type} onValueChange={v => setForm({ ...form, enrollment_type: v })}>
+                    <SelectTrigger className="h-10 rounded-xl">
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pacote">Pacote de horas</SelectItem>
+                      <SelectItem value="avulsa">Aula avulsa</SelectItem>
+                      <SelectItem value="sem_pacote">Sem pacote definido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.enrollment_type === "avulsa" && (
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                    <Label className="text-xs font-medium">Valor da Aula Avulsa (R$)</Label>
+                    <Input type="number" value={form.hourly_rate} onChange={e => setForm({ ...form, hourly_rate: e.target.value })} className="h-10 rounded-xl" placeholder="0,00" />
+                  </div>
+                )}
               </fieldset>
 
               {/* Package Section */}
@@ -717,7 +746,7 @@ export default function Students() {
                   <div><p className="text-[11px] text-muted-foreground uppercase tracking-wider">E-mail</p><p className="font-semibold">{detailStudent.email || "—"}</p></div>
                 </div>
 
-                {activePkg && (
+                {detailStudent.enrollment_type === "pacote" && activePkg && (
                   <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 space-y-3">
                     <h3 className="text-[11px] font-bold text-primary uppercase tracking-widest">Resumo do Pacote</h3>
                     <div className="grid grid-cols-2 gap-3 text-sm">
@@ -735,6 +764,22 @@ export default function Students() {
                       </div>
                       <Progress value={info.percentage} className="h-2.5" />
                     </div>
+                  </div>
+                )}
+
+                {detailStudent.enrollment_type === "avulsa" && (
+                  <div className="p-4 rounded-xl bg-accent/5 border border-accent/15 space-y-2">
+                    <h3 className="text-[11px] font-bold text-accent uppercase tracking-widest">Aula Avulsa</h3>
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm">Valor por aula:</p>
+                      <p className="text-lg font-bold text-accent">R$ {(detailStudent.hourly_rate || 0).toFixed(2)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {detailStudent.enrollment_type === "sem_pacote" && (
+                  <div className="p-4 rounded-xl bg-muted border border-border/40 text-center">
+                    <p className="text-sm font-medium text-muted-foreground italic">Nenhum pacote definido</p>
                   </div>
                 )}
 
@@ -974,25 +1019,47 @@ export default function Students() {
                 {/* Metrics Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Contratadas</p>
-                    <p className="text-lg font-bold text-primary">{formatHoursDisplay(info.totalHours)}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Tipo</p>
+                    <p className="text-sm font-bold capitalize">
+                      {summaryStudent.enrollment_type === "pacote" ? "Pacote de horas" : 
+                       summaryStudent.enrollment_type === "avulsa" ? "Aula avulsa" : "Sem pacote"}
+                    </p>
                   </div>
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumidas</p>
-                    <p className="text-lg font-bold text-green-600">{formatHoursDisplay(info.usedHours)}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Em Aberto</p>
-                    <p className="text-lg font-bold text-accent">{formatHoursDisplay(info.remaining)}</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Uso</p>
-                    <p className="text-lg font-bold">{info.percentage}%</p>
-                  </div>
+                  {summaryStudent.enrollment_type === "pacote" ? (
+                    <>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Contratadas</p>
+                        <p className="text-lg font-bold text-primary">{formatHoursDisplay(info.totalHours)}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumidas</p>
+                        <p className="text-lg font-bold text-green-600">{formatHoursDisplay(info.usedHours)}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Em Aberto</p>
+                        <p className="text-lg font-bold text-accent">{formatHoursDisplay(info.remaining)}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Valor/Aula</p>
+                        <p className="text-lg font-bold text-primary">R$ {(summaryStudent.hourly_rate || 0).toFixed(2)}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Realizadas</p>
+                        <p className="text-lg font-bold text-green-600">{studentLessons.filter(l => l.status === "concluida").length}</p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Status</p>
+                        <p className="text-sm font-bold uppercase">{summaryStudent.status}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Package Progress */}
-                {activePkg && (
+                {summaryStudent.enrollment_type === "pacote" && activePkg && (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">

@@ -18,7 +18,7 @@ import { format, differenceInDays, differenceInHours, isToday, isTomorrow, addDa
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
-interface StudentData { id: string; name: string; subject: string; modality: string; }
+interface StudentData { id: string; name: string; subject: string; modality: string; enrollment_type?: string; hourly_rate?: number; }
 interface PackageData { id: string; hours_total: number; hours_used: number; name: string; total_value: number; status: string; }
 interface LessonData { id: string; date: string; time: string; duration: number; status: string; subject: string; }
 interface PaymentData { id: string; amount: number; due_date: string; status: string; installment_number: number | null; total_installments: number | null; }
@@ -43,7 +43,7 @@ export default function StudentPortal() {
     if (!studentAccess) return;
     const sid = studentAccess.student_id;
     const [stuRes, pkgRes, lesRes, teacherRes] = await Promise.all([
-      supabase.from("students").select("id,name,subject,modality").eq("id", sid).single(),
+      supabase.from("students").select("id,name,subject,modality,enrollment_type,hourly_rate").eq("id", sid).single(),
       supabase.from("packages").select("*").eq("student_id", sid),
       supabase.from("lessons").select("*").eq("student_id", sid).order("date", { ascending: false }),
       supabase.from("profiles").select("full_name,phone").eq("id", studentAccess.teacher_id).single(),
@@ -166,7 +166,7 @@ export default function StudentPortal() {
     if (isToday(d)) dynamicMsg = `Você tem aula hoje às ${nextLesson.time} 📚`;
     else if (isTomorrow(d)) dynamicMsg = `Você tem aula amanhã às ${nextLesson.time} 📚`;
     else dynamicMsg = `Próxima aula: ${format(d, "dd/MM (EEE)", { locale: ptBR })} às ${nextLesson.time}`;
-  } else if (remaining > 0) {
+  } else if (student.enrollment_type === "pacote" && remaining > 0) {
     dynamicMsg = `Faltam ${formatHoursDisplay(remaining)} para finalizar seu pacote`;
   }
 
@@ -222,28 +222,47 @@ export default function StudentPortal() {
         </Card>
       )}
 
-      {/* Package evolution */}
-      {perms?.view_hours && totalHours > 0 && (
-        <Card className="card-premium">
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-bold text-primary"><Package className="h-4 w-4" /> Meu Pacote</div>
-              {estimatedEnd && <span className="text-[10px] text-muted-foreground">Previsão: {estimatedEnd}</span>}
-            </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div><p className="text-2xl font-bold">{formatHoursDisplay(totalHours)}</p><p className="text-xs text-muted-foreground">Contratadas</p></div>
-              <div><p className="text-2xl font-bold">{formatHoursDisplay(usedHours)}</p><p className="text-xs text-muted-foreground">Utilizadas</p></div>
-              <div><p className={`text-2xl font-bold ${remaining <= 2 ? "text-destructive" : "text-accent"}`}>{formatHoursDisplay(remaining)}</p><p className="text-xs text-muted-foreground">Restantes</p></div>
-            </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-muted-foreground"><span>{percentage}% consumido</span><span>{100 - percentage}% restante</span></div>
-              <Progress value={percentage} className="h-2.5" />
-            </div>
-            {remaining > 0 && remaining <= 3 && (
-              <p className="text-[11px] text-warning font-medium text-center">⚠️ Faltam {formatHoursDisplay(remaining)} para finalizar seu pacote</p>
-            )}
-          </CardContent>
-        </Card>
+      {/* Package / Enrollment Info */}
+      {perms?.view_hours && (
+        <>
+          {student.enrollment_type === "pacote" && totalHours > 0 ? (
+            <Card className="card-premium">
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-bold text-primary"><Package className="h-4 w-4" /> Meu Pacote</div>
+                  {estimatedEnd && <span className="text-[10px] text-muted-foreground">Previsão: {estimatedEnd}</span>}
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div><p className="text-2xl font-bold">{formatHoursDisplay(totalHours)}</p><p className="text-xs text-muted-foreground">Contratadas</p></div>
+                  <div><p className="text-2xl font-bold">{formatHoursDisplay(usedHours)}</p><p className="text-xs text-muted-foreground">Utilizadas</p></div>
+                  <div><p className={`text-2xl font-bold ${remaining <= 2 ? "text-destructive" : "text-accent"}`}>{formatHoursDisplay(remaining)}</p><p className="text-xs text-muted-foreground">Restantes</p></div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground"><span>{percentage}% consumido</span><span>{100 - percentage}% restante</span></div>
+                  <Progress value={percentage} className="h-2.5" />
+                </div>
+                {remaining > 0 && remaining <= 3 && (
+                  <p className="text-[11px] text-warning font-medium text-center">⚠️ Faltam {formatHoursDisplay(remaining)} para finalizar seu pacote</p>
+                )}
+              </CardContent>
+            </Card>
+          ) : student.enrollment_type === "avulsa" ? (
+            <Card className="card-premium">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-bold text-accent">
+                  <CreditCard className="h-4 w-4" /> Aula Avulsa
+                </div>
+                <p className="text-lg font-bold text-accent">R$ {(student.hourly_rate || 0).toFixed(2)}/aula</p>
+              </CardContent>
+            </Card>
+          ) : student.enrollment_type === "sem_pacote" ? (
+            <Card className="card-premium">
+              <CardContent className="p-4 text-center">
+                <p className="text-sm font-medium text-muted-foreground italic">Nenhum pacote definido</p>
+              </CardContent>
+            </Card>
+          ) : null}
+        </>
       )}
 
       {/* Student progress / Attendance stats */}
