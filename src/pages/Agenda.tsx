@@ -25,6 +25,9 @@ interface Lesson {
   time: string; duration: number; subject: string; status: string;
   notes: string; modality: string; package_id: string | null;
   receipt_url?: string | null;
+  lesson_type: "pacote" | "avulsa";
+  amount?: number;
+  payment_status?: "pendente" | "pago" | "atrasado";
   students?: { name: string; phone?: string };
 }
 interface Student { id: string; name: string; subject: string; modality: string; phone?: string; enrollment_type?: string; }
@@ -47,6 +50,9 @@ export default function Agenda() {
     student_id: "", date: format(new Date(), "yyyy-MM-dd"),
     time_start: "08:00", time_end: "09:00",
     duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "",
+    lesson_type: "pacote" as "pacote" | "avulsa",
+    amount: "" as string | number,
+    payment_status: "pendente" as "pendente" | "pago" | "atrasado",
     recurrence: "unica" as string, recurrence_days: [] as number[], recurrence_end: "",
   });
 
@@ -179,6 +185,9 @@ export default function Agenda() {
       duration: form.duration, subject: form.subject, status: form.status,
       notes: form.notes, modality: form.modality, teacher_id: user!.id,
       package_id: form.package_id || null,
+      lesson_type: form.lesson_type,
+      amount: form.lesson_type === "avulsa" ? Number(form.amount) || 0 : 0,
+      payment_status: form.lesson_type === "avulsa" ? form.payment_status : "pendente",
     };
 
     if (editing) {
@@ -204,8 +213,9 @@ export default function Agenda() {
     const prevStatus = lesson.status;
     const student = students.find(s => s.id === lesson.student_id);
     const pkg = lesson.package_id ? packages.find(p => p.id === lesson.package_id) : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
+    const isPackageLesson = lesson.lesson_type === "pacote";
 
-    if (pkg && student?.enrollment_type === "pacote") {
+    if (pkg && student?.enrollment_type === "pacote" && isPackageLesson) {
       let hoursChange = 0;
       const deductsHours = newStatus === "concluida" || newStatus === "noshow";
       const prevDeducted = prevStatus === "concluida" || prevStatus === "noshow";
@@ -233,7 +243,7 @@ export default function Agenda() {
   const handleDelete = async (id: string) => {
     const lesson = lessons.find(l => l.id === id);
     if (!lesson || !confirm("Excluir esta aula?")) return;
-   if (lesson.status === "concluida" || lesson.status === "noshow") {
+   if ((lesson.status === "concluida" || lesson.status === "noshow") && lesson.lesson_type === "pacote") {
       const student = students.find(s => s.id === lesson.student_id);
       const pkg = lesson.package_id ? packages.find(p => p.id === lesson.package_id) : packages.find(p => p.student_id === lesson.student_id && p.status === "ativo");
       if (pkg && student?.enrollment_type === "pacote") {
@@ -259,14 +269,18 @@ export default function Agenda() {
       student_id: lesson.student_id, date: lesson.date?.split("T")[0] || "",
       time_start: lesson.time, time_end: `${String(Math.floor(endMin / 60)).padStart(2, "0")}:${String(Math.round(endMin % 60)).padStart(2, "0")}`,
       duration: lesson.duration, subject: lesson.subject, status: lesson.status, notes: lesson.notes || "", modality: lesson.modality || "online",
-      package_id: lesson.package_id || "", recurrence: "unica", recurrence_days: [], recurrence_end: "",
+      package_id: lesson.package_id || "", 
+      lesson_type: lesson.lesson_type || "pacote",
+      amount: lesson.amount || "",
+      payment_status: lesson.payment_status || "pendente",
+      recurrence: "unica", recurrence_days: [], recurrence_end: "",
     });
     setDialogOpen(true);
   };
   const openNew = (date?: string) => {
     setEditing(null);
     setShowRecurrencePreview(false);
-    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "", recurrence: "unica", recurrence_days: [], recurrence_end: "" });
+    setForm({ student_id: "", date: date || format(new Date(), "yyyy-MM-dd"), time_start: "08:00", time_end: "09:00", duration: 1, subject: "", status: "agendada", notes: "", modality: "online", package_id: "", lesson_type: "pacote", amount: "", payment_status: "pendente", recurrence: "unica", recurrence_days: [], recurrence_end: "" });
     setDialogOpen(true);
   };
 
