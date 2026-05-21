@@ -333,6 +333,15 @@ export default function Students() {
     }
   };
 
+  const calculateEndTime = (startTime: string, durationHours: number) => {
+    if (!startTime) return "";
+    const [hours, minutes] = startTime.split(":").map(Number);
+    const totalMinutes = hours * 60 + minutes + Math.round(durationHours * 60);
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+  };
+
   const statusBadge = (s: string) =>
     s === "ativo" ? "bg-accent/10 text-accent border-accent/30" :
     s === "pausado" ? "bg-warning/10 text-warning border-warning/30" :
@@ -856,44 +865,55 @@ export default function Students() {
                           <thead className="bg-muted/50 text-muted-foreground text-[11px] uppercase tracking-wider">
                             <tr>
                               <th className="px-4 py-3 font-bold">Data</th>
-                              <th className="px-4 py-3 font-bold">Horário</th>
+                              <th className="px-4 py-3 font-bold">Início</th>
+                              <th className="px-4 py-3 font-bold">Fim</th>
                               <th className="px-4 py-3 font-bold">Duração</th>
                               <th className="px-4 py-3 font-bold">Status</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border">
-                            {studentLessons.map((lesson) => (
-                              <tr key={lesson.id} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-4 py-3 font-medium">{format(new Date(lesson.date + "T12:00:00"), "dd/MM/yyyy")}</td>
-                                <td className="px-4 py-3">{lesson.time} - {lesson.end_time || "—"}</td>
-                                <td className="px-4 py-3 text-muted-foreground">{formatHoursDisplay(lesson.duration)}</td>
-                                <td className="px-4 py-3">
-                                  <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border-none ${getStatusColor(lesson.status)}`}>
-                                    {lesson.status}
-                                  </Badge>
-                                </td>
-                              </tr>
-                            ))}
+                            {studentLessons.map((lesson) => {
+                              const endTime = lesson.end_time || calculateEndTime(lesson.time, lesson.duration);
+                              return (
+                                <tr key={lesson.id} className="hover:bg-muted/30 transition-colors">
+                                  <td className="px-4 py-3 font-medium">{format(new Date(lesson.date + "T12:00:00"), "dd/MM/yyyy")}</td>
+                                  <td className="px-4 py-3">{lesson.time}</td>
+                                  <td className="px-4 py-3">{endTime}</td>
+                                  <td className="px-4 py-3 text-muted-foreground">{formatHoursDisplay(lesson.duration)}</td>
+                                  <td className="px-4 py-3">
+                                    <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border-none ${getStatusColor(lesson.status)}`}>
+                                      {lesson.status}
+                                    </Badge>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
 
                       {/* Mobile List */}
                       <div className="sm:hidden space-y-2">
-                        {studentLessons.map((lesson) => (
-                          <div key={lesson.id} className="p-3 rounded-xl bg-card border border-border/60 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <p className="text-sm font-bold">{format(new Date(lesson.date + "T12:00:00"), "dd/MM/yyyy")}</p>
-                              <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border-none ${getStatusColor(lesson.status)}`}>
-                                {lesson.status}
-                              </Badge>
+                        {studentLessons.map((lesson) => {
+                          const endTime = lesson.end_time || calculateEndTime(lesson.time, lesson.duration);
+                          return (
+                            <div key={lesson.id} className="p-3 rounded-xl bg-card border border-border/60 space-y-2">
+                              <div className="flex justify-between items-start">
+                                <p className="text-sm font-bold">{format(new Date(lesson.date + "T12:00:00"), "dd/MM/yyyy")}</p>
+                                <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border-none ${getStatusColor(lesson.status)}`}>
+                                  {lesson.status}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                <div>
+                                  <span className="font-medium text-foreground">{lesson.time} — {endTime}</span>
+                                  <span className="mx-2">•</span>
+                                  <span>{formatHoursDisplay(lesson.duration)}</span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>{lesson.time} - {lesson.end_time || "—"}</span>
-                              <span>{formatHoursDisplay(lesson.duration)}</span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </>
                   )}
