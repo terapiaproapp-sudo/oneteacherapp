@@ -189,20 +189,73 @@ export default function Agenda() {
       if (dates.length >= 500) break; // Absolute safety limit
     }
     
-    return dates.length > 0 ? dates : [{ date: baseDate, studentRemainingHours: remaining }];
+    return dates.length > 0 ? dates : [{ date: baseDate, student_remaining_hours: remaining }];
   };
 
   const [showRecurrencePreview, setShowRecurrencePreview] = useState(false);
   const [recurrencePreviewData, setRecurrencePreviewData] = useState<{ date: string; studentRemainingHours: number }[]>([]);
 
+  // Update recurrence preview in real-time
+  useEffect(() => {
+    if (form.recurrence !== "unica" && form.student_id && form.date) {
+      const student = students.find(s => s.id === form.student_id);
+      const hasPackage = student?.enrollment_type === "pacote";
+      const hoursInfo = getStudentHoursInfo(form.student_id);
+      const availableHours = hasPackage ? hoursInfo.remaining : null;
+      
+      const preview = generateRecurrenceDates(
+        form.date, 
+        form.recurrence, 
+        form.recurrence_days, 
+        form.recurrence_end,
+        null,
+        form.duration,
+        availableHours
+      );
+      setRecurrencePreviewData(preview);
+    } else {
+      setRecurrencePreviewData([]);
+    }
+  }, [form.student_id, form.date, form.recurrence, form.recurrence_days, form.recurrence_end, form.duration, students, packages]);
+
   const [recurrenceUpdateMode, setRecurrenceUpdateMode] = useState<"none" | "this" | "next" | "all">("none");
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const validateForm = () => {
+    if (!form.student_id) {
+      toast({ title: "Atenção", description: "Selecione um aluno", variant: "destructive" });
+      return false;
+    }
+    if (!form.date) {
+      toast({ title: "Atenção", description: "Informe a data inicial", variant: "destructive" });
+      return false;
+    }
+    if (!form.time_start || !form.time_end) {
+      toast({ title: "Atenção", description: "Informe hora inicial e hora final", variant: "destructive" });
+      return false;
+    }
+    if (form.duration <= 0) {
+      toast({ title: "Atenção", description: "Hora final deve ser maior que hora inicial", variant: "destructive" });
+      return false;
+    }
+    if (form.recurrence === "semanal" && form.recurrence_days.length === 0) {
+      toast({ title: "Atenção", description: "Selecione pelo menos um dia da semana", variant: "destructive" });
+      return false;
+    }
+    if (form.recurrence !== "unica") {
+      const student = students.find(s => s.id === form.student_id);
+      const hasPackage = student?.enrollment_type === "pacote";
+      if (!hasPackage && !form.recurrence_end) {
+        toast({ title: "Atenção", description: "Informe a data final da recorrência", variant: "destructive" });
+        return false;
+      }
+    }
+    return true;
+  };
+
   const checkConflicts = async (payloads: any[]) => {
     // Basic conflict check: same teacher, same date, overlapping time
-    // For simplicity in this implementation, we'll check against existing lessons in state
-    // but ideally this should be a DB check
     const conflicts = [];
     for (const p of payloads) {
       const dayLessons = lessons.filter(l => l.date.split("T")[0] === p.date && l.id !== editing?.id);
