@@ -482,7 +482,7 @@ export default function SettingsPage() {
               size="sm" 
               className="w-full rounded-xl gap-2 mt-2" 
               onClick={testNotification} 
-              disabled={notifPermission !== 'granted' || testingNotif}
+              disabled={diagnosis.permission !== 'granted' || testingNotif}
             >
               {testingNotif ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
               Enviar notificação de teste
