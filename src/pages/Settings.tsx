@@ -345,13 +345,85 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <p className="text-sm font-medium">Status do dispositivo</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium">Status do dispositivo</p>
+                  <button onClick={() => setShowDiagnosis(!showDiagnosis)} className="text-muted-foreground hover:text-primary transition-colors">
+                    <Info className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 <p className="text-[11px] text-muted-foreground">
-                  {notifPermission === "granted" ? "Ativo ✅" : notifPermission === "denied" ? "Bloqueado ❌" : !notifSupported ? "Não suportado" : "Pendente"}
+                  {diagnosis.permission === "granted" ? "Ativo ✅" : diagnosis.permission === "denied" ? "Bloqueado ❌" : !diagnosis.support.notifications ? "Não suportado" : "Pendente"}
                 </p>
               </div>
-              <Switch checked={notifPermission === 'granted'} onCheckedChange={requestNotifPermission} />
+              <Switch checked={diagnosis.permission === 'granted'} onCheckedChange={requestNotifPermission} />
             </div>
+
+            {showDiagnosis && (
+              <div className="p-3 rounded-xl bg-muted/40 border border-border/50 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Terminal className="h-3 w-3" /> Central de Diagnóstico
+                  </h3>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={runDiagnosis}>
+                    <RefreshCw className="h-3 w-3" />
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-2 text-[11px]">
+                  <div className="flex justify-between items-center py-1 border-b border-border/20">
+                    <span className="text-muted-foreground">HTTPS:</span>
+                    <span className={diagnosis.env.isHttps ? "text-green-500 font-medium" : "text-red-500 font-medium"}>
+                      {diagnosis.env.isHttps ? "Sim" : "Não (Obrigatório)"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-border/20">
+                    <span className="text-muted-foreground">Ambiente:</span>
+                    <span className={diagnosis.env.isRestricted ? "text-yellow-500 font-medium" : "text-green-500 font-medium"}>
+                      {diagnosis.env.isPreview ? "Preview" : diagnosis.env.isInIframe ? "Iframe (Restrito)" : "Público"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-border/20">
+                    <span className="text-muted-foreground">Suporte API:</span>
+                    <span className="font-medium">
+                      {diagnosis.support.notifications && diagnosis.support.serviceWorker ? "Total ✅" : "Parcial ⚠️"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-border/20">
+                    <span className="text-muted-foreground">Service Worker:</span>
+                    <span className={diagnosis.sw.registered ? "text-green-500 font-medium" : "text-muted-foreground"}>
+                      {diagnosis.sw.registered ? `Registrado (${diagnosis.sw.status})` : "Não encontrado"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-border/20">
+                    <span className="text-muted-foreground">Inscrição Push:</span>
+                    <span className={diagnosis.subscription.exists ? "text-green-500 font-medium" : "text-muted-foreground"}>
+                      {diagnosis.subscription.exists ? "Ativa" : "Inexistente"}
+                    </span>
+                  </div>
+                  {diagnosis.subscription.error && (
+                    <div className="p-2 rounded bg-destructive/5 text-destructive border border-destructive/10 mt-1">
+                      <p className="font-bold flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Erro:</p>
+                      <p className="break-all">{diagnosis.subscription.error}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="h-7 text-[10px] rounded-lg w-full gap-1.5"
+                    onClick={() => {
+                      const report = JSON.stringify(diagnosis, null, 2);
+                      navigator.clipboard.writeText(report);
+                      toast({ title: "Relatório copiado!" });
+                    }}
+                  >
+                    <Copy className="h-3 w-3" /> Copiar Relatório
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <Separator />
 
