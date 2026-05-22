@@ -63,8 +63,22 @@ export default function Agenda() {
   const loadLessons = async () => {
     const start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd");
     const end = format(endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd") + "T23:59:59";
-    const { data } = await supabase.from("lessons").select("*, students(name, phone)").eq("teacher_id", user!.id).gte("date", start).lte("date", end).order("date").order("time") as any;
-    setLessons(data || []);
+    
+    const { data, error } = await supabase
+      .from("lessons")
+      .select("*, students(name, phone)")
+      .eq("teacher_id", user!.id)
+      .gte("date", start)
+      .lte("date", end)
+      .order("date")
+      .order("time");
+
+    if (error) {
+      console.error("Erro ao carregar aulas:", error);
+      return;
+    }
+    
+    setLessons((data as any[]) || []);
   };
 
   // Duration calculated as decimal hours (e.g. 1.5 = 1h30). Storage uses decimal hours.
@@ -367,7 +381,9 @@ export default function Agenda() {
   }[s] || s);
 
   const dotColor = (s: string, type?: string) => {
+    // If it's an extra lesson (avulsa), prioritize purple dot
     if (type === "avulsa") return "bg-purple-500";
+    
     switch (s) {
       case "agendada": return "bg-red-500";
       case "concluida": return "bg-green-500";
@@ -390,7 +406,9 @@ export default function Agenda() {
   const [viewType, setViewType] = useState<"dia" | "semana" | "mes">("dia");
 
   const stats = useMemo(() => {
-    const referenceDate = selectedDate || new Date();
+    // Para os cards superiores, se estiver no modo Mês, usamos o mês de currentDate (o que o calendário mostra)
+    // Se for dia ou semana, usamos selectedDate (se houver) ou hoje
+    const referenceDate = (viewType === "mes") ? currentDate : (selectedDate || new Date());
     let filteredLessons = [];
 
     if (viewType === "dia") {
@@ -403,8 +421,9 @@ export default function Agenda() {
         return d >= start && d <= end;
       });
     } else {
-      const start = startOfMonth(referenceDate);
-      const end = endOfMonth(referenceDate);
+      // Mês: filtra tudo que pertence ao mês de currentDate
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
       filteredLessons = lessons.filter(l => {
         const d = parseLocalDate(l.date);
         return d >= start && d <= end;
@@ -418,10 +437,11 @@ export default function Agenda() {
       pending: filteredLessons.filter(l => l.status === "agendada").length,
       date: referenceDate
     };
-  }, [lessons, selectedDate, viewType]);
+  }, [lessons, selectedDate, currentDate, viewType]);
 
   const filteredLessonsForList = useMemo(() => {
-    const referenceDate = selectedDate || new Date();
+    // Mesma lógica de sincronização para a lista lateral
+    const referenceDate = (viewType === "mes") ? currentDate : (selectedDate || new Date());
     
     if (viewType === "dia") {
       return getLessonsForDay(referenceDate);
@@ -433,14 +453,14 @@ export default function Agenda() {
         return d >= start && d <= end;
       });
     } else {
-      const start = startOfMonth(referenceDate);
-      const end = endOfMonth(referenceDate);
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
       return lessons.filter(l => {
         const d = parseLocalDate(l.date);
         return d >= start && d <= end;
       });
     }
-  }, [lessons, selectedDate, viewType]);
+  }, [lessons, selectedDate, currentDate, viewType]);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto pb-20">
@@ -520,10 +540,22 @@ export default function Agenda() {
                 {calendarDays.map(day => {
                   const dl = getLessonsForDay(day);
                   const isTodayActive = isToday(day);
+                  const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                  const isSelected = selectedDate && isSameDay(day, selectedDate);
+                  
                   return (
-                    <button key={day.toISOString()} onClick={() => handleDayClick(day)}
-                      className={`relative flex flex-col items-center p-2 rounded-xl border border-border/40 hover:bg-muted/50 transition-all ${isTodayActive ? "bg-primary/5 ring-1 ring-primary/20" : "bg-card"}`}>
-                      <span className={`text-xs font-bold ${isTodayActive ? "text-primary" : ""}`}>{format(day, "d")}</span>
+                    <button 
+                      key={day.toISOString()} 
+                      onClick={() => handleDayClick(day)}
+                      className={`relative flex flex-col items-center p-2 rounded-xl border transition-all ${
+                        isTodayActive ? "bg-primary/5 ring-1 ring-primary/20 border-primary/20" : 
+                        isSelected ? "bg-primary/10 border-primary/30 shadow-sm" : 
+                        "bg-card border-border/40"
+                      } ${!isCurrentMonth ? "opacity-30 grayscale-[0.5]" : "hover:bg-muted/50"}`}
+                    >
+                      <span className={`text-xs font-bold ${isTodayActive ? "text-primary" : isCurrentMonth ? "" : "text-muted-foreground"}`}>
+                        {format(day, "d")}
+                      </span>
                       {dl.length > 0 && (
                         <div className="mt-1 flex flex-wrap justify-center gap-0.5 max-w-full">
                           {dl.length > 3 ? (
