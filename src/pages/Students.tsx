@@ -790,7 +790,16 @@ export default function Students() {
       )}
 
       {/* Student Detail Dialog */}
-      <Dialog open={!!detailStudent} onOpenChange={() => setDetailStudent(null)}>
+      <Dialog open={!!detailStudent} onOpenChange={(open) => {
+        if (!open) {
+          setDetailStudent(null);
+          setAccessEmail("");
+          setAccessPassword("");
+          setNewAccessPassword("");
+          setEditingAccessPerms(false);
+          setEditingAccessPassword(false);
+        }
+      }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-lg font-bold">{detailStudent?.name}</DialogTitle></DialogHeader>
           {detailStudent && (() => {
