@@ -379,12 +379,21 @@ export default function Students() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Excluir este aluno e todos os dados vinculados?")) return;
-    await supabase.from("payments").delete().eq("student_id", id);
-    await supabase.from("lessons").delete().eq("student_id", id);
-    await supabase.from("packages").delete().eq("student_id", id);
-    await supabase.from("students").delete().eq("id", id);
-    toast({ title: "Aluno excluído" }); loadAll();
+    setIsDeleting(true);
+    try {
+      await supabase.from("payments").delete().eq("student_id", id);
+      await supabase.from("lessons").delete().eq("student_id", id);
+      await supabase.from("packages").delete().eq("student_id", id);
+      await supabase.from("students").delete().eq("id", id);
+      toast({ title: "Aluno excluído" }); 
+      loadAll();
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      toast({ title: "Erro ao excluir aluno", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setStudentToDelete(null);
+    }
   };
 
   const openEdit = (student: Student) => {
