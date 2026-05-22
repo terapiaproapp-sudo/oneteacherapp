@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor, ExternalLink, CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
+import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor, ExternalLink, CheckCircle2, XCircle, AlertCircle, Loader2, Smartphone, Clock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { subscribeToPush, getNotificationSettings, updateNotificationSettings } from "@/lib/notifications";
 
 type ThemeMode = "light" | "dark" | "system";
 
@@ -44,36 +45,37 @@ export default function SettingsPage() {
     localStorage.setItem("ot-theme", theme);
   }, [theme]);
 
-  // Notification preferences
-  const [notifPrefs, setNotifPrefs] = useState(() => {
-    const saved = localStorage.getItem("ot-notif-prefs");
-    return saved ? JSON.parse(saved) : {
-      aulasAgendadas: true, aulasDoDia: true, lembrete: true,
-      pagamentosPendentes: true, pagamentosAtraso: true,
-      vencimentoParcelas: true, pacoteBaixo: true, pacoteAcabando: true,
-    };
+  // Notification settings from DB
+  const [settings, setSettings] = useState({
+    daily_summary: true,
+    daily_summary_time: "07:00",
+    lesson_reminder: true,
+    lesson_reminder_lead_time: "15"
   });
-  const [reminderTime, setReminderTime] = useState(() => localStorage.getItem("ot-reminder-time") || "30min");
 
-  const updateNotifPref = (key: string, val: boolean) => {
-    const updated = { ...notifPrefs, [key]: val };
-    setNotifPrefs(updated);
-    localStorage.setItem("ot-notif-prefs", JSON.stringify(updated));
-  };
-
-  const saveReminderTime = (v: string) => { setReminderTime(v); localStorage.setItem("ot-reminder-time", v); };
-
-  // Notification diagnostics
   const env = getEnvironmentInfo();
   const [notifPermission, setNotifPermission] = useState<string>("checking");
   const [notifSupported, setNotifSupported] = useState(true);
   const [swStatus, setSwStatus] = useState<"checking" | "active" | "inactive" | "unsupported">("checking");
-  const [diagLogs, setDiagLogs] = useState<{ label: string; status: "ok" | "warn" | "error" }[]>([]);
   const [testingNotif, setTestingNotif] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
+
+  const fetchSettings = useCallback(async () => {
+    if (!user) return;
+    const dbSettings = await getNotificationSettings(user.id) as any;
+    if (dbSettings) setSettings(prev => ({ ...prev, ...dbSettings }));
+  }, [user]);
 
   useEffect(() => {
-    if (!("Notification" in window)) { setNotifSupported(false); setNotifPermission("unsupported"); }
-    else setNotifPermission(Notification.permission);
+    fetchSettings();
+    
+    if (!("Notification" in window)) { 
+      setNotifSupported(false); 
+      setNotifPermission("unsupported"); 
+    } else {
+      setNotifPermission(Notification.permission);
+    }
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
@@ -82,9 +84,23 @@ export default function SettingsPage() {
     } else {
       setSwStatus("unsupported");
     }
-  }, []);
 
-  const allReady = !env.isRestricted && notifSupported && notifPermission === "granted";
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    setIsIOS(/iphone|ipad|ipod/.test(userAgent));
+    setIsPWA(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
+  }, [fetchSettings]);
+
+  const updateSettings = async (newSettings: any) => {
+    if (!user) return;
+    const updated = { ...settings, ...newSettings };
+    setSettings(updated);
+    try {
+      await updateNotificationSettings(user.id, updated);
+      toast({ title: "Configurações salvas!" });
+    } catch (err) {
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    }
+  };
 
   const requestNotifPermission = async () => {
     if (env.isRestricted) {
@@ -98,66 +114,48 @@ export default function SettingsPage() {
     try {
       const perm = await Notification.requestPermission();
       setNotifPermission(perm);
-      if (perm === "granted") toast({ title: "Notificações ativadas! ✅" });
-      else if (perm === "denied") toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
-    } catch {
-      toast({ title: "Erro ao solicitar permissão", variant: "destructive" });
+      
+      if (perm === "granted") {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        if (regs.length > 0) {
+          await subscribeToPush(regs[0], user!.id);
+          setSwStatus("active");
+          toast({ title: "Notificações ativadas! ✅" });
+        } else {
+          toast({ title: "Erro", description: "Service Worker não encontrado. Tente recarregar a página.", variant: "destructive" });
+        }
+      } else if (perm === "denied") {
+        toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Erro ao ativar", description: "Ocorreu um erro ao configurar as notificações.", variant: "destructive" });
     }
   };
 
   const testNotification = async () => {
+    if (!user) return;
     setTestingNotif(true);
-    const logs: typeof diagLogs = [];
-
-    // 1. Environment
-    if (env.isRestricted) {
-      logs.push({ label: "Ambiente: preview/iframe detectado — notificações bloqueadas", status: "error" });
-      setDiagLogs(logs); setTestingNotif(false); return;
-    }
-    logs.push({ label: "Ambiente: versão pública ✓", status: "ok" });
-
-    // 2. Browser support
-    if (!notifSupported) {
-      logs.push({ label: "Navegador: não suporta notificações", status: "error" });
-      setDiagLogs(logs); setTestingNotif(false); return;
-    }
-    logs.push({ label: "Navegador: suporta notificações ✓", status: "ok" });
-
-    // 3. Permission
-    const perm = Notification.permission;
-    setNotifPermission(perm);
-    if (perm !== "granted") {
-      logs.push({ label: `Permissão: ${perm === "denied" ? "negada pelo usuário" : "não solicitada ainda"}`, status: perm === "denied" ? "error" : "warn" });
-      setDiagLogs(logs); setTestingNotif(false); return;
-    }
-    logs.push({ label: "Permissão: concedida ✓", status: "ok" });
-
-    // 4. Service worker
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      if (regs.length > 0) {
-        logs.push({ label: "Service Worker: ativo ✓", status: "ok" });
-      } else {
-        logs.push({ label: "Service Worker: não registrado (notificações simples funcionam)", status: "warn" });
-      }
-    } else {
-      logs.push({ label: "Service Worker: não suportado", status: "warn" });
-    }
-
-    // 5. Send test
     try {
-      const notif = new Notification("OneTeacher 📚", {
-        body: "Suas notificações estão funcionando! ✅",
-        icon: "/favicon.png",
-        tag: "test-" + Date.now(),
-      });
-      notif.onclick = () => { window.focus(); notif.close(); };
-      logs.push({ label: "Notificação enviada com sucesso ✓", status: "ok" });
-    } catch (err: any) {
-      logs.push({ label: `Erro ao enviar: ${err?.message || "desconhecido"}`, status: "error" });
-    }
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (regs.length === 0) throw new Error("Service Worker não registrado");
+      
+      const sub = await regs[0].pushManager.getSubscription();
+      if (!sub) throw new Error("Inscrição de push não encontrada");
 
-    setDiagLogs(logs);
+      const { error } = await supabase.functions.invoke('push-notifications', {
+        body: {
+          subscription: sub.toJSON(),
+          title: "OneTeacher 📚",
+          body: "Suas notificações estão funcionando! ✅",
+          data: { url: "/settings" }
+        }
+      });
+
+      if (error) throw error;
+      toast({ title: "Teste enviado!", description: "Você deve receber uma notificação em instantes." });
+    } catch (err: any) {
+      toast({ title: "Falha no teste", description: err?.message || "Erro desconhecido", variant: "destructive" });
+    }
     setTestingNotif(false);
   };
 
@@ -168,24 +166,8 @@ export default function SettingsPage() {
     setEditingProfile(false);
   };
 
-  const notifOptions = [
-    { key: "aulasAgendadas", label: "Aulas agendadas" },
-    { key: "aulasDoDia", label: "Aulas do dia" },
-    { key: "lembrete", label: "Lembretes antes da aula" },
-    { key: "pagamentosPendentes", label: "Pagamentos pendentes" },
-    { key: "pagamentosAtraso", label: "Pagamentos em atraso" },
-    { key: "vencimentoParcelas", label: "Vencimento de parcelas" },
-    { key: "pacoteBaixo", label: "Pacotes com poucas horas" },
-    { key: "pacoteAcabando", label: "Pacotes próximos de acabar" },
-  ];
-
-  const DiagIcon = ({ s }: { s: "ok" | "warn" | "error" }) =>
-    s === "ok" ? <CheckCircle2 className="h-3.5 w-3.5 text-accent shrink-0" /> :
-    s === "warn" ? <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0" /> :
-    <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />;
-
   return (
-    <div className="space-y-4 animate-fade-in max-w-2xl">
+    <div className="space-y-4 animate-fade-in max-w-2xl pb-10">
       <div>
         <h1 className="page-title">Configurações</h1>
         <p className="section-subtitle">Gerencie sua conta e preferências.</p>
@@ -238,116 +220,109 @@ export default function SettingsPage() {
         <CardContent className="p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center"><Bell className="h-4 w-4 text-primary" /></div>
-            <div><h2 className="text-sm font-bold">Notificações</h2><p className="text-[11px] text-muted-foreground">Lembretes e alertas</p></div>
+            <div><h2 className="text-sm font-bold">Notificações no Celular</h2><p className="text-[11px] text-muted-foreground">Lembretes e alertas push</p></div>
           </div>
 
-          {/* Environment warning */}
+          {isIOS && !isPWA && (
+            <div className="p-4 rounded-xl mb-4 bg-primary/10 border border-primary/20 space-y-2">
+              <div className="flex items-center gap-2 text-primary">
+                <Smartphone className="h-5 w-5" />
+                <p className="text-sm font-bold">Instalar OneTeacher</p>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                No iPhone, as notificações funcionam melhor com o app instalado. Toque no botão de compartilhamento e selecione <strong>"Adicionar à Tela de Início"</strong>.
+              </p>
+            </div>
+          )}
+
           {env.isRestricted && (
             <div className="p-3 rounded-xl mb-4 bg-warning/8 border border-warning/15">
               <div className="flex items-center gap-2 mb-1">
                 <AlertCircle className="h-4 w-4 text-warning" />
-                <p className="text-xs font-medium text-warning">Ambiente de preview detectado</p>
+                <p className="text-xs font-medium text-warning">Ambiente de preview</p>
               </div>
               <p className="text-[11px] text-muted-foreground mb-2">
-                Notificações só funcionam na versão pública do app, aberta diretamente no navegador.
-                {env.isInIframe && " (iframe detectado)"}
-                {env.isPreview && " (preview)"}
-                {env.isLovableDev && " (editor)"}
+                Notificações reais só funcionam na versão pública do app.
               </p>
               <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={() => window.open(PUBLISHED_URL, "_blank")}>
-                <ExternalLink className="h-3.5 w-3.5" /> Abrir versão pública do app
+                <ExternalLink className="h-3.5 w-3.5" /> Abrir versão pública
               </Button>
             </div>
           )}
 
-          {/* Status (only in public env) */}
-          {!env.isRestricted && (
-            <div className={`p-3 rounded-xl mb-4 ${notifPermission === "granted" ? "bg-accent/8 border border-accent/15" : "bg-warning/8 border border-warning/15"}`}>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`w-2 h-2 rounded-full ${notifPermission === "granted" ? "bg-accent" : notifPermission === "denied" ? "bg-destructive" : "bg-warning"}`} />
-                <p className={`text-xs font-medium ${notifPermission === "granted" ? "text-accent" : "text-warning"}`}>
-                  {notifPermission === "granted" ? "Notificações ativadas ✅" : notifPermission === "denied" ? "Permissão negada pelo navegador" : !notifSupported ? "Navegador não suporta" : "Notificações não ativadas"}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">Status do dispositivo</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {notifPermission === "granted" ? "Ativo ✅" : notifPermission === "denied" ? "Bloqueado ❌" : !notifSupported ? "Não suportado" : "Pendente"}
                 </p>
               </div>
-              {notifPermission === "denied" && (
-                <p className="text-[11px] text-muted-foreground mb-2">Acesse Configurações do navegador → Notificações → Permita este site.</p>
-              )}
-              <div className="flex gap-2 flex-wrap">
-                {notifPermission !== "granted" && (
-                  <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1 border-warning/30 text-warning hover:bg-warning/10" onClick={requestNotifPermission}>
-                    <BellRing className="h-3.5 w-3.5" /> {notifPermission === "denied" ? "Tentar novamente" : "Ativar notificações"}
-                  </Button>
-                )}
-                <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={testNotification} disabled={testingNotif || !allReady}>
-                  {testingNotif ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />} Testar notificação
-                </Button>
-              </div>
+              <Switch checked={notifPermission === 'granted'} onCheckedChange={requestNotifPermission} />
             </div>
-          )}
 
-          {/* Diagnostic logs */}
-          {diagLogs.length > 0 && (
-            <div className="p-3 rounded-xl mb-4 bg-muted/30 border border-border/40 space-y-1.5">
-              <p className="text-[11px] font-bold text-muted-foreground uppercase">Diagnóstico</p>
-              {diagLogs.map((log, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <DiagIcon s={log.status} />
-                  <span className="text-xs">{log.label}</span>
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Resumo diário da agenda</p>
+                  <p className="text-[11px] text-muted-foreground">Receba as aulas do dia às {settings.daily_summary_time}</p>
                 </div>
-              ))}
+                <Switch checked={settings.daily_summary} onCheckedChange={(v) => updateSettings({ daily_summary: v })} />
+              </div>
+
+              {settings.daily_summary && (
+                <div className="flex items-center justify-between pl-4 border-l-2 border-primary/20">
+                  <span className="text-xs text-muted-foreground">Horário do resumo</span>
+                  <Input 
+                    type="time" 
+                    value={settings.daily_summary_time} 
+                    onChange={(e) => updateSettings({ daily_summary_time: e.target.value })}
+                    className="h-8 w-24 rounded-lg text-xs"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Lembrete antes da aula</p>
+                  <p className="text-[11px] text-muted-foreground">Notificação popup antes de começar</p>
+                </div>
+                <Switch checked={settings.lesson_reminder} onCheckedChange={(v) => updateSettings({ lesson_reminder: v })} />
+              </div>
+
+              {settings.lesson_reminder && (
+                <div className="flex items-center justify-between pl-4 border-l-2 border-primary/20">
+                  <span className="text-xs text-muted-foreground">Lembrar quanto tempo antes?</span>
+                  <Select 
+                    value={settings.lesson_reminder_lead_time} 
+                    onValueChange={(v) => updateSettings({ lesson_reminder_lead_time: v })}
+                  >
+                    <SelectTrigger className="h-8 w-32 rounded-lg text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">No horário</SelectItem>
+                      <SelectItem value="5">5 minutos</SelectItem>
+                      <SelectItem value="10">10 minutos</SelectItem>
+                      <SelectItem value="15">15 minutos</SelectItem>
+                      <SelectItem value="30">30 minutos</SelectItem>
+                      <SelectItem value="60">1 hora</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
-          )}
 
-          <div className="space-y-3">
-            {notifOptions.map(opt => (
-              <div key={opt.key} className="flex items-center justify-between">
-                <span className="text-sm">{opt.label}</span>
-                <Switch checked={notifPrefs[opt.key]} onCheckedChange={v => updateNotifPref(opt.key, v)} />
-              </div>
-            ))}
-          </div>
-
-          <Separator className="my-4" />
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Antecedência do lembrete</span>
-              <Select value={reminderTime} onValueChange={saveReminderTime}>
-                <SelectTrigger className="h-9 w-40 rounded-xl text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">No horário</SelectItem>
-                  <SelectItem value="15min">15 minutos antes</SelectItem>
-                  <SelectItem value="30min">30 minutos antes</SelectItem>
-                  <SelectItem value="1h">1 hora antes</SelectItem>
-                  <SelectItem value="2h">2 horas antes</SelectItem>
-                  <SelectItem value="1d">1 dia antes</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Detailed diagnostic section */}
-          <Separator className="my-4" />
-          <div className="space-y-2">
-            <p className="text-xs font-bold text-muted-foreground uppercase">Status técnico</p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="flex items-center gap-1.5">
-                {env.isRestricted ? <XCircle className="h-3 w-3 text-destructive" /> : <CheckCircle2 className="h-3 w-3 text-accent" />}
-                <span>Ambiente: {env.isRestricted ? "restrito" : "público"}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                {notifSupported ? <CheckCircle2 className="h-3 w-3 text-accent" /> : <XCircle className="h-3 w-3 text-destructive" />}
-                <span>API: {notifSupported ? "suportada" : "ausente"}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                {notifPermission === "granted" ? <CheckCircle2 className="h-3 w-3 text-accent" /> : notifPermission === "denied" ? <XCircle className="h-3 w-3 text-destructive" /> : <AlertCircle className="h-3 w-3 text-warning" />}
-                <span>Permissão: {notifPermission}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                {swStatus === "active" ? <CheckCircle2 className="h-3 w-3 text-accent" /> : swStatus === "unsupported" ? <XCircle className="h-3 w-3 text-destructive" /> : <AlertCircle className="h-3 w-3 text-warning" />}
-                <span>SW: {swStatus === "active" ? "ativo" : swStatus === "inactive" ? "inativo" : swStatus === "unsupported" ? "ausente" : "..."}</span>
-              </div>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full rounded-xl gap-2 mt-2" 
+              onClick={testNotification} 
+              disabled={notifPermission !== 'granted' || testingNotif}
+            >
+              {testingNotif ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
+              Enviar notificação de teste
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -360,17 +335,21 @@ export default function SettingsPage() {
             <div><h2 className="text-sm font-bold">Aparência</h2><p className="text-[11px] text-muted-foreground">Tema e personalização</p></div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {([
-              { value: "light" as ThemeMode, icon: Sun, label: "Claro" },
-              { value: "dark" as ThemeMode, icon: Moon, label: "Escuro" },
-              { value: "system" as ThemeMode, icon: Monitor, label: "Sistema" },
-            ]).map(opt => (
-              <button key={opt.value} onClick={() => setTheme(opt.value)}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${theme === opt.value ? "border-primary bg-primary/8 text-primary" : "border-border/60 hover:bg-muted/50 text-muted-foreground"}`}>
-                <opt.icon className="h-5 w-5" />
-                <span className="text-xs font-semibold">{opt.label}</span>
-              </button>
-            ))}
+            {(["light", "dark", "system"] as ThemeMode[]).map(mode => {
+              const icons = { light: Sun, dark: Moon, system: Monitor };
+              const labels = { light: "Claro", dark: "Escuro", system: "Sistema" };
+              const Icon = icons[mode];
+              return (
+                <button 
+                  key={mode} 
+                  onClick={() => setTheme(mode)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${theme === mode ? "border-primary bg-primary/8 text-primary" : "border-border/60 hover:bg-muted/50 text-muted-foreground"}`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="text-xs font-semibold">{labels[mode]}</span>
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
