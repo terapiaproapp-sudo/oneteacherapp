@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, MapPin, Trash2, Check, RotateCcw,
   Package, X as XIcon, Edit, CalendarPlus, MessageCircle, Upload, FileText, Image as ImageIcon,
-  UserX, Repeat, Loader2
+  UserX, Repeat, Loader2, Zap
 } from "lucide-react";
 import { 
   AlertDialog, 
