@@ -300,58 +300,65 @@ export default function Students() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
+    setIsLoading(true);
+    try {
+      const studentData = {
+        name: form.name, phone: form.phone, email: form.email,
+        subject: form.subject, modality: form.modality, notes: form.notes,
+        status: form.status, guardian_name: "", guardian_phone: "",
+        lesson_content: "", 
+        enrollment_type: form.enrollment_type,
+        hourly_rate: form.enrollment_type === "avulsa" ? numVal(form.hourly_rate) : hourlyRate,
+      };
 
-    const studentData = {
-      name: form.name, phone: form.phone, email: form.email,
-      subject: form.subject, modality: form.modality, notes: form.notes,
-      status: form.status, guardian_name: "", guardian_phone: "",
-      lesson_content: "", 
-      enrollment_type: form.enrollment_type,
-      hourly_rate: form.enrollment_type === "avulsa" ? numVal(form.hourly_rate) : hourlyRate,
-    };
+      if (editing) {
+        await supabase.from("students").update(studentData).eq("id", editing.id);
 
-    if (editing) {
-      await supabase.from("students").update(studentData).eq("id", editing.id);
-
-      if (editingPackage) {
-        const activePkg = getActivePackage(editing.id);
-        if (activePkg) {
-          const newHourlyRate = packageMinutes > 0 && finalValue > 0 ? finalValue / (packageMinutes / 60) : 0;
-          await supabase.from("packages").update({
-            name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageMinutes / 60,
-            total_value: finalValue, hourly_rate: Math.round(newHourlyRate * 100) / 100,
-          }).eq("id", activePkg.id);
-          await supabase.from("students").update({ hours_contracted: packageMinutes / 60 }).eq("id", editing.id);
+        if (editingPackage) {
+          const activePkg = getActivePackage(editing.id);
+          if (activePkg) {
+            const newHourlyRate = packageMinutes > 0 && finalValue > 0 ? finalValue / (packageMinutes / 60) : 0;
+            await supabase.from("packages").update({
+              name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageMinutes / 60,
+              total_value: finalValue, hourly_rate: Math.round(newHourlyRate * 100) / 100,
+            }).eq("id", activePkg.id);
+            await supabase.from("students").update({ hours_contracted: packageMinutes / 60 }).eq("id", editing.id);
+          }
         }
+
+        if (editingFinancial) {
+          // Delete old payments and recreate
+          await supabase.from("payments").delete().eq("student_id", editing.id);
+          if (finalValue > 0) await createPayments(editing.id, getActivePackage(editing.id)?.id || null);
+        }
+
+        toast({ title: "Aluno atualizado!" });
+      } else {
+        const { data: newStudent, error } = await supabase.from("students")
+          .insert({ ...studentData, teacher_id: user!.id, hours_contracted: form.enrollment_type === "pacote" ? packageHours : 0, hours_remaining: form.enrollment_type === "pacote" ? packageHours : 0 })
+          .select().single();
+        if (error || !newStudent) { toast({ title: "Erro", description: error?.message, variant: "destructive" }); return; }
+
+        if (form.enrollment_type === "pacote" && packageMinutes > 0) {
+          const { data: newPkg } = await supabase.from("packages").insert({
+            teacher_id: user!.id, student_id: newStudent.id,
+            name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageHours,
+            hours_used: 0, total_value: finalValue,
+            hourly_rate: Math.round((finalValue / packageHours) * 100) / 100,
+            expires_at: null, status: "ativo",
+          }).select().single();
+
+          if (finalValue > 0) await createPayments(newStudent.id, newPkg?.id || null);
+        }
+        toast({ title: "Aluno cadastrado com sucesso!" });
       }
-
-      if (editingFinancial) {
-        // Delete old payments and recreate
-        await supabase.from("payments").delete().eq("student_id", editing.id);
-        if (finalValue > 0) await createPayments(editing.id, getActivePackage(editing.id)?.id || null);
-      }
-
-      toast({ title: "Aluno atualizado!" });
-    } else {
-      const { data: newStudent, error } = await supabase.from("students")
-        .insert({ ...studentData, teacher_id: user!.id, hours_contracted: form.enrollment_type === "pacote" ? packageHours : 0, hours_remaining: form.enrollment_type === "pacote" ? packageHours : 0 })
-        .select().single();
-      if (error || !newStudent) { toast({ title: "Erro", description: error?.message, variant: "destructive" }); return; }
-
-      if (form.enrollment_type === "pacote" && packageMinutes > 0) {
-        const { data: newPkg } = await supabase.from("packages").insert({
-          teacher_id: user!.id, student_id: newStudent.id,
-          name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageHours,
-          hours_used: 0, total_value: finalValue,
-          hourly_rate: Math.round((finalValue / packageHours) * 100) / 100,
-          expires_at: null, status: "ativo",
-        }).select().single();
-
-        if (finalValue > 0) await createPayments(newStudent.id, newPkg?.id || null);
-      }
-      toast({ title: "Aluno cadastrado com sucesso!" });
+      setDialogOpen(false); setEditing(null); setEditingPackage(false); setEditingFinancial(false); setForm(emptyForm); loadAll();
+    } catch (error) {
+      console.error("Error saving student:", error);
+      toast({ title: "Erro ao salvar aluno", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-    setDialogOpen(false); setEditing(null); setEditingPackage(false); setEditingFinancial(false); setForm(emptyForm); loadAll();
   };
 
   const createPayments = async (studentId: string, packageId: string | null) => {
