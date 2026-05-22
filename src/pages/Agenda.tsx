@@ -1413,16 +1413,6 @@ export default function Agenda() {
               </div>
             </Button>
             
-            <Button 
-              variant="outline" 
-              className="justify-start h-auto py-3 px-4 rounded-xl border-border/60 hover:border-primary/40 hover:bg-primary/5 group"
-              onClick={() => handleSave("all")}
-            >
-              <div className="flex flex-col items-start text-left gap-1">
-                <span className="font-bold text-sm group-hover:text-primary transition-colors">Toda a recorrência</span>
-                <span className="text-[10px] text-muted-foreground">Altera todos os eventos da série (mantendo histórico das realizadas).</span>
-              </div>
-            </Button>
           </div>
           
           <AlertDialogFooter>
