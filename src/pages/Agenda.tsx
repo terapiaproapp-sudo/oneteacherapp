@@ -195,14 +195,68 @@ export default function Agenda() {
   const [showRecurrencePreview, setShowRecurrencePreview] = useState(false);
   const [recurrencePreviewData, setRecurrencePreviewData] = useState<{ date: string; studentRemainingHours: number }[]>([]);
 
+  // Update recurrence preview in real-time
+  useEffect(() => {
+    if (form.recurrence !== "unica" && form.student_id && form.date) {
+      const student = students.find(s => s.id === form.student_id);
+      const hasPackage = student?.enrollment_type === "pacote";
+      const hoursInfo = getStudentHoursInfo(form.student_id);
+      const availableHours = hasPackage ? hoursInfo.remaining : null;
+      
+      const preview = generateRecurrenceDates(
+        form.date, 
+        form.recurrence, 
+        form.recurrence_days, 
+        form.recurrence_end,
+        null,
+        form.duration,
+        availableHours
+      );
+      setRecurrencePreviewData(preview);
+    } else {
+      setRecurrencePreviewData([]);
+      setShowRecurrencePreview(false);
+    }
+  }, [form.student_id, form.date, form.recurrence, form.recurrence_days, form.recurrence_end, form.duration, students, packages]);
+
   const [recurrenceUpdateMode, setRecurrenceUpdateMode] = useState<"none" | "this" | "next" | "all">("none");
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const validateForm = () => {
+    if (!form.student_id) {
+      toast({ title: "Atenção", description: "Selecione um aluno", variant: "destructive" });
+      return false;
+    }
+    if (!form.date) {
+      toast({ title: "Atenção", description: "Informe a data inicial", variant: "destructive" });
+      return false;
+    }
+    if (!form.time_start || !form.time_end) {
+      toast({ title: "Atenção", description: "Informe hora inicial e hora final", variant: "destructive" });
+      return false;
+    }
+    if (form.duration <= 0) {
+      toast({ title: "Atenção", description: "Hora final deve ser maior que hora inicial", variant: "destructive" });
+      return false;
+    }
+    if (form.recurrence === "semanal" && form.recurrence_days.length === 0) {
+      toast({ title: "Atenção", description: "Selecione pelo menos um dia da semana", variant: "destructive" });
+      return false;
+    }
+    if (form.recurrence !== "unica") {
+      const student = students.find(s => s.id === form.student_id);
+      const hasPackage = student?.enrollment_type === "pacote";
+      if (!hasPackage && !form.recurrence_end) {
+        toast({ title: "Atenção", description: "Informe a data final da recorrência", variant: "destructive" });
+        return false;
+      }
+    }
+    return true;
+  };
+
   const checkConflicts = async (payloads: any[]) => {
     // Basic conflict check: same teacher, same date, overlapping time
-    // For simplicity in this implementation, we'll check against existing lessons in state
-    // but ideally this should be a DB check
     const conflicts = [];
     for (const p of payloads) {
       const dayLessons = lessons.filter(l => l.date.split("T")[0] === p.date && l.id !== editing?.id);
@@ -221,12 +275,10 @@ export default function Agenda() {
   };
 
   const handleSave = async (forceMode?: "this" | "next" | "all") => {
-    if (!form.student_id) { toast({ title: "Selecione um aluno", variant: "destructive" }); return; }
-    if (form.duration <= 0) { toast({ title: "Duração inválida", variant: "destructive" }); return; }
+    if (!validateForm()) return;
     
     const student = students.find(s => s.id === form.student_id);
     const hasPackage = student?.enrollment_type === "pacote";
-    const hoursInfo = getStudentHoursInfo(form.student_id);
     
     if (editing && editing.recurrence_id && !forceMode) {
       setShowRecurrenceDialog(true);
@@ -234,23 +286,6 @@ export default function Agenda() {
     }
 
     if (!editing && form.recurrence !== "unica" && !showRecurrencePreview) {
-      if (!hasPackage && !form.recurrence_end) {
-        toast({ title: "Atenção", description: "Informe uma data final para criar a recorrência.", variant: "destructive" });
-        return;
-      }
-      
-      const availableHours = hasPackage ? hoursInfo.remaining : null;
-      const preview = generateRecurrenceDates(
-        form.date, 
-        form.recurrence, 
-        form.recurrence_days, 
-        form.recurrence_end,
-        null,
-        form.duration,
-        availableHours
-      );
-      
-      setRecurrencePreviewData(preview);
       setShowRecurrencePreview(true);
       return;
     }
@@ -332,7 +367,8 @@ export default function Agenda() {
             date: d.date,
             recurrence_id: recurrenceId,
             recurrence_config: recurrenceConfig,
-            recurrence_index: index
+            recurrence_index: index,
+            status: "agendada"
           }));
 
           const conflicts = await checkConflicts(rows);
@@ -344,10 +380,27 @@ export default function Agenda() {
             }
           }
 
-          await supabase.from("lessons").insert(rows);
+          const { error: insertError } = await supabase.from("lessons").insert(rows);
+          if (insertError) throw insertError;
+
+          // Log the creation
+          await supabase.from("recurrence_logs").insert({
+            teacher_id: user!.id,
+            recurrence_id: recurrenceId,
+            action_type: "create_recurrence",
+            affected_count: rows.length,
+            metadata: { 
+              config: recurrenceConfig,
+              student_id: form.student_id,
+              base_date: form.date,
+              time: form.time_start
+            }
+          });
+
           toast({ title: `${recurrencePreviewData.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
         } else {
-          await supabase.from("lessons").insert(payload);
+          const { error: insertError } = await supabase.from("lessons").insert(payload);
+          if (insertError) throw insertError;
           toast({ title: "Aula agendada!" });
         }
       }
@@ -923,97 +976,99 @@ export default function Agenda() {
                   <Repeat className="h-3.5 w-3.5" /> Recorrência
                 </div>
                 
-                {!showRecurrencePreview ? (
-                  <>
-                    <Select value={form.recurrence} onValueChange={v => setForm({ ...form, recurrence: v })}>
-                      <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unica">Única</SelectItem>
-                        <SelectItem value="diaria">Diária</SelectItem>
-                        <SelectItem value="semanal">Semanal</SelectItem>
-                        <SelectItem value="mensal">Mensal</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-4">
+                  <Select value={form.recurrence} onValueChange={v => setForm({ ...form, recurrence: v })}>
+                    <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unica">Única</SelectItem>
+                      <SelectItem value="diaria">Diária</SelectItem>
+                      <SelectItem value="semanal">Semanal</SelectItem>
+                      <SelectItem value="mensal">Mensal</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                    {form.recurrence === "semanal" && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-medium">Dias da semana</Label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {[
-                            { day: 1, label: "Seg" }, { day: 2, label: "Ter" }, { day: 3, label: "Qua" },
-                            { day: 4, label: "Qui" }, { day: 5, label: "Sex" }, { day: 6, label: "Sáb" }, { day: 0, label: "Dom" },
-                          ].map(d => (
-                            <button key={d.day} type="button"
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${form.recurrence_days.includes(d.day) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
-                              onClick={() => {
-                                const days = form.recurrence_days.includes(d.day)
-                                  ? form.recurrence_days.filter(x => x !== d.day)
-                                  : [...form.recurrence_days, d.day];
-                                setForm({ ...form, recurrence_days: days });
-                              }}>
-                              {d.label}
-                            </button>
-                          ))}
+                  {form.recurrence !== "unica" && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                      {form.recurrence === "semanal" && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-medium">Dias da semana</Label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[
+                              { day: 1, label: "Seg" }, { day: 2, label: "Ter" }, { day: 3, label: "Qua" },
+                              { day: 4, label: "Qui" }, { day: 5, label: "Sex" }, { day: 6, label: "Sáb" }, { day: 0, label: "Dom" },
+                            ].map(d => (
+                              <button key={d.day} type="button"
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${form.recurrence_days.includes(d.day) ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                                onClick={() => {
+                                  const days = form.recurrence_days.includes(d.day)
+                                    ? form.recurrence_days.filter(x => x !== d.day)
+                                    : [...form.recurrence_days, d.day];
+                                  setForm({ ...form, recurrence_days: days });
+                                }}>
+                                {d.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {form.recurrence !== "unica" && (
                       <div className="space-y-1.5">
                         <Label className="text-xs font-medium">Repetir até {students.find(s => s.id === form.student_id)?.enrollment_type === "pacote" && "(Opcional se houver pacote)"}</Label>
                         <Input type="date" value={form.recurrence_end} onChange={e => setForm({ ...form, recurrence_end: e.target.value })} className="h-10 rounded-xl" />
                       </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                    <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
-                      <div className="flex items-center justify-between border-b border-primary/10 pb-2">
-                        <h3 className="text-sm font-bold text-primary">Resumo da Recorrência</h3>
-                        <Button variant="ghost" size="sm" className="h-7 text-[10px] rounded-lg" onClick={() => setShowRecurrencePreview(false)}>Alterar</Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-y-2 text-xs">
-                        <div className="text-muted-foreground">Pacote do aluno:</div>
-                        <div className="font-bold text-right">{selectedStudentInfo ? formatHoursDisplay(selectedStudentInfo.remaining) : "N/A"}</div>
-                        
-                        <div className="text-muted-foreground">Duração por aula:</div>
-                        <div className="font-bold text-right">{formatHoursDisplay(form.duration)}</div>
-                        
-                        <div className="text-muted-foreground">Aulas a serem criadas:</div>
-                        <div className="font-bold text-right text-primary">{recurrencePreviewData.length}</div>
-                        
-                        <div className="text-muted-foreground">Total de horas:</div>
-                        <div className="font-bold text-right">{formatHoursDisplay(recurrencePreviewData.length * form.duration)}</div>
-                        
-                        <div className="text-muted-foreground border-t border-primary/10 pt-2 mt-1">Saldo restante:</div>
-                        <div className={`font-bold text-right border-t border-primary/10 pt-2 mt-1 ${recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours < form.duration ? "text-destructive" : "text-accent"}`}>
-                          {formatHoursDisplay(recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours)}
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Datas previstas</Label>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                        {recurrencePreviewData.map((d, i) => {
-                          const dt = d.date ? new Date(d.date + "T12:00:00") : null;
-                          return (
-                            <div key={i} className="flex items-center justify-between text-[11px] bg-muted/40 rounded-lg p-2 border border-border/50">
-                              <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 flex items-center justify-center bg-primary/10 text-primary rounded-full font-bold">{i + 1}</span>
-                                <span className="font-medium">{safeFormatDate(dt, "dd/MM/yyyy", "Data inválida")} — <span className="capitalize">{safeFormatDate(dt, "EEEE", "", { locale: ptBR })}</span></span>
-                              </div>
-                              <div className="text-muted-foreground font-medium">
-                                {form.time_start} às {form.time_end} ({formatHoursDisplay(form.duration)})
-                              </div>
+                      {recurrencePreviewData.length > 0 && (
+                        <div className="space-y-4">
+                          <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
+                            <h3 className="text-sm font-bold text-primary border-b border-primary/10 pb-2">Resumo da Recorrência</h3>
+                            <div className="grid grid-cols-2 gap-y-2 text-xs">
+                              <div className="text-muted-foreground">Horário:</div>
+                              <div className="font-bold text-right">{form.time_start} às {form.time_end}</div>
+
+                              <div className="text-muted-foreground">Duração por aula:</div>
+                              <div className="font-bold text-right">{formatHoursDisplay(form.duration)}</div>
+                              
+                              <div className="text-muted-foreground border-t border-primary/10 pt-2 mt-1">Quantidade de aulas:</div>
+                              <div className="font-bold text-right border-t border-primary/10 pt-2 mt-1 text-primary">{recurrencePreviewData.length}</div>
+                              
+                              <div className="text-muted-foreground">Total de horas programadas:</div>
+                              <div className="font-bold text-right text-primary">{formatHoursDisplay(recurrencePreviewData.length * form.duration)}</div>
+                              
+                              {selectedStudentInfo && selectedStudentInfo.total > 0 && (
+                                <>
+                                  <div className="text-muted-foreground border-t border-primary/10 pt-2 mt-1">Saldo restante após série:</div>
+                                  <div className={`font-bold text-right border-t border-primary/10 pt-2 mt-1 ${recurrencePreviewData.length > 0 && recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours < 0.01 ? "text-destructive" : "text-green-600"}`}>
+                                    {formatHoursDisplay(recurrencePreviewData.length > 0 ? recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours : 0)}
+                                  </div>
+                                </>
+                              )}
                             </div>
-                          );
-                        })}
-                      </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Datas previstas</Label>
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                              {recurrencePreviewData.map((d, i) => {
+                                const dt = d.date ? new Date(d.date + "T12:00:00") : null;
+                                return (
+                                  <div key={i} className="flex items-center justify-between text-[11px] bg-muted/40 rounded-lg p-2 border border-border/50">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-5 h-5 flex items-center justify-center bg-primary/10 text-primary rounded-full font-bold">{i + 1}</span>
+                                      <span className="font-medium">{safeFormatDate(dt, "dd/MM/yyyy", "Data inválida")} — <span className="capitalize">{safeFormatDate(dt, "EEEE", "", { locale: ptBR })}</span></span>
+                                    </div>
+                                    <div className="text-muted-foreground font-medium">
+                                      {form.time_start} às {form.time_end} ({formatHoursDisplay(form.duration)})
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
