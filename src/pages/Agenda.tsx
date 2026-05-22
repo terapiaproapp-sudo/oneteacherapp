@@ -997,12 +997,12 @@ export default function Agenda() {
                       <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Datas previstas</Label>
                       <div className="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {recurrencePreviewData.map((d, i) => {
-                          const dt = new Date(d.date + "T12:00:00");
+                          const dt = d.date ? new Date(d.date + "T12:00:00") : null;
                           return (
                             <div key={i} className="flex items-center justify-between text-[11px] bg-muted/40 rounded-lg p-2 border border-border/50">
                               <div className="flex items-center gap-2">
                                 <span className="w-5 h-5 flex items-center justify-center bg-primary/10 text-primary rounded-full font-bold">{i + 1}</span>
-                                <span className="font-medium">{format(dt, "dd/MM/yyyy")} — <span className="capitalize">{format(dt, "EEEE", { locale: ptBR })}</span></span>
+                                <span className="font-medium">{safeFormatDate(dt, "dd/MM/yyyy", "Data inválida")} — <span className="capitalize">{safeFormatDate(dt, "EEEE", "", { locale: ptBR })}</span></span>
                               </div>
                               <div className="text-muted-foreground font-medium">
                                 {form.time_start} às {form.time_end} ({formatHoursDisplay(form.duration)})
