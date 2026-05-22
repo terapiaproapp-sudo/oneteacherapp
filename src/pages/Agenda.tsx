@@ -410,8 +410,8 @@ export default function Agenda() {
           <Card className="card-premium overflow-hidden">
             <CardContent className="p-1.5 sm:p-4">
               <div className="flex items-center justify-between mb-4">
-                 <div className="text-base font-bold capitalize flex items-center gap-2">
-                   {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                 <div className="text-base font-bold flex items-center gap-2">
+                   {format(currentDate, "MMMM 'de' yyyy", { locale: ptBR }).replace(/^\w/, (c) => c.toUpperCase())}
                  </div>
                  <div className="flex items-center gap-1">
                    <Button variant="ghost" size="sm" className="h-8 w-8 rounded-lg" onClick={() => navigate(-1)}><ChevronLeft className="h-4 w-4" /></Button>
@@ -485,7 +485,12 @@ export default function Agenda() {
                       </div>
                     );
                   })}
-                {lessons.filter(l => parseLocalDate(l.date) >= new Date().setHours(0,0,0,0)).length === 0 && (
+                {lessons.filter(l => {
+                  const d = parseLocalDate(l.date);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  return d.getTime() >= today.getTime();
+                }).length === 0 && (
                   <p className="text-xs text-center text-muted-foreground py-4">Nenhuma aula programada</p>
                 )}
               </div>
