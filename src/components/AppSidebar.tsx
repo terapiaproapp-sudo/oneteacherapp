@@ -42,7 +42,7 @@ export function AppSidebar() {
           {!collapsed ? (
             <div className="animate-fade-in space-y-6">
               <div className="flex items-center justify-start">
-                <img src={logo} alt="OneTeacher" className="h-10 w-auto object-contain" />
+                <img src={logo} alt="OneTeacher" className="h-14 w-auto object-contain" />
               </div>
               <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10 shadow-sm">
                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1 opacity-80">
