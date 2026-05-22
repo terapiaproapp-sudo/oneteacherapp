@@ -5,11 +5,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Search, DollarSign, ArrowUpRight, ArrowDownRight, Check, CreditCard, TrendingUp, CalendarDays, RotateCcw } from "lucide-react";
+import { Search, DollarSign, ArrowUpRight, ArrowDownRight, Check, CreditCard, TrendingUp, CalendarDays, RotateCcw, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Payment {
   id: string; student_id: string; teacher_id: string; amount: number;
@@ -208,7 +218,9 @@ export default function Financial() {
                       <p className="text-sm font-bold">R$ {formatCurrency(p.amount)}</p>
                       <Badge variant="outline" className={`text-[9px] h-4 px-1.5 border ${statusBadgeClass(p)}`}>{statusLabel(p)}</Badge>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-xl text-accent hover:bg-accent/10"><Check className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => markPaid(p)} disabled={isLoading} className="h-8 w-8 p-0 rounded-xl text-accent hover:bg-accent/10">
+                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -259,9 +271,13 @@ export default function Financial() {
                         <Badge variant="outline" className={`text-[10px] h-5 px-1.5 border mt-0.5 ${statusBadgeClass(p)}`}>{statusLabel(p)}</Badge>
                       </div>
                      {p.status !== "pago" ? (
-                        <Button variant="ghost" size="sm" onClick={() => markPaid(p)} className="h-8 w-8 p-0 rounded-xl text-accent hover:bg-accent/10"><Check className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => markPaid(p)} disabled={isLoading} className="h-8 w-8 p-0 rounded-xl text-accent hover:bg-accent/10">
+                          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                        </Button>
                       ) : (
-                        <Button variant="ghost" size="sm" onClick={() => undoPaid(p)} className="h-8 w-8 p-0 rounded-xl text-warning hover:bg-warning/10" title="Desfazer pagamento"><RotateCcw className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" onClick={() => undoPaid(p)} disabled={isLoading} className="h-8 w-8 p-0 rounded-xl text-warning hover:bg-warning/10" title="Desfazer pagamento">
+                          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -271,6 +287,23 @@ export default function Financial() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!paymentToUndo} onOpenChange={(open) => !open && setPaymentToUndo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desfazer pagamento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O status deste pagamento voltará para "pendente".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUndoConfirm} className="bg-warning hover:bg-warning/90">
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

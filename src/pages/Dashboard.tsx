@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Calendar, DollarSign, Clock, AlertTriangle, TrendingUp, ChevronRight, Package } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { formatHoursDisplay } from "@/lib/formatMinutes";
+import { useToast } from "@/hooks/use-toast";
 
 interface Stats {
   totalStudents: number; activeStudents: number; todayLessons: number;
@@ -77,7 +79,11 @@ export default function Dashboard() {
               <div className={`w-8 h-8 rounded-xl ${card.bg} flex items-center justify-center mb-2`}>
                 <card.icon className={`h-4 w-4 ${card.color}`} />
               </div>
-              <p className="text-xl sm:text-2xl font-bold tracking-tight">{card.value}</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-24 mt-1" />
+              ) : (
+                <p className="text-xl sm:text-2xl font-bold tracking-tight">{card.value}</p>
+              )}
               <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 font-semibold uppercase tracking-wide">{card.label}</p>
             </CardContent>
           </Card>
