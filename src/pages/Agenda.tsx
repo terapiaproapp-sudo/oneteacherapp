@@ -381,7 +381,9 @@ export default function Agenda() {
   }[s] || s);
 
   const dotColor = (s: string, type?: string) => {
+    // If it's an extra lesson (avulsa), prioritize purple dot
     if (type === "avulsa") return "bg-purple-500";
+    
     switch (s) {
       case "agendada": return "bg-red-500";
       case "concluida": return "bg-green-500";
