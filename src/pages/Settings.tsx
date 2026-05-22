@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor, ExternalLink, CheckCircle2, XCircle, AlertCircle, Loader2, Smartphone, Clock, Info, ShieldAlert, Terminal, Copy, RefreshCw } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { subscribeToPush, getNotificationSettings, updateNotificationSettings, registerServiceWorker } from "@/lib/notifications";
+import { subscribeToPush, getNotificationSettings, updateNotificationSettings, registerServiceWorker, reconfigurePushSubscription } from "@/lib/notifications";
 
 type ThemeMode = "light" | "dark" | "system";
 
