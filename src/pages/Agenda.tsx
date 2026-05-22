@@ -1029,19 +1029,26 @@ export default function Agenda() {
                         <div className="text-muted-foreground">Pacote do aluno:</div>
                         <div className="font-bold text-right">{selectedStudentInfo ? formatHoursDisplay(selectedStudentInfo.remaining) : "N/A"}</div>
                         
+                        <div className="text-muted-foreground">Horário:</div>
+                        <div className="font-bold text-right">{form.time_start} às {form.time_end}</div>
+
                         <div className="text-muted-foreground">Duração por aula:</div>
                         <div className="font-bold text-right">{formatHoursDisplay(form.duration)}</div>
                         
-                        <div className="text-muted-foreground">Aulas a serem criadas:</div>
-                        <div className="font-bold text-right text-primary">{recurrencePreviewData.length}</div>
+                        <div className="text-muted-foreground border-t border-primary/10 pt-2 mt-1">Quantidade de aulas:</div>
+                        <div className="font-bold text-right border-t border-primary/10 pt-2 mt-1 text-primary">{recurrencePreviewData.length}</div>
                         
-                        <div className="text-muted-foreground">Total de horas:</div>
-                        <div className="font-bold text-right">{formatHoursDisplay(recurrencePreviewData.length * form.duration)}</div>
+                        <div className="text-muted-foreground">Total de horas programadas:</div>
+                        <div className="font-bold text-right text-primary">{formatHoursDisplay(recurrencePreviewData.length * form.duration)}</div>
                         
-                        <div className="text-muted-foreground border-t border-primary/10 pt-2 mt-1">Saldo restante:</div>
-                        <div className={`font-bold text-right border-t border-primary/10 pt-2 mt-1 ${recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours < form.duration ? "text-destructive" : "text-accent"}`}>
-                          {formatHoursDisplay(recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours)}
-                        </div>
+                        {selectedStudentInfo && selectedStudentInfo.total > 0 && (
+                          <>
+                            <div className="text-muted-foreground border-t border-primary/10 pt-2 mt-1">Saldo restante após série:</div>
+                            <div className={`font-bold text-right border-t border-primary/10 pt-2 mt-1 ${recurrencePreviewData.length > 0 && recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours < 0.01 ? "text-destructive" : "text-green-600"}`}>
+                              {formatHoursDisplay(recurrencePreviewData.length > 0 ? recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours : 0)}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
