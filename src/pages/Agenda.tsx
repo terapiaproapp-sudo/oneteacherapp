@@ -404,7 +404,9 @@ export default function Agenda() {
   const [viewType, setViewType] = useState<"dia" | "semana" | "mes">("dia");
 
   const stats = useMemo(() => {
-    const referenceDate = selectedDate || new Date();
+    // Para os cards superiores, se estiver no modo Mês, usamos o mês de currentDate (o que o calendário mostra)
+    // Se for dia ou semana, usamos selectedDate (se houver) ou hoje
+    const referenceDate = (viewType === "mes") ? currentDate : (selectedDate || new Date());
     let filteredLessons = [];
 
     if (viewType === "dia") {
@@ -417,8 +419,9 @@ export default function Agenda() {
         return d >= start && d <= end;
       });
     } else {
-      const start = startOfMonth(referenceDate);
-      const end = endOfMonth(referenceDate);
+      // Mês: filtra tudo que pertence ao mês de currentDate
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
       filteredLessons = lessons.filter(l => {
         const d = parseLocalDate(l.date);
         return d >= start && d <= end;
@@ -432,10 +435,11 @@ export default function Agenda() {
       pending: filteredLessons.filter(l => l.status === "agendada").length,
       date: referenceDate
     };
-  }, [lessons, selectedDate, viewType]);
+  }, [lessons, selectedDate, currentDate, viewType]);
 
   const filteredLessonsForList = useMemo(() => {
-    const referenceDate = selectedDate || new Date();
+    // Mesma lógica de sincronização para a lista lateral
+    const referenceDate = (viewType === "mes") ? currentDate : (selectedDate || new Date());
     
     if (viewType === "dia") {
       return getLessonsForDay(referenceDate);
@@ -447,14 +451,14 @@ export default function Agenda() {
         return d >= start && d <= end;
       });
     } else {
-      const start = startOfMonth(referenceDate);
-      const end = endOfMonth(referenceDate);
+      const start = startOfMonth(currentDate);
+      const end = endOfMonth(currentDate);
       return lessons.filter(l => {
         const d = parseLocalDate(l.date);
         return d >= start && d <= end;
       });
     }
-  }, [lessons, selectedDate, viewType]);
+  }, [lessons, selectedDate, currentDate, viewType]);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto pb-20">
