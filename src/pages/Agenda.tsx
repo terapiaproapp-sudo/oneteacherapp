@@ -366,7 +366,8 @@ export default function Agenda() {
             date: d.date,
             recurrence_id: recurrenceId,
             recurrence_config: recurrenceConfig,
-            recurrence_index: index
+            recurrence_index: index,
+            status: "agendada"
           }));
 
           const conflicts = await checkConflicts(rows);
@@ -378,10 +379,27 @@ export default function Agenda() {
             }
           }
 
-          await supabase.from("lessons").insert(rows);
+          const { error: insertError } = await supabase.from("lessons").insert(rows);
+          if (insertError) throw insertError;
+
+          // Log the creation
+          await supabase.from("recurrence_logs").insert({
+            teacher_id: user!.id,
+            recurrence_id: recurrenceId,
+            action_type: "create_recurrence",
+            affected_count: rows.length,
+            metadata: { 
+              config: recurrenceConfig,
+              student_id: form.student_id,
+              base_date: form.date,
+              time: form.time_start
+            }
+          });
+
           toast({ title: `${recurrencePreviewData.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
         } else {
-          await supabase.from("lessons").insert(payload);
+          const { error: insertError } = await supabase.from("lessons").insert(payload);
+          if (insertError) throw insertError;
           toast({ title: "Aula agendada!" });
         }
       }
