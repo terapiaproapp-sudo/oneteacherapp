@@ -899,15 +899,20 @@ export default function Agenda() {
           </DialogHeader>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {selectedDayLessons.map(l => (
-              <div key={l.id} className="flex items-center justify-between p-3 rounded-xl border border-border/50">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{l.students?.name}</p>
-                  <p className="text-xs text-muted-foreground">{l.time} · {l.subject} · {formatHoursDisplay(l.duration)}</p>
-                  <Badge className={`mt-1 ${statusStyle(l.status)}`} variant="outline">{statusLabel(l.status)}</Badge>
+              <div 
+                key={l.id} 
+                onClick={() => { setDetailOpen(false); setLessonDetail(l); setShowLessonDetail(true); }}
+                className="flex items-center justify-between p-4 rounded-2xl border border-border/50 cursor-pointer hover:bg-muted/30 hover:border-primary/30 transition-all"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-foreground truncate">{l.students?.name}</p>
+                  <p className="text-[11px] font-bold text-muted-foreground mt-0.5">{l.time} · {l.subject} · {formatHoursDisplay(l.duration)}</p>
+                  <Badge className={`mt-2 text-[9px] font-black uppercase tracking-wider ${statusStyle(l.status)}`} variant="outline">{statusLabel(l.status)}</Badge>
                 </div>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setDetailOpen(false); openEdit(l); }}>
-                    <Edit className="h-4 w-4" />
+                <div className="flex gap-2 ml-4">
+                  <Button size="sm" variant="secondary" className="h-8 px-3 rounded-xl gap-1.5 font-bold text-[10px] uppercase border border-border/50 shadow-sm" onClick={(e) => { e.stopPropagation(); setDetailOpen(false); openEdit(l); }}>
+                    <Edit className="h-3 w-3" />
+                    Editar
                   </Button>
                 </div>
               </div>
