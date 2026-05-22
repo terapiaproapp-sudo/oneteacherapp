@@ -356,23 +356,25 @@ export default function Agenda() {
 
   const handleDayClick = (day: Date) => {
     setSelectedDate(day);
-    const dl = getLessonsForDay(day);
-    if (dl.length > 0) setDetailOpen(true);
-    else openNew(format(day, "yyyy-MM-dd"));
+    // Don't auto-open detail modal on day click to allow user to see stats updated on the page
+    // if (dl.length > 0) setDetailOpen(true);
+    // else openNew(format(day, "yyyy-MM-dd"));
   };
 
 
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
 
   const stats = useMemo(() => {
-    const todayLessons = getLessonsForDay(new Date());
+    const referenceDate = selectedDate || new Date();
+    const dayLessons = getLessonsForDay(referenceDate);
     return {
-      totalToday: todayLessons.length,
-      hoursToday: todayLessons.reduce((s, l) => s + l.duration, 0),
-      avulsasToday: todayLessons.filter(l => l.lesson_type === "avulsa").length,
-      pendingToday: todayLessons.filter(l => l.status === "agendada").length,
+      total: dayLessons.length,
+      hours: dayLessons.reduce((s, l) => s + l.duration, 0),
+      avulsas: dayLessons.filter(l => l.lesson_type === "avulsa").length,
+      pending: dayLessons.filter(l => l.status === "agendada").length,
+      date: referenceDate
     };
-  }, [lessons]);
+  }, [lessons, selectedDate]);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto pb-20">
@@ -389,10 +391,10 @@ export default function Agenda() {
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Aulas hoje", val: stats.totalToday, color: "text-primary" },
-          { label: "Horas hoje", val: formatHoursDisplay(stats.hoursToday), color: "text-accent" },
-          { label: "Avulsas hoje", val: stats.avulsasToday, color: "text-info" },
-          { label: "Pendentes", val: stats.pendingToday, color: "text-warning" },
+          { label: `Aulas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: stats.total, color: "text-primary" },
+          { label: `Horas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: formatHoursDisplay(stats.hours), color: "text-accent" },
+          { label: `Avulsas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: stats.avulsas, color: "text-info" },
+          { label: "Pendentes de confirmação", val: stats.pending, color: "text-warning" },
         ].map(s => (
           <Card key={s.label} className="card-premium">
             <CardContent className="p-4">
@@ -428,7 +430,15 @@ export default function Agenda() {
                     <button key={day.toISOString()} onClick={() => handleDayClick(day)}
                       className={`relative flex flex-col items-center p-2 rounded-xl border border-border/40 hover:bg-muted/50 transition-all ${isTodayActive ? "bg-primary/5 ring-1 ring-primary/20" : "bg-card"}`}>
                       <span className={`text-xs font-bold ${isTodayActive ? "text-primary" : ""}`}>{format(day, "d")}</span>
-                      {dl.length > 0 && <div className="mt-1 flex gap-0.5">{dl.slice(0, 3).map((l, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${dotColor(l.status)}`} />)}</div>}
+                      {dl.length > 0 && (
+                        <div className="mt-1 flex flex-wrap justify-center gap-0.5 max-w-full">
+                          {dl.length > 3 ? (
+                            <span className="text-[9px] font-bold text-muted-foreground">+{dl.length}</span>
+                          ) : (
+                            dl.map((l, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${dotColor(l.status)}`} />)
+                          )}
+                        </div>
+                      )}
                     </button>
                   );
                 })}
@@ -442,15 +452,42 @@ export default function Agenda() {
             <CardContent className="p-5">
               <h3 className="text-sm font-bold mb-4">Próximas Aulas</h3>
               <div className="space-y-3">
-                {lessons.filter(l => new Date(l.date) >= new Date()).slice(0, 5).map(l => (
-                  <div key={l.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30">
-                    <div className="text-center font-bold text-sm text-primary">{l.time}</div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate">{l.students?.name}</p>
-                      <p className="text-xs text-muted-foreground">{l.subject}</p>
-                    </div>
-                  </div>
-                ))}
+                {lessons
+                  .filter(l => {
+                    const lessonDate = parseLocalDate(l.date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return lessonDate >= today;
+                  })
+                  .slice(0, 10)
+                  .map(l => {
+                    const lessonDate = parseLocalDate(l.date);
+                    const showDate = !isToday(lessonDate);
+                    return (
+                      <div key={l.id} className="flex flex-col gap-1 p-3 rounded-xl bg-muted/30 border border-border/50">
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-primary">
+                              {showDate && `${format(lessonDate, "dd/MM")} • `}{l.time}
+                            </span>
+                            <p className="text-sm font-bold truncate">{l.students?.name}</p>
+                          </div>
+                          <Badge variant="outline" className={`text-[10px] px-1.5 h-5 ${statusStyle(l.status)}`}>
+                            {statusLabel(l.status)}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+                          <span>{l.subject}</span>
+                          <span className="capitalize px-1.5 py-0.5 rounded bg-background/50 border border-border/30">
+                            {l.lesson_type === "pacote" ? "Pacote" : "Avulsa"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                {lessons.filter(l => parseLocalDate(l.date) >= new Date().setHours(0,0,0,0)).length === 0 && (
+                  <p className="text-xs text-center text-muted-foreground py-4">Nenhuma aula programada</p>
+                )}
               </div>
             </CardContent>
           </Card>

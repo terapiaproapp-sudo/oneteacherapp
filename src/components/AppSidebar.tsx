@@ -98,14 +98,17 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border py-4">
+      <SidebarFooter className="border-t border-sidebar-border py-4 bg-sidebar-accent/5">
         {!collapsed && (
-          <div className="px-4 mb-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="OneTeacher" className="h-4 object-contain brightness-0 invert opacity-30" />
+          <div className="px-4 mb-4 flex flex-col gap-3">
+            <div className="flex items-center gap-2 py-2">
+              <img src={logo} alt="OneTeacher" className="h-8 object-contain brightness-0 invert opacity-80" />
             </div>
             {user && (
-              <p className="text-[10px] text-sidebar-foreground/40 truncate font-medium">{user.email}</p>
+              <div className="space-y-1">
+                <p className="text-[10px] text-sidebar-foreground/60 truncate font-semibold uppercase tracking-wider">Conta ativa</p>
+                <p className="text-[10px] text-sidebar-foreground/40 truncate font-medium">{user.email}</p>
+              </div>
             )}
           </div>
         )}
