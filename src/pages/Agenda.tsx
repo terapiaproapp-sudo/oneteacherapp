@@ -345,10 +345,39 @@ export default function Agenda() {
     toast({ title: "Comprovante removido" }); loadLessons();
   };
 
-  const statusStyle = (s: string) => ({ agendada: "bg-primary/10 text-primary border-primary/20", concluida: "bg-accent/10 text-accent border-accent/20", cancelada: "bg-destructive/10 text-destructive border-destructive/20", falta: "bg-warning/10 text-warning border-warning/20", remarcada: "bg-info/10 text-info border-info/20", noshow: "bg-destructive/10 text-destructive border-destructive/20" }[s] || "bg-muted text-muted-foreground");
-  const statusLabel = (s: string) => ({ agendada: "Agendada", concluida: "Realizada", cancelada: "Cancelada", falta: "Falta", remarcada: "Remarcada", noshow: "No-show" }[s] || s);
-  const dotColor = (s: string) => ({ agendada: "bg-primary", concluida: "bg-accent", cancelada: "bg-destructive", falta: "bg-warning", remarcada: "bg-info", noshow: "bg-destructive" }[s] || "bg-muted-foreground");
+  const statusStyle = (s: string) => {
+    switch (s) {
+      case "agendada": return "bg-red-50 text-red-600 border-red-200";
+      case "concluida": return "bg-green-50 text-green-600 border-green-200";
+      case "noshow": return "bg-red-900/10 text-red-900 border-red-900/20";
+      case "remarcada": return "bg-orange-50 text-orange-600 border-orange-200";
+      case "cancelada": return "bg-gray-100 text-gray-500 border-gray-200";
+      case "falta": return "bg-yellow-50 text-yellow-600 border-yellow-200";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
 
+  const statusLabel = (s: string) => ({ 
+    agendada: "Agendada", 
+    concluida: "Realizada", 
+    cancelada: "Cancelada", 
+    falta: "Falta", 
+    remarcada: "Remarcada", 
+    noshow: "No-show" 
+  }[s] || s);
+
+  const dotColor = (s: string, type?: string) => {
+    if (type === "avulsa") return "bg-purple-500";
+    switch (s) {
+      case "agendada": return "bg-red-500";
+      case "concluida": return "bg-green-500";
+      case "noshow": return "bg-red-900";
+      case "remarcada": return "bg-orange-500";
+      case "cancelada": return "bg-gray-400";
+      case "falta": return "bg-yellow-500";
+      default: return "bg-muted-foreground";
+    }
+  };
 
   const ms = startOfMonth(currentDate);
   const me = endOfMonth(currentDate);
@@ -356,45 +385,110 @@ export default function Agenda() {
 
   const handleDayClick = (day: Date) => {
     setSelectedDate(day);
-    // Don't auto-open detail modal on day click to allow user to see stats updated on the page
-    // if (dl.length > 0) setDetailOpen(true);
-    // else openNew(format(day, "yyyy-MM-dd"));
   };
 
-
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [viewType, setViewType] = useState<"dia" | "semana" | "mes">("dia");
 
   const stats = useMemo(() => {
     const referenceDate = selectedDate || new Date();
-    const dayLessons = getLessonsForDay(referenceDate);
+    let filteredLessons = [];
+
+    if (viewType === "dia") {
+      filteredLessons = getLessonsForDay(referenceDate);
+    } else if (viewType === "semana") {
+      const start = startOfWeek(referenceDate, { weekStartsOn: 1 });
+      const end = endOfWeek(referenceDate, { weekStartsOn: 1 });
+      filteredLessons = lessons.filter(l => {
+        const d = parseLocalDate(l.date);
+        return d >= start && d <= end;
+      });
+    } else {
+      const start = startOfMonth(referenceDate);
+      const end = endOfMonth(referenceDate);
+      filteredLessons = lessons.filter(l => {
+        const d = parseLocalDate(l.date);
+        return d >= start && d <= end;
+      });
+    }
+
     return {
-      total: dayLessons.length,
-      hours: dayLessons.reduce((s, l) => s + l.duration, 0),
-      avulsas: dayLessons.filter(l => l.lesson_type === "avulsa").length,
-      pending: dayLessons.filter(l => l.status === "agendada").length,
+      total: filteredLessons.length,
+      hours: filteredLessons.reduce((s, l) => s + l.duration, 0),
+      avulsas: filteredLessons.filter(l => l.lesson_type === "avulsa").length,
+      pending: filteredLessons.filter(l => l.status === "agendada").length,
       date: referenceDate
     };
-  }, [lessons, selectedDate]);
+  }, [lessons, selectedDate, viewType]);
+
+  const filteredLessonsForList = useMemo(() => {
+    const referenceDate = selectedDate || new Date();
+    
+    if (viewType === "dia") {
+      return getLessonsForDay(referenceDate);
+    } else if (viewType === "semana") {
+      const start = startOfWeek(referenceDate, { weekStartsOn: 1 });
+      const end = endOfWeek(referenceDate, { weekStartsOn: 1 });
+      return lessons.filter(l => {
+        const d = parseLocalDate(l.date);
+        return d >= start && d <= end;
+      });
+    } else {
+      const start = startOfMonth(referenceDate);
+      const end = endOfMonth(referenceDate);
+      return lessons.filter(l => {
+        const d = parseLocalDate(l.date);
+        return d >= start && d <= end;
+      });
+    }
+  }, [lessons, selectedDate, viewType]);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto pb-20">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Agenda</h1>
           <p className="text-sm text-muted-foreground">Sua central de aulas e operações</p>
         </div>
-        <Button onClick={() => openNew()} size="sm" className="rounded-xl shadow-sm h-10 gap-2">
-          <Plus className="h-4 w-4" /> Nova Aula
-        </Button>
+        
+        <div className="flex items-center gap-2">
+          <div className="bg-muted p-1 rounded-xl flex items-center shadow-inner">
+            {(["dia", "semana", "mes"] as const).map((type) => (
+              <Button
+                key={type}
+                variant={viewType === type ? "default" : "ghost"}
+                size="sm"
+                className={`rounded-lg h-8 px-4 text-xs font-bold transition-all ${viewType === type ? "shadow-sm" : ""}`}
+                onClick={() => setViewType(type)}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Button>
+            ))}
+          </div>
+          <Button onClick={() => openNew()} size="sm" className="rounded-xl shadow-sm h-10 gap-2 ml-2">
+            <Plus className="h-4 w-4" /> Nova Aula
+          </Button>
+        </div>
       </div>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: `Aulas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: stats.total, color: "text-primary" },
-          { label: `Horas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: formatHoursDisplay(stats.hours), color: "text-accent" },
-          { label: `Avulsas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: stats.avulsas, color: "text-info" },
-          { label: "Pendentes de confirmação", val: stats.pending, color: "text-warning" },
+          { 
+            label: `Aulas n${viewType === "dia" ? "o dia" : viewType === "semana" ? "a semana" : "o mês"}`, 
+            val: stats.total, 
+            color: "text-red-500" 
+          },
+          { 
+            label: `Horas n${viewType === "dia" ? "o dia" : viewType === "semana" ? "a semana" : "o mês"}`, 
+            val: formatHoursDisplay(stats.hours), 
+            color: "text-green-600" 
+          },
+          { 
+            label: `Avulsas n${viewType === "dia" ? "o dia" : viewType === "semana" ? "a semana" : "o mês"}`, 
+            val: stats.avulsas, 
+            color: "text-purple-600" 
+          },
+          { label: "Pendentes de confirmação", val: stats.pending, color: "text-orange-500" },
         ].map(s => (
           <Card key={s.label} className="card-premium">
             <CardContent className="p-4">
@@ -435,7 +529,7 @@ export default function Agenda() {
                           {dl.length > 3 ? (
                             <span className="text-[9px] font-bold text-muted-foreground">+{dl.length}</span>
                           ) : (
-                            dl.map((l, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${dotColor(l.status)}`} />)
+                            dl.map((l, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${dotColor(l.status, l.lesson_type)}`} />)
                           )}
                         </div>
                       )}
@@ -450,56 +544,103 @@ export default function Agenda() {
         <div className="space-y-6">
           <Card className="card-premium">
             <CardContent className="p-5">
-              <h3 className="text-sm font-bold mb-4">
-                {selectedDate && !isToday(selectedDate) 
-                  ? `Aulas de ${format(selectedDate, "dd/MM")}` 
-                  : "Próximas Aulas"}
+              <h3 className="text-sm font-bold mb-4 flex items-center justify-between">
+                <span>
+                  {viewType === "dia" 
+                    ? (selectedDate && !isToday(selectedDate) ? `Aulas de ${format(selectedDate, "dd/MM")}` : "Aulas de Hoje")
+                    : viewType === "semana" ? "Aulas da Semana" : "Aulas do Mês"}
+                </span>
+                <Badge variant="secondary" className="text-[10px] font-bold">
+                  {filteredLessonsForList.length} aula(s)
+                </Badge>
               </h3>
-              <div className="space-y-3">
-                {lessons
-                  .filter(l => {
-                    const lessonDate = parseLocalDate(l.date);
-                    const referenceDate = selectedDate || new Date();
-                    referenceDate.setHours(0, 0, 0, 0);
-                    
-                    if (selectedDate && !isToday(selectedDate)) {
-                      return isSameDay(lessonDate, selectedDate);
-                    }
-                    return lessonDate.getTime() >= referenceDate.getTime();
-                  })
-                  .slice(0, 10)
-                  .map(l => {
-                    const lessonDate = parseLocalDate(l.date);
-                    const showDate = !isToday(lessonDate);
-                    return (
-                      <div key={l.id} className="flex flex-col gap-1 p-3 rounded-xl bg-muted/30 border border-border/50">
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-primary">
-                              {showDate && `${format(lessonDate, "dd/MM")} • `}{l.time}
-                            </span>
-                            <p className="text-sm font-bold truncate">{l.students?.name}</p>
-                          </div>
-                          <Badge variant="outline" className={`text-[10px] px-1.5 h-5 ${statusStyle(l.status)}`}>
-                            {statusLabel(l.status)}
-                          </Badge>
-                        </div>
-                        <div className="flex justify-between items-center text-[11px] text-muted-foreground">
-                          <span>{l.subject}</span>
-                          <span className="capitalize px-1.5 py-0.5 rounded bg-background/50 border border-border/30">
-                            {l.lesson_type === "pacote" ? "Pacote" : "Avulsa"}
+              
+              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                {filteredLessonsForList.length > 0 ? (
+                  // Grouping logic
+                  Object.entries(
+                    filteredLessonsForList.reduce((acc, lesson) => {
+                      const dateKey = lesson.date.split("T")[0];
+                      if (!acc[dateKey]) acc[dateKey] = [];
+                      acc[dateKey].push(lesson);
+                      return acc;
+                    }, {} as Record<string, Lesson[]>)
+                  )
+                  .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+                  .map(([date, dayLessons]) => (
+                    <div key={date} className="space-y-3">
+                      {viewType !== "dia" && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-px flex-1 bg-border/50"></div>
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/50 px-2 py-0.5 rounded-full">
+                            {format(parseLocalDate(date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
                           </span>
+                          <div className="h-px flex-1 bg-border/50"></div>
                         </div>
+                      )}
+                      
+                      <div className="space-y-3">
+                        {dayLessons.map(l => {
+                          const lessonDate = parseLocalDate(l.date);
+                          const endTime = l.time && l.duration ? calculateEndTime(l.time, l.duration) : "--:--";
+                          
+                          return (
+                            <div key={l.id} className="group relative flex flex-col gap-2 p-4 rounded-2xl bg-muted/20 border border-border/50 hover:bg-muted/40 hover:border-primary/20 transition-all duration-300">
+                              <div className="flex justify-between items-start">
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-wider">
+                                      {l.time} às {endTime}
+                                    </span>
+                                    <Badge className={`text-[9px] font-bold px-1.5 h-4 uppercase ${statusStyle(l.status)}`} variant="outline">
+                                      {statusLabel(l.status)}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-base font-black text-foreground tracking-tight leading-tight mt-1">{l.students?.name}</p>
+                                </div>
+                                
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg" onClick={() => openEdit(l)}>
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/10 mt-1">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Disciplina</span>
+                                  <span className="text-[11px] font-semibold truncate">{l.subject || "Não informada"}</span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Modalidade</span>
+                                  <span className="text-[11px] font-semibold capitalize">{l.modality}</span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Tipo</span>
+                                  <span className={`text-[11px] font-bold ${l.lesson_type === "avulsa" ? "text-purple-600" : "text-primary"}`}>
+                                    {l.lesson_type === "pacote" ? "Pacote" : "Avulsa"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Duração</span>
+                                  <span className="text-[11px] font-semibold">{formatHoursDisplay(l.duration)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                {lessons.filter(l => {
-                  const d = parseLocalDate(l.date);
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  return d.getTime() >= today.getTime();
-                }).length === 0 && (
-                  <p className="text-xs text-center text-muted-foreground py-4">Nenhuma aula programada</p>
+                    </div>
+                  ))
+                ) : (
+
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                      <Clock className="h-6 w-6 text-muted-foreground/40" />
+                    </div>
+                    <p className="text-xs font-bold text-muted-foreground">Nenhuma aula encontrada</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1">Experimente trocar a data ou o filtro</p>
+                  </div>
                 )}
               </div>
             </CardContent>
