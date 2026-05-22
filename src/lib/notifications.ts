@@ -85,7 +85,7 @@ export async function subscribeToPush(registration: ServiceWorkerRegistration, u
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     }, {
-      onConflict: "user_id, subscription"
+      onConflict: "user_id,endpoint"
     });
 
     if (error) throw error;
