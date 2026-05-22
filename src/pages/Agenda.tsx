@@ -538,10 +538,22 @@ export default function Agenda() {
                 {calendarDays.map(day => {
                   const dl = getLessonsForDay(day);
                   const isTodayActive = isToday(day);
+                  const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                  const isSelected = selectedDate && isSameDay(day, selectedDate);
+                  
                   return (
-                    <button key={day.toISOString()} onClick={() => handleDayClick(day)}
-                      className={`relative flex flex-col items-center p-2 rounded-xl border border-border/40 hover:bg-muted/50 transition-all ${isTodayActive ? "bg-primary/5 ring-1 ring-primary/20" : "bg-card"}`}>
-                      <span className={`text-xs font-bold ${isTodayActive ? "text-primary" : ""}`}>{format(day, "d")}</span>
+                    <button 
+                      key={day.toISOString()} 
+                      onClick={() => handleDayClick(day)}
+                      className={`relative flex flex-col items-center p-2 rounded-xl border transition-all ${
+                        isTodayActive ? "bg-primary/5 ring-1 ring-primary/20 border-primary/20" : 
+                        isSelected ? "bg-primary/10 border-primary/30 shadow-sm" : 
+                        "bg-card border-border/40"
+                      } ${!isCurrentMonth ? "opacity-30 grayscale-[0.5]" : "hover:bg-muted/50"}`}
+                    >
+                      <span className={`text-xs font-bold ${isTodayActive ? "text-primary" : isCurrentMonth ? "" : "text-muted-foreground"}`}>
+                        {format(day, "d")}
+                      </span>
                       {dl.length > 0 && (
                         <div className="mt-1 flex flex-wrap justify-center gap-0.5 max-w-full">
                           {dl.length > 3 ? (
