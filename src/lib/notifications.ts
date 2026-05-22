@@ -41,6 +41,7 @@ export async function subscribeToPush(registration: ServiceWorkerRegistration, u
       device_info: {
         userAgent: navigator.userAgent,
         platform: (navigator as any).platform || "unknown",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       },
     }, {
       onConflict: "user_id, subscription"
