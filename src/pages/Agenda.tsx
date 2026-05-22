@@ -450,14 +450,22 @@ export default function Agenda() {
         <div className="space-y-6">
           <Card className="card-premium">
             <CardContent className="p-5">
-              <h3 className="text-sm font-bold mb-4">Próximas Aulas</h3>
+              <h3 className="text-sm font-bold mb-4">
+                {selectedDate && !isToday(selectedDate) 
+                  ? `Aulas de ${format(selectedDate, "dd/MM")}` 
+                  : "Próximas Aulas"}
+              </h3>
               <div className="space-y-3">
                 {lessons
                   .filter(l => {
                     const lessonDate = parseLocalDate(l.date);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    return lessonDate >= today;
+                    const referenceDate = selectedDate || new Date();
+                    referenceDate.setHours(0, 0, 0, 0);
+                    
+                    if (selectedDate && !isToday(selectedDate)) {
+                      return isSameDay(lessonDate, selectedDate);
+                    }
+                    return lessonDate.getTime() >= referenceDate.getTime();
                   })
                   .slice(0, 10)
                   .map(l => {
