@@ -46,36 +46,38 @@ export default function SettingsPage() {
     localStorage.setItem("ot-theme", theme);
   }, [theme]);
 
-  // Notification preferences
-  const [notifPrefs, setNotifPrefs] = useState(() => {
-    const saved = localStorage.getItem("ot-notif-prefs");
-    return saved ? JSON.parse(saved) : {
-      aulasAgendadas: true, aulasDoDia: true, lembrete: true,
-      pagamentosPendentes: true, pagamentosAtraso: true,
-      vencimentoParcelas: true, pacoteBaixo: true, pacoteAcabando: true,
-    };
+  // Notification settings from DB
+  const [settings, setSettings] = useState({
+    daily_summary: true,
+    daily_summary_time: "07:00",
+    lesson_reminder: true,
+    lesson_reminder_lead_time: "15"
   });
-  const [reminderTime, setReminderTime] = useState(() => localStorage.getItem("ot-reminder-time") || "30min");
 
-  const updateNotifPref = (key: string, val: boolean) => {
-    const updated = { ...notifPrefs, [key]: val };
-    setNotifPrefs(updated);
-    localStorage.setItem("ot-notif-prefs", JSON.stringify(updated));
-  };
-
-  const saveReminderTime = (v: string) => { setReminderTime(v); localStorage.setItem("ot-reminder-time", v); };
-
-  // Notification diagnostics
   const env = getEnvironmentInfo();
   const [notifPermission, setNotifPermission] = useState<string>("checking");
   const [notifSupported, setNotifSupported] = useState(true);
   const [swStatus, setSwStatus] = useState<"checking" | "active" | "inactive" | "unsupported">("checking");
   const [diagLogs, setDiagLogs] = useState<{ label: string; status: "ok" | "warn" | "error" }[]>([]);
   const [testingNotif, setTestingNotif] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
+
+  const fetchSettings = useCallback(async () => {
+    if (!user) return;
+    const dbSettings = await getNotificationSettings(user.id);
+    if (dbSettings) setSettings(dbSettings);
+  }, [user]);
 
   useEffect(() => {
-    if (!("Notification" in window)) { setNotifSupported(false); setNotifPermission("unsupported"); }
-    else setNotifPermission(Notification.permission);
+    fetchSettings();
+    
+    if (!("Notification" in window)) { 
+      setNotifSupported(false); 
+      setNotifPermission("unsupported"); 
+    } else {
+      setNotifPermission(Notification.permission);
+    }
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
@@ -84,7 +86,24 @@ export default function SettingsPage() {
     } else {
       setSwStatus("unsupported");
     }
-  }, []);
+
+    // iOS and PWA detection
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    setIsIOS(/iphone|ipad|ipod/.test(userAgent));
+    setIsPWA(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
+  }, [fetchSettings]);
+
+  const updateSettings = async (newSettings: any) => {
+    if (!user) return;
+    const updated = { ...settings, ...newSettings };
+    setSettings(updated);
+    try {
+      await updateNotificationSettings(user.id, updated);
+      toast({ title: "Configurações salvas!" });
+    } catch (err) {
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    }
+  };
 
   const allReady = !env.isRestricted && notifSupported && notifPermission === "granted";
 
@@ -100,66 +119,51 @@ export default function SettingsPage() {
     try {
       const perm = await Notification.requestPermission();
       setNotifPermission(perm);
-      if (perm === "granted") toast({ title: "Notificações ativadas! ✅" });
-      else if (perm === "denied") toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
-    } catch {
-      toast({ title: "Erro ao solicitar permissão", variant: "destructive" });
+      
+      if (perm === "granted") {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        if (regs.length > 0) {
+          await subscribeToPush(regs[0], user!.id);
+          setSwStatus("active");
+          toast({ title: "Notificações ativadas com sucesso! ✅" });
+        } else {
+          toast({ title: "Erro", description: "Service Worker não encontrado.", variant: "destructive" });
+        }
+      } else if (perm === "denied") {
+        toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Erro ao ativar", description: "Ocorreu um erro ao configurar as notificações.", variant: "destructive" });
     }
   };
 
   const testNotification = async () => {
+    if (!user) return;
     setTestingNotif(true);
     const logs: typeof diagLogs = [];
 
-    // 1. Environment
-    if (env.isRestricted) {
-      logs.push({ label: "Ambiente: preview/iframe detectado — notificações bloqueadas", status: "error" });
-      setDiagLogs(logs); setTestingNotif(false); return;
-    }
-    logs.push({ label: "Ambiente: versão pública ✓", status: "ok" });
-
-    // 2. Browser support
-    if (!notifSupported) {
-      logs.push({ label: "Navegador: não suporta notificações", status: "error" });
-      setDiagLogs(logs); setTestingNotif(false); return;
-    }
-    logs.push({ label: "Navegador: suporta notificações ✓", status: "ok" });
-
-    // 3. Permission
-    const perm = Notification.permission;
-    setNotifPermission(perm);
-    if (perm !== "granted") {
-      logs.push({ label: `Permissão: ${perm === "denied" ? "negada pelo usuário" : "não solicitada ainda"}`, status: perm === "denied" ? "error" : "warn" });
-      setDiagLogs(logs); setTestingNotif(false); return;
-    }
-    logs.push({ label: "Permissão: concedida ✓", status: "ok" });
-
-    // 4. Service worker
-    if ("serviceWorker" in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      if (regs.length > 0) {
-        logs.push({ label: "Service Worker: ativo ✓", status: "ok" });
-      } else {
-        logs.push({ label: "Service Worker: não registrado (notificações simples funcionam)", status: "warn" });
-      }
-    } else {
-      logs.push({ label: "Service Worker: não suportado", status: "warn" });
-    }
-
-    // 5. Send test
     try {
-      const notif = new Notification("OneTeacher 📚", {
-        body: "Suas notificações estão funcionando! ✅",
-        icon: "/favicon.png",
-        tag: "test-" + Date.now(),
+      const { data, error } = await supabase.functions.invoke('push-notifications', {
+        body: {
+          subscription: (await (await navigator.serviceWorker.getRegistrations())[0].pushManager.getSubscription())?.toJSON(),
+          title: "OneTeacher 📚",
+          body: "Suas notificações estão funcionando! ✅",
+          data: { url: "/settings" }
+        }
       });
-      notif.onclick = () => { window.focus(); notif.close(); };
-      logs.push({ label: "Notificação enviada com sucesso ✓", status: "ok" });
+
+      if (error) throw error;
+      logs.push({ label: "Notificação de teste enviada ✓", status: "ok" });
+      toast({ title: "Teste enviado!", description: "Você deve receber uma notificação em instantes." });
     } catch (err: any) {
-      logs.push({ label: `Erro ao enviar: ${err?.message || "desconhecido"}`, status: "error" });
+      logs.push({ label: `Erro no teste: ${err?.message || "falha na entrega"}`, status: "error" });
+      toast({ title: "Falha no teste", description: err?.message, variant: "destructive" });
     }
 
     setDiagLogs(logs);
+    setTestingNotif(false);
+  };
+
     setTestingNotif(false);
   };
 
