@@ -379,6 +379,14 @@ export default function Agenda() {
     }
   };
 
+  const ms = startOfMonth(currentDate);
+  const me = endOfMonth(currentDate);
+  const calendarDays = eachDayOfInterval({ start: startOfWeek(ms, { weekStartsOn: 1 }), end: endOfWeek(me, { weekStartsOn: 1 }) });
+
+  const handleDayClick = (day: Date) => {
+    setSelectedDate(day);
+  };
+
   const [viewType, setViewType] = useState<"dia" | "semana" | "mes">("dia");
 
   const stats = useMemo(() => {
