@@ -14,16 +14,31 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export async function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) return null;
+  if (!("serviceWorker" in navigator)) {
+    throw new Error("Service Worker não é suportado neste navegador.");
+  }
 
   try {
+    // Check if it's already registered
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    if (registrations.length > 0) {
+      return registrations[0];
+    }
+
     const registration = await navigator.serviceWorker.register("/sw.js", {
       scope: "/",
     });
+    
+    // Wait for it to be ready
+    await navigator.serviceWorker.ready;
+    
     return registration;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Service Worker registration failed:", error);
-    return null;
+    if (error.message?.includes("404")) {
+      throw new Error("Arquivo sw.js não encontrado no servidor.");
+    }
+    throw new Error(`Falha ao registrar Service Worker: ${error.message}`);
   }
 }
 
