@@ -420,6 +420,28 @@ export default function Agenda() {
     };
   }, [lessons, selectedDate, viewType]);
 
+  const filteredLessonsForList = useMemo(() => {
+    const referenceDate = selectedDate || new Date();
+    
+    if (viewType === "dia") {
+      return getLessonsForDay(referenceDate);
+    } else if (viewType === "semana") {
+      const start = startOfWeek(referenceDate, { weekStartsOn: 1 });
+      const end = endOfWeek(referenceDate, { weekStartsOn: 1 });
+      return lessons.filter(l => {
+        const d = parseLocalDate(l.date);
+        return d >= start && d <= end;
+      });
+    } else {
+      const start = startOfMonth(referenceDate);
+      const end = endOfMonth(referenceDate);
+      return lessons.filter(l => {
+        const d = parseLocalDate(l.date);
+        return d >= start && d <= end;
+      });
+    }
+  }, [lessons, selectedDate, viewType]);
+
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
