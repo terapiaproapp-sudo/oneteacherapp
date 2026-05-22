@@ -13,8 +13,18 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Plus, ChevronLeft, ChevronRight, Clock, MapPin, Trash2, Check, RotateCcw,
   Package, X as XIcon, Edit, CalendarPlus, MessageCircle, Upload, FileText, Image as ImageIcon,
-  UserX, Repeat
+  UserX, Repeat, Loader2
 } from "lucide-react";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,6 +39,9 @@ interface Lesson {
   amount?: number;
   payment_status?: "pendente" | "pago" | "atrasado";
   students?: { name: string; phone?: string };
+  recurrence_id?: string | null;
+  recurrence_config?: any | null;
+  recurrence_index?: number | null;
 }
 interface Student { id: string; name: string; subject: string; modality: string; phone?: string; enrollment_type?: string; hourly_rate?: number; }
 interface StudentPackage { id: string; student_id: string; name: string; hours_total: number; hours_used: number; status: string; total_value: number; }
@@ -164,7 +177,32 @@ export default function Agenda() {
   const [showRecurrencePreview, setShowRecurrencePreview] = useState(false);
   const [recurrencePreviewData, setRecurrencePreviewData] = useState<{ date: string; studentRemainingHours: number }[]>([]);
 
-  const handleSave = async () => {
+  const [recurrenceUpdateMode, setRecurrenceUpdateMode] = useState<"none" | "this" | "next" | "all">("none");
+  const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const checkConflicts = async (payloads: any[]) => {
+    // Basic conflict check: same teacher, same date, overlapping time
+    // For simplicity in this implementation, we'll check against existing lessons in state
+    // but ideally this should be a DB check
+    const conflicts = [];
+    for (const p of payloads) {
+      const dayLessons = lessons.filter(l => l.date.split("T")[0] === p.date && l.id !== editing?.id);
+      for (const l of dayLessons) {
+        const pStart = p.time;
+        const pEnd = calculateEndTime(p.time, p.duration);
+        const lStart = l.time;
+        const lEnd = calculateEndTime(l.time, l.duration);
+        
+        if ((pStart >= lStart && pStart < lEnd) || (pEnd > lStart && pEnd <= lEnd) || (pStart <= lStart && pEnd >= lEnd)) {
+          conflicts.push({ date: p.date, time: p.time, student: l.students?.name });
+        }
+      }
+    }
+    return conflicts;
+  };
+
+  const handleSave = async (forceMode?: "this" | "next" | "all") => {
     if (!form.student_id) { toast({ title: "Selecione um aluno", variant: "destructive" }); return; }
     if (form.duration <= 0) { toast({ title: "Duração inválida", variant: "destructive" }); return; }
     
@@ -172,7 +210,12 @@ export default function Agenda() {
     const hasPackage = student?.enrollment_type === "pacote";
     const hoursInfo = getStudentHoursInfo(form.student_id);
     
-    if (form.recurrence !== "unica" && !showRecurrencePreview) {
+    if (editing && editing.recurrence_id && !forceMode) {
+      setShowRecurrenceDialog(true);
+      return;
+    }
+
+    if (!editing && form.recurrence !== "unica" && !showRecurrencePreview) {
       if (!hasPackage && !form.recurrence_end) {
         toast({ title: "Atenção", description: "Informe uma data final para criar a recorrência.", variant: "destructive" });
         return;
@@ -184,7 +227,7 @@ export default function Agenda() {
         form.recurrence, 
         form.recurrence_days, 
         form.recurrence_end,
-        null, // No max occurrences field currently
+        null,
         form.duration,
         availableHours
       );
@@ -194,31 +237,115 @@ export default function Agenda() {
       return;
     }
 
-    const payload: any = {
-      student_id: form.student_id, date: form.date, time: form.time_start,
-      duration: form.duration, subject: form.subject, status: form.status,
-      notes: form.notes, modality: form.modality, teacher_id: user!.id,
-      package_id: form.package_id || null,
-      lesson_type: form.lesson_type,
-      amount: form.lesson_type === "avulsa" ? Number(form.amount) || 0 : 0,
-      payment_status: form.lesson_type === "avulsa" ? form.payment_status : "pendente",
-    };
+    setIsSaving(true);
+    try {
+      const payload: any = {
+        student_id: form.student_id, date: form.date, time: form.time_start,
+        duration: form.duration, subject: form.subject, status: form.status,
+        notes: form.notes, modality: form.modality, teacher_id: user!.id,
+        package_id: form.package_id || null,
+        lesson_type: form.lesson_type,
+        amount: form.lesson_type === "avulsa" ? Number(form.amount) || 0 : 0,
+        payment_status: form.lesson_type === "avulsa" ? form.payment_status : "pendente",
+      };
 
-    if (editing) {
-      await supabase.from("lessons").update(payload).eq("id", editing.id);
-      toast({ title: "Aula atualizada!" });
-    } else {
-      if (form.recurrence !== "unica") {
-        const rows = recurrencePreviewData.map(d => ({ ...payload, date: d.date }));
-        await supabase.from("lessons").insert(rows);
-        toast({ title: `${recurrencePreviewData.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
+      if (editing) {
+        if (forceMode && editing.recurrence_id) {
+          const recurrenceId = editing.recurrence_id;
+          let affectedCount = 0;
+          
+          if (forceMode === "this") {
+            await supabase.from("lessons").update(payload).eq("id", editing.id);
+            affectedCount = 1;
+          } else if (forceMode === "next") {
+            const { data: futures } = await supabase.from("lessons")
+              .update({
+                time: payload.time,
+                duration: payload.duration,
+                subject: payload.subject,
+                modality: payload.modality,
+                notes: payload.notes
+              })
+              .eq("recurrence_id", recurrenceId)
+              .gte("date", editing.date)
+              .neq("status", "concluida")
+              .neq("status", "noshow");
+            affectedCount = lessons.filter(l => l.recurrence_id === recurrenceId && l.date >= editing.date && l.status !== "concluida" && l.status !== "noshow").length;
+          } else if (forceMode === "all") {
+            await supabase.from("lessons")
+              .update({
+                time: payload.time,
+                duration: payload.duration,
+                subject: payload.subject,
+                modality: payload.modality,
+                notes: payload.notes
+              })
+              .eq("recurrence_id", recurrenceId)
+              .neq("status", "concluida")
+              .neq("status", "noshow");
+            affectedCount = lessons.filter(l => l.recurrence_id === recurrenceId && l.status !== "concluida" && l.status !== "noshow").length;
+          }
+
+          // Log the action
+          await supabase.from("recurrence_logs").insert({
+            teacher_id: user!.id,
+            recurrence_id: recurrenceId,
+            action_type: `update_${forceMode}`,
+            affected_count: affectedCount,
+            metadata: { payload, original_lesson: editing.id }
+          });
+
+          toast({ title: "Recorrência atualizada!", description: `${affectedCount} aulas afetadas.` });
+        } else {
+          await supabase.from("lessons").update(payload).eq("id", editing.id);
+          toast({ title: "Aula atualizada!" });
+        }
       } else {
-        await supabase.from("lessons").insert(payload);
-        toast({ title: "Aula agendada!" });
+        if (form.recurrence !== "unica") {
+          const recurrenceId = crypto.randomUUID();
+          const recurrenceConfig = {
+            type: form.recurrence,
+            days: form.recurrence_days,
+            end: form.recurrence_end
+          };
+          
+          const rows = recurrencePreviewData.map((d, index) => ({ 
+            ...payload, 
+            date: d.date,
+            recurrence_id: recurrenceId,
+            recurrence_config: recurrenceConfig,
+            recurrence_index: index
+          }));
+
+          const conflicts = await checkConflicts(rows);
+          if (conflicts.length > 0) {
+            const confirmMsg = `Existem ${conflicts.length} possíveis conflitos de horário. Deseja prosseguir mesmo assim?`;
+            if (!confirm(confirmMsg)) {
+              setIsSaving(false);
+              return;
+            }
+          }
+
+          await supabase.from("lessons").insert(rows);
+          toast({ title: `${recurrencePreviewData.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
+        } else {
+          await supabase.from("lessons").insert(payload);
+          toast({ title: "Aula agendada!" });
+        }
       }
+      
+      setDialogOpen(false); 
+      setEditing(null); 
+      setShowRecurrencePreview(false); 
+      setShowRecurrenceDialog(false);
+      loadLessons(); 
+      loadPackages();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
     }
-    
-    setDialogOpen(false); setEditing(null); setShowRecurrencePreview(false); loadLessons(); loadPackages();
   };
 
   const updateStatus = async (id: string, newStatus: string) => {
@@ -883,7 +1010,12 @@ export default function Agenda() {
               if (showRecurrencePreview) setShowRecurrencePreview(false);
               else setDialogOpen(false);
             }}>Cancelar</Button>
-            <Button className="flex-1 h-11 rounded-xl font-bold shadow-md shadow-primary/20" onClick={handleSave}>
+            <Button 
+              className="flex-1 h-11 rounded-xl font-bold shadow-md shadow-primary/20" 
+              onClick={() => handleSave()}
+              disabled={isSaving}
+            >
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {showRecurrencePreview ? "Confirmar Agendamento" : (editing ? "Salvar Alterações" : "Agendar")}
             </Button>
             {editing && !showRecurrencePreview && (
@@ -894,6 +1026,67 @@ export default function Agenda() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Recurrence Selection Dialog */}
+      <AlertDialog open={showRecurrenceDialog} onOpenChange={setShowRecurrenceDialog}>
+        <AlertDialogContent className="max-w-md rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Repeat className="h-5 w-5 text-primary" />
+              Editar Aula Recorrente
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm pt-2">
+              Esta é uma aula de uma série recorrente. Como você deseja aplicar as alterações de horário, modalidade e conteúdo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="grid gap-3 py-4">
+            <Button 
+              variant="outline" 
+              className="justify-start h-auto py-3 px-4 rounded-xl border-border/60 hover:border-primary/40 hover:bg-primary/5 group"
+              onClick={() => handleSave("this")}
+            >
+              <div className="flex flex-col items-start text-left gap-1">
+                <span className="font-bold text-sm group-hover:text-primary transition-colors">Apenas esta aula</span>
+                <span className="text-[10px] text-muted-foreground">Altera somente o evento selecionado ({format(new Date(editing?.date || ""), "dd/MM")}).</span>
+              </div>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="justify-start h-auto py-3 px-4 rounded-xl border-border/60 hover:border-primary/40 hover:bg-primary/5 group"
+              onClick={() => handleSave("next")}
+            >
+              <div className="flex flex-col items-start text-left gap-1">
+                <span className="font-bold text-sm group-hover:text-primary transition-colors">Esta e as próximas</span>
+                <span className="text-[10px] text-muted-foreground">
+                  Altera a aula atual e todas as futuras desta série.
+                  {editing?.recurrence_id && (
+                    <span className="block font-semibold text-primary/80 mt-1">
+                      Afectará aproximadamente {lessons.filter(l => l.recurrence_id === editing.recurrence_id && l.date >= editing.date && l.status !== "concluida" && l.status !== "noshow").length} aulas.
+                    </span>
+                  )}
+                </span>
+              </div>
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="justify-start h-auto py-3 px-4 rounded-xl border-border/60 hover:border-primary/40 hover:bg-primary/5 group"
+              onClick={() => handleSave("all")}
+            >
+              <div className="flex flex-col items-start text-left gap-1">
+                <span className="font-bold text-sm group-hover:text-primary transition-colors">Toda a recorrência</span>
+                <span className="text-[10px] text-muted-foreground">Altera todos os eventos da série (mantendo histórico das realizadas).</span>
+              </div>
+            </Button>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

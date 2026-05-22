@@ -51,6 +51,9 @@ export type Database = {
           package_id: string | null
           payment_status: string | null
           receipt_url: string | null
+          recurrence_config: Json | null
+          recurrence_id: string | null
+          recurrence_index: number | null
           status: string | null
           student_id: string
           subject: string | null
@@ -70,6 +73,9 @@ export type Database = {
           package_id?: string | null
           payment_status?: string | null
           receipt_url?: string | null
+          recurrence_config?: Json | null
+          recurrence_id?: string | null
+          recurrence_index?: number | null
           status?: string | null
           student_id: string
           subject?: string | null
@@ -89,6 +95,9 @@ export type Database = {
           package_id?: string | null
           payment_status?: string | null
           receipt_url?: string | null
+          recurrence_config?: Json | null
+          recurrence_id?: string | null
+          recurrence_index?: number | null
           status?: string | null
           student_id?: string
           subject?: string | null
@@ -262,6 +271,36 @@ export type Database = {
           phone?: string | null
           plan?: string | null
           status?: string | null
+        }
+        Relationships: []
+      }
+      recurrence_logs: {
+        Row: {
+          action_type: string
+          affected_count: number
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          recurrence_id: string
+          teacher_id: string
+        }
+        Insert: {
+          action_type: string
+          affected_count: number
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          recurrence_id: string
+          teacher_id: string
+        }
+        Update: {
+          action_type?: string
+          affected_count?: number
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          recurrence_id?: string
+          teacher_id?: string
         }
         Relationships: []
       }
