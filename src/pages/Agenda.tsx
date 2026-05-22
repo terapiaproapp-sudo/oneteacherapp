@@ -507,7 +507,7 @@ export default function Agenda() {
                           {dl.length > 3 ? (
                             <span className="text-[9px] font-bold text-muted-foreground">+{dl.length}</span>
                           ) : (
-                            dl.map((l, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${dotColor(l.status)}`} />)
+                            dl.map((l, i) => <div key={i} className={`w-1.5 h-1.5 rounded-full ${dotColor(l.status, l.lesson_type)}`} />)
                           )}
                         </div>
                       )}
