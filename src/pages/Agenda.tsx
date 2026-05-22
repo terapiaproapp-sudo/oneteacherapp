@@ -61,7 +61,6 @@ export default function Agenda() {
   const loadStudents = async () => { const { data } = await supabase.from("students").select("id,name,subject,modality,phone,enrollment_type").eq("teacher_id", user!.id).order("name"); setStudents(data || []); };
   const loadPackages = async () => { const { data } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).eq("status", "ativo"); setPackages(data || []); };
   const loadLessons = async () => {
-    // Carregamos um intervalo um pouco maior para garantir que as bolinhas do calendário (mesmo de dias de outros meses exibidos) funcionem
     const start = format(startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd");
     const end = format(endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 }), "yyyy-MM-dd") + "T23:59:59";
     
@@ -79,7 +78,7 @@ export default function Agenda() {
       return;
     }
     
-    setLessons(data || []);
+    setLessons((data as any[]) || []);
   };
 
   // Duration calculated as decimal hours (e.g. 1.5 = 1h30). Storage uses decimal hours.
