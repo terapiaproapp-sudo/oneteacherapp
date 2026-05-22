@@ -19,11 +19,35 @@ const PUBLISHED_URL = "https://oneteacherapp.lovable.app";
 function getEnvironmentInfo() {
   const isInIframe = (() => { try { return window.self !== window.top; } catch { return true; } })();
   const hostname = window.location.hostname;
-  const isPreview = hostname.includes("id-preview--") || hostname.includes("lovableproject.com");
+  const isPreview = hostname.includes("id-preview--") || hostname.includes("lovableproject.com") || hostname.includes("lovable.app") && hostname.split('.')[0].includes('--');
   const isLovableDev = hostname.includes("lovable.dev");
-  const isPublished = hostname === "oneteacherapp.lovable.app" || (!isPreview && !isLovableDev && !isInIframe && !hostname.includes("localhost"));
+  const isHttps = window.location.protocol === "https:";
+  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
+  
+  // Real notifications need HTTPS and no iframe (usually)
   const isRestricted = isInIframe || isPreview || isLovableDev;
-  return { isInIframe, isPreview, isLovableDev, isPublished, isRestricted };
+  
+  return { isInIframe, isPreview, isLovableDev, isHttps, isLocalhost, isRestricted };
+}
+
+interface Diagnosis {
+  env: ReturnType<typeof getEnvironmentInfo>;
+  support: {
+    notifications: boolean;
+    serviceWorker: boolean;
+    pushManager: boolean;
+  };
+  permission: NotificationPermission | "checking";
+  sw: {
+    registered: boolean;
+    status: string;
+    controller: boolean;
+  };
+  subscription: {
+    exists: boolean;
+    details?: any;
+    error?: string;
+  };
 }
 
 export default function SettingsPage() {
