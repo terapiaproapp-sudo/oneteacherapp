@@ -1336,49 +1336,6 @@ export default function Agenda() {
           )}
         </DialogContent>
       </Dialog>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block mb-4 opacity-60 ml-1">Utilidades</span>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => sendWhatsApp(lessonDetail)}
-                          variant="outline"
-                          className="flex-1 h-10 p-0 border-emerald-100 bg-emerald-50/30 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
-                          title="WhatsApp"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </Button>
-
-                        <Button 
-                          onClick={() => exportToCalendar(lessonDetail)}
-                          variant="outline"
-                          className="flex-1 h-10 p-0 border-slate-200 bg-slate-50/30 text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-                          title="Calendário"
-                        >
-                          <CalendarPlus className="h-4 w-4" />
-                        </Button>
-
-                        <Button 
-                          onClick={() => fileInputRef.current?.click()}
-                          variant="outline"
-                          className="flex-1 h-10 p-0 border-indigo-100 bg-indigo-50/30 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                          title="Comprovante"
-                        >
-                          <Upload className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <input
         type="file"
