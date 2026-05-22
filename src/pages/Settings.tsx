@@ -82,6 +82,7 @@ export default function SettingsPage() {
   const [isIOS, setIsIOS] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
   const [testingNotif, setTestingNotif] = useState(false);
+  const [reconfiguring, setReconfiguring] = useState(false);
   
   const [diagnosis, setDiagnosis] = useState<Diagnosis>({
     env,
