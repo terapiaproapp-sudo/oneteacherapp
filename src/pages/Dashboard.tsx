@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Calendar, DollarSign, Clock, AlertTriangle, TrendingUp, ChevronRight, Package } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { formatHoursDisplay } from "@/lib/formatMinutes";
+import { useToast } from "@/hooks/use-toast";
 
 interface Stats {
   totalStudents: number; activeStudents: number; todayLessons: number;
@@ -20,36 +22,45 @@ export default function Dashboard() {
   const [stats, setStats] = useState<Stats>({ totalStudents: 0, activeStudents: 0, todayLessons: 0, monthRevenue: 0, pendingPayments: 0, totalHoursRemaining: 0, totalHoursSold: 0, overduePayments: 0 });
   const [recentLessons, setRecentLessons] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => { if (user) loadStats(); }, [user]);
 
   const loadStats = async () => {
-    const today = format(new Date(), "yyyy-MM-dd");
-    const som = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
-    const [studentsRes, todayRes, paymentsRes, packagesRes] = await Promise.all([
-      supabase.from("students").select("*").eq("teacher_id", user!.id),
-      supabase.from("lessons").select("*, students(name)").eq("teacher_id", user!.id).gte("date", today).lte("date", today + "T23:59:59").order("time"),
-      supabase.from("payments").select("*").eq("teacher_id", user!.id),
-      supabase.from("packages").select("*").eq("teacher_id", user!.id),
-    ]);
-    const students = studentsRes.data || [];
-    const payments = paymentsRes.data || [];
-    const pkgs = packagesRes.data || [];
-    const monthPaid = payments.filter((p: any) => p.status === "pago" && p.paid_date && p.paid_date >= som).reduce((s: number, p: any) => s + (p.amount || 0), 0);
-    const pending = payments.filter((p: any) => p.status === "pendente").reduce((s: number, p: any) => s + (p.amount || 0), 0);
-    const overdue = payments.filter((p: any) => p.status === "pendente" && p.due_date < today).reduce((s: number, p: any) => s + (p.amount || 0), 0);
-    const totalHoursSold = pkgs.reduce((s: number, p: any) => s + (p.hours_total || 0), 0);
-    const totalHoursRemaining = pkgs.filter((p: any) => p.status === "ativo" && students.find(s => s.id === p.student_id)?.enrollment_type === "pacote").reduce((s: number, p: any) => s + ((p.hours_total || 0) - (p.hours_used || 0)), 0);
-    const lowHoursPkgs = pkgs.filter((p: any) => p.status === "ativo" && (p.hours_total - p.hours_used) <= 2 && (p.hours_total - p.hours_used) > 0);
+    setIsLoading(true);
+    try {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const som = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
+      const [studentsRes, todayRes, paymentsRes, packagesRes] = await Promise.all([
+        supabase.from("students").select("*").eq("teacher_id", user!.id),
+        supabase.from("lessons").select("*, students(name)").eq("teacher_id", user!.id).gte("date", today).lte("date", today + "T23:59:59").order("time"),
+        supabase.from("payments").select("*").eq("teacher_id", user!.id),
+        supabase.from("packages").select("*").eq("teacher_id", user!.id),
+      ]);
+      const students = studentsRes.data || [];
+      const payments = paymentsRes.data || [];
+      const pkgs = packagesRes.data || [];
+      const monthPaid = payments.filter((p: any) => p.status === "pago" && p.paid_date && p.paid_date >= som).reduce((s: number, p: any) => s + (p.amount || 0), 0);
+      const pending = payments.filter((p: any) => p.status === "pendente").reduce((s: number, p: any) => s + (p.amount || 0), 0);
+      const overdue = payments.filter((p: any) => p.status === "pendente" && p.due_date < today).reduce((s: number, p: any) => s + (p.amount || 0), 0);
+      const totalHoursSold = pkgs.reduce((s: number, p: any) => s + (p.hours_total || 0), 0);
+      const totalHoursRemaining = pkgs.filter((p: any) => p.status === "ativo" && students.find(s => s.id === p.student_id)?.enrollment_type === "pacote").reduce((s: number, p: any) => s + ((p.hours_total || 0) - (p.hours_used || 0)), 0);
+      const lowHoursPkgs = pkgs.filter((p: any) => p.status === "ativo" && (p.hours_total - p.hours_used) <= 2 && (p.hours_total - p.hours_used) > 0);
 
-    const alertsList: Alert[] = [];
-    if (overdue > 0) alertsList.push({ type: "danger", title: "Pagamentos em atraso", description: `R$ ${overdue.toFixed(2)} vencidos`, link: "/financeiro" });
-    if (pending > 0) alertsList.push({ type: "warning", title: "Pagamentos pendentes", description: `R$ ${pending.toFixed(2)} a receber`, link: "/financeiro" });
-    if (lowHoursPkgs.length > 0) alertsList.push({ type: "info", title: "Pacotes com poucas horas", description: `${lowHoursPkgs.length} pacote(s) com ≤2h restantes`, link: "/alunos" });
+      const alertsList: Alert[] = [];
+      if (overdue > 0) alertsList.push({ type: "danger", title: "Pagamentos em atraso", description: `R$ ${overdue.toFixed(2)} vencidos`, link: "/financeiro" });
+      if (pending > 0) alertsList.push({ type: "warning", title: "Pagamentos pendentes", description: `R$ ${pending.toFixed(2)} a receber`, link: "/financeiro" });
+      if (lowHoursPkgs.length > 0) alertsList.push({ type: "info", title: "Pacotes com poucas horas", description: `${lowHoursPkgs.length} pacote(s) com ≤2h restantes`, link: "/alunos" });
 
-    setStats({ totalStudents: students.length, activeStudents: students.filter((s: any) => s.status === "ativo").length, todayLessons: todayRes.data?.length || 0, monthRevenue: monthPaid, pendingPayments: pending, totalHoursRemaining, totalHoursSold, overduePayments: overdue });
-    setRecentLessons(todayRes.data || []);
-    setAlerts(alertsList);
+      setStats({ totalStudents: students.length, activeStudents: students.filter((s: any) => s.status === "ativo").length, todayLessons: todayRes.data?.length || 0, monthRevenue: monthPaid, pendingPayments: pending, totalHoursRemaining, totalHoursSold, overduePayments: overdue });
+      setRecentLessons(todayRes.data || []);
+      setAlerts(alertsList);
+    } catch (error) {
+      toast({ title: "Erro ao carregar dados", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const userName = user?.user_metadata?.full_name || "Professor(a)";
@@ -77,7 +88,11 @@ export default function Dashboard() {
               <div className={`w-8 h-8 rounded-xl ${card.bg} flex items-center justify-center mb-2`}>
                 <card.icon className={`h-4 w-4 ${card.color}`} />
               </div>
-              <p className="text-xl sm:text-2xl font-bold tracking-tight">{card.value}</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-24 mt-1" />
+              ) : (
+                <p className="text-xl sm:text-2xl font-bold tracking-tight">{card.value}</p>
+              )}
               <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 font-semibold uppercase tracking-wide">{card.label}</p>
             </CardContent>
           </Card>
