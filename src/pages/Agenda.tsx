@@ -1118,51 +1118,41 @@ export default function Agenda() {
       </Dialog>
       
       <Dialog open={showLessonDetail} onOpenChange={setShowLessonDetail}>
-        <DialogContent className="max-w-md p-0 overflow-hidden border-none rounded-[32px] sm:max-w-lg shadow-2xl bg-white">
+        <DialogContent className="max-w-md p-0 overflow-hidden border-none rounded-[24px] sm:max-w-lg shadow-2xl bg-white">
           {lessonDetail && (
-            <div className="flex flex-col h-full max-h-[90vh]">
-              {/* Header section with sophisticated background */}
-              <div className={`relative p-6 sm:p-8 pb-10 ${statusStyle(lessonDetail.status)} border-b border-white/10`}>
-                <div className="absolute inset-0 opacity-20 pointer-events-none">
-                  <div className="absolute -top-24 -right-24 w-64 h-64 bg-white rounded-full blur-3xl" />
-                  <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-black rounded-full blur-3xl" />
-                </div>
-                
-                <div className="relative z-10 space-y-4">
+            <div className="flex flex-col h-full max-h-[95vh] sm:max-h-[90vh]">
+              {/* Header section - more compact and standard system colors */}
+              <div className={`relative p-5 sm:p-6 ${statusStyle(lessonDetail.status).split(' ')[0]} border-b border-white/10`}>
+                <div className="relative z-10 space-y-3">
                   <div className="flex justify-between items-center">
-                    <Badge className="bg-white/20 hover:bg-white/30 text-white border-white/40 backdrop-blur-md uppercase font-black text-[10px] px-3 py-1 tracking-widest rounded-full shadow-sm">
+                    <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm uppercase font-black text-[9px] px-2 py-0.5 tracking-widest rounded-full">
                       {statusLabel(lessonDetail.status)}
                     </Badge>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="text-white hover:bg-white/20 h-8 w-8 rounded-full backdrop-blur-sm transition-all" 
+                      className="text-white hover:bg-white/20 h-7 w-7 rounded-full transition-all" 
                       onClick={() => setShowLessonDetail(false)}
                     >
-                      <XIcon className="h-5 w-5" />
+                      <XIcon className="h-4 w-4" />
                     </Button>
                   </div>
                   
-                  <div>
-                    <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight drop-shadow-sm">
+                  <div className="flex flex-col gap-0.5">
+                    <h2 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight">
                       {lessonDetail.students?.name}
                     </h2>
-                    <p className="text-white/80 font-bold text-sm sm:text-base mt-1 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white/60" />
-                      {lessonDetail.subject || "Sem disciplina definida"}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-3 pt-2">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-md rounded-xl text-white border border-white/10">
-                      <CalendarPlus className="h-3.5 w-3.5" />
-                      <span className="text-xs font-bold whitespace-nowrap">
-                        {safeFormatDate(lessonDetail.date ? lessonDetail.date + "T12:00:00" : null, "dd 'de' MMM", "", { locale: ptBR })}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-white/90 font-bold text-xs sm:text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <BookOpen className="h-3.5 w-3.5 opacity-70" />
+                        {lessonDetail.subject || "Sem disciplina"}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/15 backdrop-blur-md rounded-xl text-white border border-white/10">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span className="text-xs font-bold whitespace-nowrap">
+                      <span className="flex items-center gap-1.5">
+                        <CalendarPlus className="h-3.5 w-3.5 opacity-70" />
+                        {safeFormatDate(lessonDetail.date ? lessonDetail.date + "T12:00:00" : null, "dd/MM/yy", "", { locale: ptBR })}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 opacity-70" />
                         {lessonDetail.time} — {calculateEndTime(lessonDetail.time, lessonDetail.duration)}
                       </span>
                     </div>
@@ -1170,174 +1160,182 @@ export default function Agenda() {
                 </div>
               </div>
 
-              {/* Main Content Area */}
-              <div className="px-6 sm:px-8 py-6 space-y-8 overflow-y-auto custom-scrollbar bg-gray-50/30">
-                {/* Info Grid */}
-                <div className="grid grid-cols-2 gap-4 sm:gap-6 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block opacity-60">Duração</span>
-                    <span className="font-extrabold text-sm sm:text-base text-foreground">{formatHoursDisplay(lessonDetail.duration)}</span>
+              {/* Main Content Area - Optimized for vertical space */}
+              <div className="px-5 sm:px-6 py-4 space-y-4 overflow-y-auto custom-scrollbar bg-gray-50/20">
+                {/* Info Grid - 2 columns always */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm space-y-1">
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest block">Duração e Modalidade</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-xs text-foreground">{formatHoursDisplay(lessonDetail.duration)}</span>
+                      <span className="text-[10px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-lg capitalize">{lessonDetail.modality}</span>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block opacity-60">Modalidade</span>
-                    <span className="font-extrabold text-sm sm:text-base text-foreground capitalize">{lessonDetail.modality}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block opacity-60">Tipo de Aula</span>
+                  
+                  <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm space-y-1">
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest block">Tipo de Aula</span>
                     <div className="flex items-center mt-0.5">
-                      <Badge variant="secondary" className={`font-black text-[9px] tracking-widest px-2 py-0.5 rounded-md ${lessonDetail.lesson_type === 'pacote' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-purple-100 text-purple-700 border-purple-200'}`}>
+                      <Badge variant="secondary" className={`font-black text-[8px] tracking-widest px-2 py-0 rounded-md ${lessonDetail.lesson_type === 'pacote' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-purple-100 text-purple-700 border-purple-200'}`}>
                         {lessonDetail.lesson_type === 'pacote' ? 'PACOTE' : 'AVULSA'}
                       </Badge>
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block opacity-60">Data Completa</span>
-                    <span className="font-extrabold text-xs sm:text-sm text-foreground">
-                      {safeFormatDate(lessonDetail.date ? lessonDetail.date + "T12:00:00" : null, "dd/MM/yyyy", "", { locale: ptBR })}
-                    </span>
-                  </div>
                 </div>
 
-                {/* Package Summary or Simple Status */}
+                {/* Package Summary - More compact */}
                 {lessonDetail.lesson_type === "pacote" && lessonDetail.student_id ? (
-                  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className="bg-primary/10 p-2 rounded-xl">
-                          <Package className="h-4 w-4 text-primary" />
-                        </div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Resumo do Pacote</span>
-                      </div>
-                      <Badge variant="outline" className="text-[9px] font-black border-primary/20 text-primary bg-primary/5 px-2 py-0 rounded-full">ATIVO</Badge>
-                    </div>
+                  <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                     {(() => {
                       const info = getStudentHoursInfo(lessonDetail.student_id);
                       return (
-                        <div className="space-y-4">
-                           <div className="flex justify-between items-end">
-                             <div className="flex flex-col">
-                               <span className="text-2xl font-black text-primary tracking-tighter">
-                                 {(info.total - info.used).toFixed(1)} <span className="text-xs uppercase tracking-widest ml-1 text-muted-foreground">horas restantes</span>
-                               </span>
+                        <div className="space-y-2">
+                           <div className="flex justify-between items-center">
+                             <div className="flex items-center gap-2">
+                               <Package className="h-3.5 w-3.5 text-primary" />
+                               <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Resumo do Pacote</span>
                              </div>
-                             <span className="text-[10px] font-bold text-muted-foreground bg-gray-100 px-2 py-0.5 rounded-full">{info.percentage}% consumido</span>
+                             <span className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full">{info.percentage}% consumido</span>
                            </div>
-                           <Progress value={info.percentage} className="h-2 bg-gray-100 overflow-hidden rounded-full shadow-inner" />
-                           <div className="flex justify-between text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest pt-1">
-                             <span>Início: 0h</span>
-                             <span>Total: {formatHoursDisplay(info.total)}</span>
+                           <div className="flex justify-between items-baseline">
+                             <span className="text-lg font-black text-primary tracking-tighter">
+                               {(info.total - info.used).toFixed(1)} <span className="text-[8px] uppercase tracking-widest ml-1 text-muted-foreground">horas restantes</span>
+                             </span>
+                             <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest">Total: {formatHoursDisplay(info.total)}</span>
                            </div>
+                           <Progress value={info.percentage} className="h-1.5 bg-gray-100 rounded-full" />
                         </div>
                       );
                     })()}
                   </div>
                 ) : (
-                  <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-sm flex items-center gap-3">
-                    <div className="bg-purple-100 p-2 rounded-xl text-purple-600">
-                      <Zap className="h-4 w-4" />
-                    </div>
+                  <div className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex items-center gap-3">
+                    <Zap className="h-3.5 w-3.5 text-purple-600" />
                     <div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block">Aula Individual</span>
-                      <span className="text-xs font-bold text-purple-700">Não consome pacote de horas</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground block leading-none">Aula Individual</span>
+                      <span className="text-[10px] font-bold text-purple-700">Não consome horas do pacote</span>
                     </div>
                   </div>
                 )}
 
-                {/* Notes and Receipt with modern look */}
-                <div className="grid grid-cols-1 gap-4">
+                {/* Notes and Receipt */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {lessonDetail.notes && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block opacity-60 ml-1">Observações</span>
-                      <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50 text-xs sm:text-sm font-medium text-blue-900/70 leading-relaxed italic relative">
-                        <FileText className="absolute top-4 right-4 h-4 w-4 opacity-10" />
-                        "{lessonDetail.notes}"
-                      </div>
+                    <div className="bg-blue-50/40 p-3 rounded-2xl border border-blue-100/30 relative min-h-[60px]">
+                      <span className="text-[8px] font-black text-blue-800/60 uppercase tracking-widest block mb-1">Observações</span>
+                      <p className="text-[10px] font-medium text-blue-900/70 leading-relaxed italic">"{lessonDetail.notes}"</p>
+                      <FileText className="absolute bottom-2 right-2 h-3 w-3 opacity-10" />
                     </div>
                   )}
 
                   {lessonDetail.receipt_url && (
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block opacity-60 ml-1">Comprovante</span>
-                      <div className="flex items-center justify-between p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100/50">
-                         <div className="flex items-center gap-3">
-                           <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600">
-                             <ImageIcon className="h-4 w-4" />
-                           </div>
-                           <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Anexo disponível</span>
-                         </div>
-                         <div className="flex gap-1">
-                           <Button variant="ghost" size="sm" className="h-7 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-700 hover:bg-emerald-100 rounded-lg" onClick={() => window.open(lessonDetail.receipt_url!, '_blank')}>
-                             Ver
-                           </Button>
-                           <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-50 rounded-lg" onClick={() => deleteReceipt(lessonDetail.id, lessonDetail.receipt_url!)}>
-                             Excluir
-                           </Button>
-                         </div>
-                      </div>
+                    <div className="bg-emerald-50/40 p-3 rounded-2xl border border-emerald-100/30 flex flex-col justify-between">
+                       <div className="flex items-center gap-2 mb-2">
+                         <ImageIcon className="h-3.5 w-3.5 text-emerald-600" />
+                         <span className="text-[8px] font-black text-emerald-700 uppercase tracking-widest">Comprovante</span>
+                       </div>
+                       <div className="flex gap-1.5">
+                         <Button variant="ghost" size="sm" className="h-6 flex-1 text-[9px] font-black uppercase bg-emerald-100/50 text-emerald-700 hover:bg-emerald-100 rounded-lg" onClick={() => window.open(lessonDetail.receipt_url!, '_blank')}>
+                           Ver
+                         </Button>
+                         <Button variant="ghost" size="sm" className="h-6 px-2 text-[9px] font-black uppercase text-red-500 hover:bg-red-50 rounded-lg" onClick={() => deleteReceipt(lessonDetail.id, lessonDetail.receipt_url!)}>
+                           X
+                         </Button>
+                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Management Actions */}
-                <div className="space-y-6 pt-2 pb-4">
-                  <div>
-                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block mb-4 opacity-60 ml-1">Status da Aula</span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <Button 
-                        onClick={() => { updateStatus(lessonDetail.id, "concluida"); setShowLessonDetail(false); }}
-                        className="flex-col gap-1.5 h-auto py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl shadow-sm transition-all hover:scale-[1.02] active:scale-95 border-none"
-                      >
-                        <Check className="h-5 w-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Realizada</span>
-                      </Button>
-                      
-                      <Button 
-                        onClick={() => { updateStatus(lessonDetail.id, "noshow"); setShowLessonDetail(false); }}
-                        variant="outline"
-                        className="flex-col gap-1.5 h-auto py-3 text-red-600 border-red-100 bg-red-50/50 hover:bg-red-50 rounded-2xl transition-all hover:scale-[1.02] active:scale-95"
-                      >
-                        <UserX className="h-5 w-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">No-show</span>
-                      </Button>
+                {/* Optimized Actions Area */}
+                <div className="pt-2 pb-2 border-t border-gray-100 space-y-4">
+                  <div className="grid grid-cols-4 gap-2">
+                    <Button 
+                      onClick={() => { updateStatus(lessonDetail.id, "concluida"); setShowLessonDetail(false); }}
+                      className="flex-col gap-1 h-16 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-sm border-none"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span className="text-[8px] font-black uppercase tracking-tight">Realizada</span>
+                    </Button>
+                    
+                    <Button 
+                      onClick={() => { updateStatus(lessonDetail.id, "noshow"); setShowLessonDetail(false); }}
+                      variant="outline"
+                      className="flex-col gap-1 h-16 text-red-600 border-red-100 bg-red-50/50 hover:bg-red-100 rounded-xl"
+                    >
+                      <UserX className="h-4 w-4" />
+                      <span className="text-[8px] font-black uppercase tracking-tight">No-show</span>
+                    </Button>
 
+                    <Button 
+                      onClick={() => { openEdit(lessonDetail); setShowLessonDetail(false); }}
+                      variant="outline"
+                      className="flex-col gap-1 h-16 border-amber-100 bg-amber-50/50 text-amber-600 hover:bg-amber-100 rounded-xl"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      <span className="text-[8px] font-black uppercase tracking-tight">Remarcar</span>
+                    </Button>
+
+                    <Button 
+                      onClick={() => { updateStatus(lessonDetail.id, "cancelada"); setShowLessonDetail(false); }}
+                      variant="outline"
+                      className="flex-col gap-1 h-16 border-gray-200 bg-gray-50/50 text-gray-600 hover:bg-gray-100 rounded-xl"
+                    >
+                      <XIcon className="h-4 w-4" />
+                      <span className="text-[8px] font-black uppercase tracking-tight">Cancelar</span>
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex gap-2">
                       <Button 
                         onClick={() => { openEdit(lessonDetail); setShowLessonDetail(false); }}
                         variant="outline"
-                        className="flex-col gap-1.5 h-auto py-3 border-amber-100 bg-amber-50/50 text-amber-600 hover:bg-amber-50 rounded-2xl transition-all hover:scale-[1.02] active:scale-95"
+                        className="flex-1 gap-1.5 h-9 border-blue-100 bg-blue-50/30 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-[10px] uppercase tracking-wider"
                       >
-                        <RotateCcw className="h-5 w-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Remarcar</span>
+                        <Edit className="h-3.5 w-3.5" />
+                        Editar
                       </Button>
-
                       <Button 
-                        onClick={() => { updateStatus(lessonDetail.id, "cancelada"); setShowLessonDetail(false); }}
+                        onClick={() => { handleDelete(lessonDetail.id); setShowLessonDetail(false); }}
                         variant="outline"
-                        className="flex-col gap-1.5 h-auto py-3 border-gray-200 bg-gray-50/50 text-gray-600 hover:bg-gray-100 rounded-2xl transition-all hover:scale-[1.02] active:scale-95"
+                        className="h-9 w-9 p-0 border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                       >
-                        <XIcon className="h-5 w-5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Cancelar</span>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    <div className="flex gap-1.5">
+                      <Button 
+                        onClick={() => sendWhatsApp(lessonDetail)}
+                        variant="outline"
+                        className="flex-1 h-9 p-0 border-emerald-100 bg-emerald-50/30 text-emerald-600 hover:bg-emerald-100 rounded-xl"
+                        title="WhatsApp"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button 
+                        onClick={() => exportToCalendar(lessonDetail)}
+                        variant="outline"
+                        className="flex-1 h-9 p-0 border-slate-200 bg-slate-50/30 text-slate-600 hover:bg-slate-100 rounded-xl"
+                        title="Calendário"
+                      >
+                        <CalendarPlus className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button 
+                        onClick={() => fileInputRef.current?.click()}
+                        variant="outline"
+                        className="flex-1 h-9 p-0 border-indigo-100 bg-indigo-50/30 text-indigo-600 hover:bg-indigo-100 rounded-xl"
+                        title="Comprovante"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block mb-4 opacity-60 ml-1">Controle</span>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => { openEdit(lessonDetail); setShowLessonDetail(false); }}
-                          variant="outline"
-                          className="flex-1 gap-2 h-10 border-blue-100 bg-blue-50/30 text-blue-600 hover:bg-blue-50 rounded-xl transition-all font-bold text-xs"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
-
-                        <Button 
-                          onClick={() => { handleDelete(lessonDetail.id); setShowLessonDetail(false); }}
-                          variant="outline"
-                          className="h-10 w-10 p-0 border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                        >
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
