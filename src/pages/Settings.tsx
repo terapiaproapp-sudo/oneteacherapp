@@ -63,8 +63,8 @@ export default function SettingsPage() {
 
   const fetchSettings = useCallback(async () => {
     if (!user) return;
-    const dbSettings = await getNotificationSettings(user.id);
-    if (dbSettings) setSettings(dbSettings);
+    const dbSettings = await getNotificationSettings(user.id) as any;
+    if (dbSettings) setSettings(prev => ({ ...prev, ...dbSettings }));
   }, [user]);
 
   useEffect(() => {
