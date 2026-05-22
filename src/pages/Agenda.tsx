@@ -1066,7 +1066,7 @@ export default function Agenda() {
             >
               <div className="flex flex-col items-start text-left gap-1">
                 <span className="font-bold text-sm group-hover:text-primary transition-colors">Apenas esta aula</span>
-                <span className="text-[10px] text-muted-foreground">Altera somente o evento selecionado ({format(new Date(editing?.date || ""), "dd/MM")}).</span>
+                <span className="text-[10px] text-muted-foreground">Altera somente o evento selecionado ({safeFormatDate(editing?.date ? editing.date + "T12:00:00" : null, "dd/MM", "—")}).</span>
               </div>
             </Button>
             
