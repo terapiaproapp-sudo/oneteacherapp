@@ -252,6 +252,31 @@ export default function SettingsPage() {
     setTestingNotif(false);
   };
 
+  const reconfigureDevice = async () => {
+    if (!user) return;
+    setReconfiguring(true);
+    try {
+      if (Notification.permission !== "granted") {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") throw new Error("Permissão de notificação não concedida.");
+      }
+      await reconfigurePushSubscription(user.id);
+      await runDiagnosis();
+      toast({
+        title: "Dispositivo atualizado ✅",
+        description: "Dispositivo atualizado com sucesso para a nova chave de notificações.",
+      });
+    } catch (err: any) {
+      console.error("Reconfigure error:", err);
+      toast({
+        title: "Falha ao reconfigurar",
+        description: err?.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    }
+    setReconfiguring(false);
+  };
+
   const handleSaveProfile = async () => {
     const { error } = await supabase.auth.updateUser({ data: { full_name: fullName } });
     if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
