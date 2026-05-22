@@ -423,22 +423,51 @@ export default function Agenda() {
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto pb-20">
       <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Agenda</h1>
           <p className="text-sm text-muted-foreground">Sua central de aulas e operações</p>
         </div>
-        <Button onClick={() => openNew()} size="sm" className="rounded-xl shadow-sm h-10 gap-2">
-          <Plus className="h-4 w-4" /> Nova Aula
-        </Button>
+        
+        <div className="flex items-center gap-2">
+          <div className="bg-muted p-1 rounded-xl flex items-center shadow-inner">
+            {(["dia", "semana", "mes"] as const).map((type) => (
+              <Button
+                key={type}
+                variant={viewType === type ? "default" : "ghost"}
+                size="sm"
+                className={`rounded-lg h-8 px-4 text-xs font-bold transition-all ${viewType === type ? "shadow-sm" : ""}`}
+                onClick={() => setViewType(type)}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Button>
+            ))}
+          </div>
+          <Button onClick={() => openNew()} size="sm" className="rounded-xl shadow-sm h-10 gap-2 ml-2">
+            <Plus className="h-4 w-4" /> Nova Aula
+          </Button>
+        </div>
       </div>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: `Aulas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: stats.total, color: "text-primary" },
-          { label: `Horas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: formatHoursDisplay(stats.hours), color: "text-accent" },
-          { label: `Avulsas ${isToday(stats.date) ? "hoje" : "no dia"}`, val: stats.avulsas, color: "text-info" },
-          { label: "Pendentes de confirmação", val: stats.pending, color: "text-warning" },
+          { 
+            label: `Aulas n${viewType === "dia" ? "o dia" : viewType === "semana" ? "a semana" : "o mês"}`, 
+            val: stats.total, 
+            color: "text-red-500" 
+          },
+          { 
+            label: `Horas n${viewType === "dia" ? "o dia" : viewType === "semana" ? "a semana" : "o mês"}`, 
+            val: formatHoursDisplay(stats.hours), 
+            color: "text-green-600" 
+          },
+          { 
+            label: `Avulsas n${viewType === "dia" ? "o dia" : viewType === "semana" ? "a semana" : "o mês"}`, 
+            val: stats.avulsas, 
+            color: "text-purple-600" 
+          },
+          { label: "Pendentes de confirmação", val: stats.pending, color: "text-orange-500" },
         ].map(s => (
           <Card key={s.label} className="card-premium">
             <CardContent className="p-4">
