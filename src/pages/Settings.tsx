@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor, ExternalLink, CheckCircle2, XCircle, AlertCircle, Loader2, Smartphone, Clock, Info, ShieldAlert, Terminal, Copy, RefreshCw } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { subscribeToPush, getNotificationSettings, updateNotificationSettings, registerServiceWorker } from "@/lib/notifications";
+import { subscribeToPush, getNotificationSettings, updateNotificationSettings, registerServiceWorker, reconfigurePushSubscription } from "@/lib/notifications";
 
 type ThemeMode = "light" | "dark" | "system";
 
@@ -82,6 +82,7 @@ export default function SettingsPage() {
   const [isIOS, setIsIOS] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
   const [testingNotif, setTestingNotif] = useState(false);
+  const [reconfiguring, setReconfiguring] = useState(false);
   
   const [diagnosis, setDiagnosis] = useState<Diagnosis>({
     env,
@@ -249,6 +250,31 @@ export default function SettingsPage() {
       toast({ title: "Falha no teste", description: err?.message || "Erro desconhecido", variant: "destructive" });
     }
     setTestingNotif(false);
+  };
+
+  const reconfigureDevice = async () => {
+    if (!user) return;
+    setReconfiguring(true);
+    try {
+      if (Notification.permission !== "granted") {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") throw new Error("Permissão de notificação não concedida.");
+      }
+      await reconfigurePushSubscription(user.id);
+      await runDiagnosis();
+      toast({
+        title: "Dispositivo atualizado ✅",
+        description: "Dispositivo atualizado com sucesso para a nova chave de notificações.",
+      });
+    } catch (err: any) {
+      console.error("Reconfigure error:", err);
+      toast({
+        title: "Falha ao reconfigurar",
+        description: err?.message || "Erro desconhecido",
+        variant: "destructive",
+      });
+    }
+    setReconfiguring(false);
   };
 
   const handleSaveProfile = async () => {
@@ -486,6 +512,17 @@ export default function SettingsPage() {
             >
               {testingNotif ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
               Enviar notificação de teste
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full rounded-xl gap-2"
+              onClick={reconfigureDevice}
+              disabled={reconfiguring}
+            >
+              {reconfiguring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
+              Reconfigurar notificações deste dispositivo
             </Button>
           </div>
         </CardContent>
