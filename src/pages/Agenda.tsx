@@ -511,7 +511,7 @@ export default function Agenda() {
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{selectedDate ? format(selectedDate, "dd 'de' MMMM", { locale: ptBR }) : "Aulas do dia"}</DialogTitle>
+            <DialogTitle>{selectedDate ? format(selectedDate, "dd 'de' MMMM", { locale: ptBR }).replace(/(\d+ de )(\w)/, (m, p1, p2) => p1 + p2.toUpperCase()) : "Aulas do dia"}</DialogTitle>
             <DialogDescription>{selectedDayLessons.length} aula(s)</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 max-h-96 overflow-y-auto">
