@@ -975,8 +975,6 @@ export default function Agenda() {
                   <Repeat className="h-3.5 w-3.5" /> Recorrência
                 </div>
                 
-                {!showRecurrencePreview ? (
-                  <>
                 <div className="space-y-4">
                   <Select value={form.recurrence} onValueChange={v => setForm({ ...form, recurrence: v })}>
                     <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
@@ -1038,8 +1036,8 @@ export default function Agenda() {
                               {selectedStudentInfo && selectedStudentInfo.total > 0 && (
                                 <>
                                   <div className="text-muted-foreground border-t border-primary/10 pt-2 mt-1">Saldo restante após série:</div>
-                                  <div className={`font-bold text-right border-t border-primary/10 pt-2 mt-1 ${recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours < 0.01 ? "text-destructive" : "text-green-600"}`}>
-                                    {formatHoursDisplay(recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours)}
+                                  <div className={`font-bold text-right border-t border-primary/10 pt-2 mt-1 ${recurrencePreviewData.length > 0 && recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours < 0.01 ? "text-destructive" : "text-green-600"}`}>
+                                    {formatHoursDisplay(recurrencePreviewData.length > 0 ? recurrencePreviewData[recurrencePreviewData.length - 1].studentRemainingHours : 0)}
                                   </div>
                                 </>
                               )}
