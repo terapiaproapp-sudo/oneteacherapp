@@ -1121,38 +1121,48 @@ export default function Agenda() {
         <DialogContent className="max-w-md p-0 overflow-hidden border-none rounded-[24px] sm:max-w-lg shadow-2xl bg-white">
           {lessonDetail && (
             <div className="flex flex-col h-full max-h-[95vh] sm:max-h-[90vh]">
-              {/* Header section - more compact and standard system colors */}
-              <div className={`relative p-5 sm:p-6 ${statusStyle(lessonDetail.status).split(' ')[0]} border-b border-white/10`}>
-                <div className="relative z-10 space-y-3">
+              {/* Header section - Premium Dark Navy Theme */}
+              <div className="relative p-6 bg-[#0a192f] border-b border-white/5 overflow-hidden">
+                {/* Subtle background decoration */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+                
+                <div className="relative z-10 space-y-4">
                   <div className="flex justify-between items-center">
-                    <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm uppercase font-black text-[9px] px-2 py-0.5 tracking-widest rounded-full">
-                      {statusLabel(lessonDetail.status)}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-white/10 text-white border-white/20 backdrop-blur-md uppercase font-black text-[9px] px-2.5 py-1 tracking-widest rounded-full">
+                        {statusLabel(lessonDetail.status)}
+                      </Badge>
+                      {lessonDetail.lesson_type === 'pacote' && (
+                        <Badge className="bg-primary/20 text-primary-foreground border-primary/30 uppercase font-black text-[9px] px-2.5 py-1 tracking-widest rounded-full">
+                          PACOTE
+                        </Badge>
+                      )}
+                    </div>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="text-white hover:bg-white/20 h-7 w-7 rounded-full transition-all" 
+                      className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8 rounded-full transition-all" 
                       onClick={() => setShowLessonDetail(false)}
                     >
                       <XIcon className="h-4 w-4" />
                     </Button>
                   </div>
                   
-                  <div className="flex flex-col gap-0.5">
-                    <h2 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight">
+                  <div className="space-y-1">
+                    <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight tracking-tight">
                       {lessonDetail.students?.name}
                     </h2>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-white/90 font-bold text-xs sm:text-sm">
-                      <span className="flex items-center gap-1.5">
-                        <BookOpen className="h-3.5 w-3.5 opacity-70" />
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-white/70 font-bold text-sm">
+                      <span className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-primary/80" />
                         {lessonDetail.subject || "Sem disciplina"}
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <CalendarPlus className="h-3.5 w-3.5 opacity-70" />
+                      <span className="flex items-center gap-2">
+                        <CalendarPlus className="h-4 w-4 text-primary/80" />
                         {safeFormatDate(lessonDetail.date ? lessonDetail.date + "T12:00:00" : null, "dd/MM/yy", "", { locale: ptBR })}
                       </span>
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 opacity-70" />
+                      <span className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-primary/80" />
                         {lessonDetail.time} — {calculateEndTime(lessonDetail.time, lessonDetail.duration)}
                       </span>
                     </div>
