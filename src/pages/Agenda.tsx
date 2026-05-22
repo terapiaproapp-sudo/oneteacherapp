@@ -28,6 +28,24 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+// Safe date formatter: returns fallback when value is missing or invalid
+// instead of throwing "RangeError: Invalid time value".
+const safeFormatDate = (
+  dateValue: Date | string | number | null | undefined,
+  formatPattern: string,
+  fallback: string = "",
+  options?: Parameters<typeof format>[2]
+): string => {
+  if (dateValue === null || dateValue === undefined || dateValue === "") return fallback;
+  const d = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  if (!d || isNaN(d.getTime())) return fallback;
+  try {
+    return format(d, formatPattern, options);
+  } catch {
+    return fallback;
+  }
+};
 import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 
 interface Lesson {
@@ -979,12 +997,12 @@ export default function Agenda() {
                       <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Datas previstas</Label>
                       <div className="space-y-1.5 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {recurrencePreviewData.map((d, i) => {
-                          const dt = new Date(d.date + "T12:00:00");
+                          const dt = d.date ? new Date(d.date + "T12:00:00") : null;
                           return (
                             <div key={i} className="flex items-center justify-between text-[11px] bg-muted/40 rounded-lg p-2 border border-border/50">
                               <div className="flex items-center gap-2">
                                 <span className="w-5 h-5 flex items-center justify-center bg-primary/10 text-primary rounded-full font-bold">{i + 1}</span>
-                                <span className="font-medium">{format(dt, "dd/MM/yyyy")} — <span className="capitalize">{format(dt, "EEEE", { locale: ptBR })}</span></span>
+                                <span className="font-medium">{safeFormatDate(dt, "dd/MM/yyyy", "Data inválida")} — <span className="capitalize">{safeFormatDate(dt, "EEEE", "", { locale: ptBR })}</span></span>
                               </div>
                               <div className="text-muted-foreground font-medium">
                                 {form.time_start} às {form.time_end} ({formatHoursDisplay(form.duration)})
@@ -1048,7 +1066,7 @@ export default function Agenda() {
             >
               <div className="flex flex-col items-start text-left gap-1">
                 <span className="font-bold text-sm group-hover:text-primary transition-colors">Apenas esta aula</span>
-                <span className="text-[10px] text-muted-foreground">Altera somente o evento selecionado ({format(new Date(editing?.date || ""), "dd/MM")}).</span>
+                <span className="text-[10px] text-muted-foreground">Altera somente o evento selecionado ({safeFormatDate(editing?.date ? editing.date + "T12:00:00" : null, "dd/MM", "—")}).</span>
               </div>
             </Button>
             
