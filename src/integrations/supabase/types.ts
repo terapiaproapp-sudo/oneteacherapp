@@ -248,6 +248,7 @@ export type Database = {
           full_name: string | null
           id: string
           last_sign_in: string | null
+          notification_settings: Json | null
           phone: string | null
           plan: string | null
           status: string | null
@@ -258,6 +259,7 @@ export type Database = {
           full_name?: string | null
           id: string
           last_sign_in?: string | null
+          notification_settings?: Json | null
           phone?: string | null
           plan?: string | null
           status?: string | null
@@ -268,9 +270,37 @@ export type Database = {
           full_name?: string | null
           id?: string
           last_sign_in?: string | null
+          notification_settings?: Json | null
           phone?: string | null
           plan?: string | null
           status?: string | null
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          id: string
+          subscription: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: string
+          subscription: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: string
+          subscription?: Json
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
