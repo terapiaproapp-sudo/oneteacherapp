@@ -28,6 +28,24 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+// Safe date formatter: returns fallback when value is missing or invalid
+// instead of throwing "RangeError: Invalid time value".
+const safeFormatDate = (
+  dateValue: Date | string | number | null | undefined,
+  formatPattern: string,
+  fallback: string = "",
+  options?: Parameters<typeof format>[2]
+): string => {
+  if (dateValue === null || dateValue === undefined || dateValue === "") return fallback;
+  const d = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  if (!d || isNaN(d.getTime())) return fallback;
+  try {
+    return format(d, formatPattern, options);
+  } catch {
+    return fallback;
+  }
+};
 import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 
 interface Lesson {
