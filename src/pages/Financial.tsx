@@ -36,52 +36,79 @@ export default function Financial() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
+  const [isLoading, setIsLoading] = useState(false);
+  const [paymentToUndo, setPaymentToUndo] = useState<Payment | null>(null);
 
   useEffect(() => { if (user) loadPayments(); }, [user]);
 
   const loadPayments = async () => {
-    const { data: payRes } = await supabase.from("payments").select("*, students(name)").eq("teacher_id", user!.id).order("due_date");
-    const { data: lessonRes } = await supabase.from("lessons").select("id, amount, payment_status, date, students(name)").eq("teacher_id", user!.id).eq("lesson_type", "avulsa");
-    
-    const standardPayments = (payRes || []).map(p => ({ ...p, type: 'package' }));
-    const avulsaPayments = (lessonRes || []).map(l => ({
-      id: `lesson-${l.id}`,
-      student_id: "", // not used in list
-      teacher_id: user!.id,
-      amount: l.amount || 0,
-      due_date: l.date,
-      paid_date: l.payment_status === 'pago' ? l.date : null,
-      status: l.payment_status,
-      payment_method: "avulsa",
-      notes: "Aula Avulsa",
-      package_id: null,
-      installment_number: null,
-      total_installments: null,
-      lesson_id: l.id,
-      students: l.students,
-      type: 'avulsa'
-    }));
+    setIsLoading(true);
+    try {
+      const { data: payRes } = await supabase.from("payments").select("*, students(name)").eq("teacher_id", user!.id).order("due_date");
+      const { data: lessonRes } = await supabase.from("lessons").select("id, amount, payment_status, date, students(name)").eq("teacher_id", user!.id).eq("lesson_type", "avulsa");
+      
+      const standardPayments = (payRes || []).map(p => ({ ...p, type: 'package' }));
+      const avulsaPayments = (lessonRes || []).map(l => ({
+        id: `lesson-${l.id}`,
+        student_id: "", // not used in list
+        teacher_id: user!.id,
+        amount: l.amount || 0,
+        due_date: l.date,
+        paid_date: l.payment_status === 'pago' ? l.date : null,
+        status: l.payment_status,
+        payment_method: "avulsa",
+        notes: "Aula Avulsa",
+        package_id: null,
+        installment_number: null,
+        total_installments: null,
+        lesson_id: l.id,
+        students: l.students,
+        type: 'avulsa'
+      }));
 
-    setPayments([...standardPayments, ...avulsaPayments].sort((a, b) => b.due_date.localeCompare(a.due_date)));
+      setPayments([...standardPayments, ...avulsaPayments].sort((a, b) => b.due_date.localeCompare(a.due_date)));
+    } catch (error) {
+      toast({ title: "Erro ao carregar pagamentos", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const markPaid = async (p: Payment) => {
-    if (p.lesson_id) {
-      await supabase.from("lessons").update({ payment_status: "pago" }).eq("id", p.lesson_id);
-    } else {
-      await supabase.from("payments").update({ status: "pago", paid_date: format(new Date(), "yyyy-MM-dd") }).eq("id", p.id);
+    setIsLoading(true);
+    try {
+      if (p.lesson_id) {
+        await supabase.from("lessons").update({ payment_status: "pago" }).eq("id", p.lesson_id);
+      } else {
+        await supabase.from("payments").update({ status: "pago", paid_date: format(new Date(), "yyyy-MM-dd") }).eq("id", p.id);
+      }
+      toast({ title: "Marcado como pago!" }); 
+      await loadPayments();
+    } finally {
+      setIsLoading(false);
     }
-    toast({ title: "Marcado como pago!" }); loadPayments();
   };
 
-  const undoPaid = async (p: Payment) => {
-    if (!confirm("Desfazer este pagamento? O status voltará para 'pendente'.")) return;
-    if (p.lesson_id) {
-      await supabase.from("lessons").update({ payment_status: "pendente" }).eq("id", p.lesson_id);
-    } else {
-      await supabase.from("payments").update({ status: "pendente", paid_date: null }).eq("id", p.id);
+  const handleUndoConfirm = async () => {
+    if (!paymentToUndo) return;
+    const p = paymentToUndo;
+    setPaymentToUndo(null);
+    setIsLoading(true);
+    try {
+      if (p.lesson_id) {
+        await supabase.from("lessons").update({ payment_status: "pendente" }).eq("id", p.lesson_id);
+      } else {
+        await supabase.from("payments").update({ status: "pendente", paid_date: null }).eq("id", p.id);
+      }
+      toast({ title: "Pagamento desfeito", description: "Status alterado para pendente." }); 
+      await loadPayments();
+    } finally {
+      setIsLoading(false);
     }
-    toast({ title: "Pagamento desfeito", description: "Status alterado para pendente." }); loadPayments();
+  };
+
+  const undoPaid = (p: Payment) => {
+    setPaymentToUndo(p);
   };
 
   const today = format(new Date(), "yyyy-MM-dd");
