@@ -274,12 +274,10 @@ export default function Agenda() {
   };
 
   const handleSave = async (forceMode?: "this" | "next" | "all") => {
-    if (!form.student_id) { toast({ title: "Selecione um aluno", variant: "destructive" }); return; }
-    if (form.duration <= 0) { toast({ title: "Duração inválida", variant: "destructive" }); return; }
+    if (!validateForm()) return;
     
     const student = students.find(s => s.id === form.student_id);
     const hasPackage = student?.enrollment_type === "pacote";
-    const hoursInfo = getStudentHoursInfo(form.student_id);
     
     if (editing && editing.recurrence_id && !forceMode) {
       setShowRecurrenceDialog(true);
@@ -287,23 +285,6 @@ export default function Agenda() {
     }
 
     if (!editing && form.recurrence !== "unica" && !showRecurrencePreview) {
-      if (!hasPackage && !form.recurrence_end) {
-        toast({ title: "Atenção", description: "Informe uma data final para criar a recorrência.", variant: "destructive" });
-        return;
-      }
-      
-      const availableHours = hasPackage ? hoursInfo.remaining : null;
-      const preview = generateRecurrenceDates(
-        form.date, 
-        form.recurrence, 
-        form.recurrence_days, 
-        form.recurrence_end,
-        null,
-        form.duration,
-        availableHours
-      );
-      
-      setRecurrencePreviewData(preview);
       setShowRecurrencePreview(true);
       return;
     }
