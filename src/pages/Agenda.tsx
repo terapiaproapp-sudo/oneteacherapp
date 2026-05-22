@@ -1256,87 +1256,97 @@ export default function Agenda() {
                 </div>
 
                 {/* Optimized Actions Area */}
-                <div className="pt-2 pb-2 border-t border-gray-100 space-y-4">
-                  <div className="grid grid-cols-4 gap-2">
-                    <Button 
-                      onClick={() => { updateStatus(lessonDetail.id, "concluida"); setShowLessonDetail(false); }}
-                      className="flex-col gap-1 h-16 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl shadow-sm border-none"
-                    >
-                      <Check className="h-4 w-4" />
-                      <span className="text-[8px] font-black uppercase tracking-tight">Realizada</span>
-                    </Button>
-                    
-                    <Button 
-                      onClick={() => { updateStatus(lessonDetail.id, "noshow"); setShowLessonDetail(false); }}
-                      variant="outline"
-                      className="flex-col gap-1 h-16 text-red-600 border-red-100 bg-red-50/50 hover:bg-red-100 rounded-xl"
-                    >
-                      <UserX className="h-4 w-4" />
-                      <span className="text-[8px] font-black uppercase tracking-tight">No-show</span>
-                    </Button>
+                <div className="pt-4 pb-2 border-t border-gray-100 space-y-4">
+                  {/* Primary Actions - High Impact */}
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block ml-1">Ações Principais</span>
+                    <div className="grid grid-cols-4 gap-2">
+                      <Button 
+                        onClick={() => { updateStatus(lessonDetail.id, "concluida"); setShowLessonDetail(false); }}
+                        className="flex-col gap-1.5 h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl shadow-sm border-none transition-all active:scale-95"
+                      >
+                        <Check className="h-4 w-4" />
+                        <span className="text-[8px] font-black uppercase tracking-tight">Realizada</span>
+                      </Button>
+                      
+                      <Button 
+                        onClick={() => { updateStatus(lessonDetail.id, "noshow"); setShowLessonDetail(false); }}
+                        className="flex-col gap-1.5 h-16 bg-red-500 hover:bg-red-600 text-white rounded-2xl shadow-sm border-none transition-all active:scale-95"
+                      >
+                        <UserX className="h-4 w-4" />
+                        <span className="text-[8px] font-black uppercase tracking-tight">No-show</span>
+                      </Button>
 
-                    <Button 
-                      onClick={() => { openEdit(lessonDetail); setShowLessonDetail(false); }}
-                      variant="outline"
-                      className="flex-col gap-1 h-16 border-amber-100 bg-amber-50/50 text-amber-600 hover:bg-amber-100 rounded-xl"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      <span className="text-[8px] font-black uppercase tracking-tight">Remarcar</span>
-                    </Button>
+                      <Button 
+                        onClick={() => { openEdit(lessonDetail); setShowLessonDetail(false); }}
+                        className="flex-col gap-1.5 h-16 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl shadow-sm border-none transition-all active:scale-95"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        <span className="text-[8px] font-black uppercase tracking-tight">Remarcar</span>
+                      </Button>
 
-                    <Button 
-                      onClick={() => { updateStatus(lessonDetail.id, "cancelada"); setShowLessonDetail(false); }}
-                      variant="outline"
-                      className="flex-col gap-1 h-16 border-gray-200 bg-gray-50/50 text-gray-600 hover:bg-gray-100 rounded-xl"
-                    >
-                      <XIcon className="h-4 w-4" />
-                      <span className="text-[8px] font-black uppercase tracking-tight">Cancelar</span>
-                    </Button>
+                      <Button 
+                        onClick={() => { updateStatus(lessonDetail.id, "cancelada"); setShowLessonDetail(false); }}
+                        className="flex-col gap-1.5 h-16 bg-slate-400 hover:bg-slate-500 text-white rounded-2xl shadow-sm border-none transition-all active:scale-95"
+                      >
+                        <XIcon className="h-4 w-4" />
+                        <span className="text-[8px] font-black uppercase tracking-tight">Cancelar</span>
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex gap-2">
+                  {/* Secondary Actions - More Subtle */}
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest block ml-1">Operacional</span>
+                    <div className="grid grid-cols-5 gap-2">
                       <Button 
                         onClick={() => { openEdit(lessonDetail); setShowLessonDetail(false); }}
                         variant="outline"
-                        className="flex-1 gap-1.5 h-9 border-blue-100 bg-blue-50/30 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-[10px] uppercase tracking-wider"
+                        className="flex-col gap-1 h-14 border-blue-100 bg-blue-50/50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-xl transition-all"
+                        title="Editar Aula"
                       >
-                        <Edit className="h-3.5 w-3.5" />
-                        Editar
+                        <Edit className="h-4 w-4" />
+                        <span className="text-[7px] font-black uppercase">Editar</span>
                       </Button>
+
                       <Button 
                         onClick={() => { handleDelete(lessonDetail.id); setShowLessonDetail(false); }}
                         variant="outline"
-                        className="h-9 w-9 p-0 border-red-100 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        className="flex-col gap-1 h-14 border-red-100 bg-red-50/50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-xl transition-all"
+                        title="Excluir Aula"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" />
+                        <span className="text-[7px] font-black uppercase">Excluir</span>
                       </Button>
-                    </div>
 
-                    <div className="flex gap-1.5">
                       <Button 
                         onClick={() => sendWhatsApp(lessonDetail)}
                         variant="outline"
-                        className="flex-1 h-9 p-0 border-emerald-100 bg-emerald-50/30 text-emerald-600 hover:bg-emerald-100 rounded-xl"
-                        title="WhatsApp"
+                        className="flex-col gap-1 h-14 border-emerald-100 bg-emerald-50/50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 rounded-xl transition-all"
+                        title="Enviar WhatsApp"
                       >
-                        <MessageCircle className="h-3.5 w-3.5" />
+                        <MessageCircle className="h-4 w-4" />
+                        <span className="text-[7px] font-black uppercase">WhatsApp</span>
                       </Button>
+
                       <Button 
                         onClick={() => exportToCalendar(lessonDetail)}
                         variant="outline"
-                        className="flex-1 h-9 p-0 border-slate-200 bg-slate-50/30 text-slate-600 hover:bg-slate-100 rounded-xl"
-                        title="Calendário"
+                        className="flex-col gap-1 h-14 border-slate-200 bg-slate-50/50 text-slate-600 hover:bg-slate-100 hover:text-slate-700 rounded-xl transition-all"
+                        title="Exportar Calendário"
                       >
-                        <CalendarPlus className="h-3.5 w-3.5" />
+                        <CalendarPlus className="h-4 w-4" />
+                        <span className="text-[7px] font-black uppercase">Agenda</span>
                       </Button>
+
                       <Button 
                         onClick={() => fileInputRef.current?.click()}
                         variant="outline"
-                        className="flex-1 h-9 p-0 border-indigo-100 bg-indigo-50/30 text-indigo-600 hover:bg-indigo-100 rounded-xl"
-                        title="Comprovante"
+                        className="flex-col gap-1 h-14 border-indigo-100 bg-indigo-50/50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 rounded-xl transition-all"
+                        title="Anexar Comprovante"
                       >
-                        <Upload className="h-3.5 w-3.5" />
+                        <Upload className="h-4 w-4" />
+                        <span className="text-[7px] font-black uppercase">Anexo</span>
                       </Button>
                     </div>
                   </div>
