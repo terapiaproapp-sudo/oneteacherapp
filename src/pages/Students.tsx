@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -103,6 +104,9 @@ export default function Students() {
   });
   const [editingPackage, setEditingPackage] = useState(false);
   const [editingFinancial, setEditingFinancial] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
 
   // Student access state
   const [accessRecords, setAccessRecords] = useState<Record<string, StudentAccessRecord>>({});
@@ -120,22 +124,27 @@ export default function Students() {
   useEffect(() => { if (user) loadAll(); }, [user]);
 
   const loadAll = async () => {
-    const { data: studs } = await supabase.from("students").select("*").eq("teacher_id", user!.id).order("name");
-    setStudents(studs || []);
-    const { data: pkgs } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).order("created_at", { ascending: false });
-    const grouped: Record<string, StudentPackage[]> = {};
-    (pkgs || []).forEach((p: any) => { if (!grouped[p.student_id]) grouped[p.student_id] = []; grouped[p.student_id].push(p); });
-    setPackages(grouped);
-    const { data: pays } = await supabase.from("payments").select("*").eq("teacher_id", user!.id).order("due_date");
-    const payGrouped: Record<string, Payment[]> = {};
-    (pays || []).forEach((p: any) => { if (!payGrouped[p.student_id]) payGrouped[p.student_id] = []; payGrouped[p.student_id].push(p); });
-    setPayments(payGrouped);
-    // Load student access records
-    const { data: accesses } = await (supabase.from as any)("student_access")
-      .select("*").eq("teacher_id", user!.id);
-    const accessMap: Record<string, StudentAccessRecord> = {};
-    (accesses || []).forEach((a: any) => { accessMap[a.student_id] = a; });
-    setAccessRecords(accessMap);
+    try {
+      const { data: studs } = await supabase.from("students").select("*").eq("teacher_id", user!.id).order("name");
+      setStudents(studs || []);
+      const { data: pkgs } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).order("created_at", { ascending: false });
+      const grouped: Record<string, StudentPackage[]> = {};
+      (pkgs || []).forEach((p: any) => { if (!grouped[p.student_id]) grouped[p.student_id] = []; grouped[p.student_id].push(p); });
+      setPackages(grouped);
+      const { data: pays } = await supabase.from("payments").select("*").eq("teacher_id", user!.id).order("due_date");
+      const payGrouped: Record<string, Payment[]> = {};
+      (pays || []).forEach((p: any) => { if (!payGrouped[p.student_id]) payGrouped[p.student_id] = []; payGrouped[p.student_id].push(p); });
+      setPayments(payGrouped);
+      // Load student access records
+      const { data: accesses } = await (supabase.from as any)("student_access")
+        .select("*").eq("teacher_id", user!.id);
+      const accessMap: Record<string, StudentAccessRecord> = {};
+      (accesses || []).forEach((a: any) => { accessMap[a.student_id] = a; });
+      setAccessRecords(accessMap);
+    } catch (error) {
+      console.error("Error loading students:", error);
+      toast({ title: "Erro ao carregar alunos", variant: "destructive" });
+    }
   };
 
   const numVal = (v: string | number): number => { const n = typeof v === "string" ? parseFloat(v) : v; return isNaN(n) ? 0 : n; };
@@ -291,58 +300,65 @@ export default function Students() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
+    setIsLoading(true);
+    try {
+      const studentData = {
+        name: form.name, phone: form.phone, email: form.email,
+        subject: form.subject, modality: form.modality, notes: form.notes,
+        status: form.status, guardian_name: "", guardian_phone: "",
+        lesson_content: "", 
+        enrollment_type: form.enrollment_type,
+        hourly_rate: form.enrollment_type === "avulsa" ? numVal(form.hourly_rate) : hourlyRate,
+      };
 
-    const studentData = {
-      name: form.name, phone: form.phone, email: form.email,
-      subject: form.subject, modality: form.modality, notes: form.notes,
-      status: form.status, guardian_name: "", guardian_phone: "",
-      lesson_content: "", 
-      enrollment_type: form.enrollment_type,
-      hourly_rate: form.enrollment_type === "avulsa" ? numVal(form.hourly_rate) : hourlyRate,
-    };
+      if (editing) {
+        await supabase.from("students").update(studentData).eq("id", editing.id);
 
-    if (editing) {
-      await supabase.from("students").update(studentData).eq("id", editing.id);
-
-      if (editingPackage) {
-        const activePkg = getActivePackage(editing.id);
-        if (activePkg) {
-          const newHourlyRate = packageMinutes > 0 && finalValue > 0 ? finalValue / (packageMinutes / 60) : 0;
-          await supabase.from("packages").update({
-            name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageMinutes / 60,
-            total_value: finalValue, hourly_rate: Math.round(newHourlyRate * 100) / 100,
-          }).eq("id", activePkg.id);
-          await supabase.from("students").update({ hours_contracted: packageMinutes / 60 }).eq("id", editing.id);
+        if (editingPackage) {
+          const activePkg = getActivePackage(editing.id);
+          if (activePkg) {
+            const newHourlyRate = packageMinutes > 0 && finalValue > 0 ? finalValue / (packageMinutes / 60) : 0;
+            await supabase.from("packages").update({
+              name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageMinutes / 60,
+              total_value: finalValue, hourly_rate: Math.round(newHourlyRate * 100) / 100,
+            }).eq("id", activePkg.id);
+            await supabase.from("students").update({ hours_contracted: packageMinutes / 60 }).eq("id", editing.id);
+          }
         }
+
+        if (editingFinancial) {
+          // Delete old payments and recreate
+          await supabase.from("payments").delete().eq("student_id", editing.id);
+          if (finalValue > 0) await createPayments(editing.id, getActivePackage(editing.id)?.id || null);
+        }
+
+        toast({ title: "Aluno atualizado!" });
+      } else {
+        const { data: newStudent, error } = await supabase.from("students")
+          .insert({ ...studentData, teacher_id: user!.id, hours_contracted: form.enrollment_type === "pacote" ? packageHours : 0, hours_remaining: form.enrollment_type === "pacote" ? packageHours : 0 })
+          .select().single();
+        if (error || !newStudent) { toast({ title: "Erro", description: error?.message, variant: "destructive" }); return; }
+
+        if (form.enrollment_type === "pacote" && packageMinutes > 0) {
+          const { data: newPkg } = await supabase.from("packages").insert({
+            teacher_id: user!.id, student_id: newStudent.id,
+            name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageHours,
+            hours_used: 0, total_value: finalValue,
+            hourly_rate: Math.round((finalValue / packageHours) * 100) / 100,
+            expires_at: null, status: "ativo",
+          }).select().single();
+
+          if (finalValue > 0) await createPayments(newStudent.id, newPkg?.id || null);
+        }
+        toast({ title: "Aluno cadastrado com sucesso!" });
       }
-
-      if (editingFinancial) {
-        // Delete old payments and recreate
-        await supabase.from("payments").delete().eq("student_id", editing.id);
-        if (finalValue > 0) await createPayments(editing.id, getActivePackage(editing.id)?.id || null);
-      }
-
-      toast({ title: "Aluno atualizado!" });
-    } else {
-      const { data: newStudent, error } = await supabase.from("students")
-        .insert({ ...studentData, teacher_id: user!.id, hours_contracted: form.enrollment_type === "pacote" ? packageHours : 0, hours_remaining: form.enrollment_type === "pacote" ? packageHours : 0 })
-        .select().single();
-      if (error || !newStudent) { toast({ title: "Erro", description: error?.message, variant: "destructive" }); return; }
-
-      if (form.enrollment_type === "pacote" && packageMinutes > 0) {
-        const { data: newPkg } = await supabase.from("packages").insert({
-          teacher_id: user!.id, student_id: newStudent.id,
-          name: `Pacote ${formatMinutesToHoursInput(packageMinutes)}`, hours_total: packageHours,
-          hours_used: 0, total_value: finalValue,
-          hourly_rate: Math.round((finalValue / packageHours) * 100) / 100,
-          expires_at: null, status: "ativo",
-        }).select().single();
-
-        if (finalValue > 0) await createPayments(newStudent.id, newPkg?.id || null);
-      }
-      toast({ title: "Aluno cadastrado com sucesso!" });
+      setDialogOpen(false); setEditing(null); setEditingPackage(false); setEditingFinancial(false); setForm(emptyForm); loadAll();
+    } catch (error) {
+      console.error("Error saving student:", error);
+      toast({ title: "Erro ao salvar aluno", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-    setDialogOpen(false); setEditing(null); setEditingPackage(false); setEditingFinancial(false); setForm(emptyForm); loadAll();
   };
 
   const createPayments = async (studentId: string, packageId: string | null) => {
@@ -363,12 +379,21 @@ export default function Students() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Excluir este aluno e todos os dados vinculados?")) return;
-    await supabase.from("payments").delete().eq("student_id", id);
-    await supabase.from("lessons").delete().eq("student_id", id);
-    await supabase.from("packages").delete().eq("student_id", id);
-    await supabase.from("students").delete().eq("id", id);
-    toast({ title: "Aluno excluído" }); loadAll();
+    setIsDeleting(true);
+    try {
+      await supabase.from("payments").delete().eq("student_id", id);
+      await supabase.from("lessons").delete().eq("student_id", id);
+      await supabase.from("packages").delete().eq("student_id", id);
+      await supabase.from("students").delete().eq("id", id);
+      toast({ title: "Aluno excluído" }); 
+      loadAll();
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      toast({ title: "Erro ao excluir aluno", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setStudentToDelete(null);
+    }
   };
 
   const openEdit = (student: Student) => {
@@ -662,8 +687,12 @@ export default function Students() {
                 <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} className="text-sm rounded-xl" placeholder="Anotações sobre o aluno..." />
               </div>
 
-              <Button onClick={handleSave} className="w-full h-11 rounded-xl font-semibold text-sm">
-                {editing ? "Salvar Alterações" : "Cadastrar Aluno"}
+              <Button onClick={handleSave} disabled={isLoading} className="w-full h-11 rounded-xl font-semibold text-sm">
+                {isLoading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</>
+                ) : (
+                  editing ? "Salvar Alterações" : "Cadastrar Aluno"
+                )}
               </Button>
             </div>
           </DialogContent>
@@ -748,7 +777,7 @@ export default function Students() {
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10" onClick={() => openEdit(s)}>
                         <Edit className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10" onClick={() => handleDelete(s.id)}>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10" onClick={() => setStudentToDelete(s.id)}>
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
@@ -760,8 +789,46 @@ export default function Students() {
         </div>
       )}
 
+      <AlertDialog open={!!studentToDelete} onOpenChange={(open) => !open && setStudentToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir aluno?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o aluno
+              e todos os seus dados vinculados (pagamentos, aulas e pacotes).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (studentToDelete) handleDelete(studentToDelete);
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+            >
+              {isDeleting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Excluindo...</>
+              ) : (
+                "Confirmar Exclusão"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Student Detail Dialog */}
-      <Dialog open={!!detailStudent} onOpenChange={() => setDetailStudent(null)}>
+      <Dialog open={!!detailStudent} onOpenChange={(open) => {
+        if (!open) {
+          setDetailStudent(null);
+          setAccessEmail("");
+          setAccessPassword("");
+          setNewAccessPassword("");
+          setEditingAccessPerms(false);
+          setEditingAccessPassword(false);
+        }
+      }}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-lg font-bold">{detailStudent?.name}</DialogTitle></DialogHeader>
           {detailStudent && (() => {
