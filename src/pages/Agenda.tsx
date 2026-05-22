@@ -76,6 +76,8 @@ export default function Agenda() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [editing, setEditing] = useState<Lesson | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
+  const [lessonDetail, setLessonDetail] = useState<Lesson | null>(null);
+  const [showLessonDetail, setShowLessonDetail] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     student_id: "", date: format(new Date(), "yyyy-MM-dd"),
