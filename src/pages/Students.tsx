@@ -124,22 +124,27 @@ export default function Students() {
   useEffect(() => { if (user) loadAll(); }, [user]);
 
   const loadAll = async () => {
-    const { data: studs } = await supabase.from("students").select("*").eq("teacher_id", user!.id).order("name");
-    setStudents(studs || []);
-    const { data: pkgs } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).order("created_at", { ascending: false });
-    const grouped: Record<string, StudentPackage[]> = {};
-    (pkgs || []).forEach((p: any) => { if (!grouped[p.student_id]) grouped[p.student_id] = []; grouped[p.student_id].push(p); });
-    setPackages(grouped);
-    const { data: pays } = await supabase.from("payments").select("*").eq("teacher_id", user!.id).order("due_date");
-    const payGrouped: Record<string, Payment[]> = {};
-    (pays || []).forEach((p: any) => { if (!payGrouped[p.student_id]) payGrouped[p.student_id] = []; payGrouped[p.student_id].push(p); });
-    setPayments(payGrouped);
-    // Load student access records
-    const { data: accesses } = await (supabase.from as any)("student_access")
-      .select("*").eq("teacher_id", user!.id);
-    const accessMap: Record<string, StudentAccessRecord> = {};
-    (accesses || []).forEach((a: any) => { accessMap[a.student_id] = a; });
-    setAccessRecords(accessMap);
+    try {
+      const { data: studs } = await supabase.from("students").select("*").eq("teacher_id", user!.id).order("name");
+      setStudents(studs || []);
+      const { data: pkgs } = await supabase.from("packages").select("*").eq("teacher_id", user!.id).order("created_at", { ascending: false });
+      const grouped: Record<string, StudentPackage[]> = {};
+      (pkgs || []).forEach((p: any) => { if (!grouped[p.student_id]) grouped[p.student_id] = []; grouped[p.student_id].push(p); });
+      setPackages(grouped);
+      const { data: pays } = await supabase.from("payments").select("*").eq("teacher_id", user!.id).order("due_date");
+      const payGrouped: Record<string, Payment[]> = {};
+      (pays || []).forEach((p: any) => { if (!payGrouped[p.student_id]) payGrouped[p.student_id] = []; payGrouped[p.student_id].push(p); });
+      setPayments(payGrouped);
+      // Load student access records
+      const { data: accesses } = await (supabase.from as any)("student_access")
+        .select("*").eq("teacher_id", user!.id);
+      const accessMap: Record<string, StudentAccessRecord> = {};
+      (accesses || []).forEach((a: any) => { accessMap[a.student_id] = a; });
+      setAccessRecords(accessMap);
+    } catch (error) {
+      console.error("Error loading students:", error);
+      toast({ title: "Erro ao carregar alunos", variant: "destructive" });
+    }
   };
 
   const numVal = (v: string | number): number => { const n = typeof v === "string" ? parseFloat(v) : v; return isNaN(n) ? 0 : n; };
