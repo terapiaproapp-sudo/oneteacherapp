@@ -555,58 +555,85 @@ export default function Agenda() {
                 </Badge>
               </h3>
               
-              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredLessonsForList.length > 0 ? (
-                  filteredLessonsForList.map(l => {
-                    const lessonDate = parseLocalDate(l.date);
-                    const endTime = l.time && l.duration ? calculateEndTime(l.time, l.duration) : "--:--";
-                    
-                    return (
-                      <div key={l.id} className="group relative flex flex-col gap-2 p-4 rounded-2xl bg-muted/20 border border-border/50 hover:bg-muted/40 hover:border-primary/20 transition-all duration-300">
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-black text-primary uppercase tracking-wider">
-                                {format(lessonDate, "dd/MM")} • {l.time} às {endTime}
-                              </span>
-                              <Badge className={`text-[9px] font-bold px-1.5 h-4 uppercase ${statusStyle(l.status)}`} variant="outline">
-                                {statusLabel(l.status)}
-                              </Badge>
-                            </div>
-                            <p className="text-base font-black text-foreground tracking-tight leading-tight mt-1">{l.students?.name}</p>
-                          </div>
+                  // Grouping logic
+                  Object.entries(
+                    filteredLessonsForList.reduce((acc, lesson) => {
+                      const dateKey = lesson.date.split("T")[0];
+                      if (!acc[dateKey]) acc[dateKey] = [];
+                      acc[dateKey].push(lesson);
+                      return acc;
+                    }, {} as Record<string, Lesson[]>)
+                  )
+                  .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+                  .map(([date, dayLessons]) => (
+                    <div key={date} className="space-y-3">
+                      {viewType !== "dia" && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="h-px flex-1 bg-border/50"></div>
+                          <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/50 px-2 py-0.5 rounded-full">
+                            {format(parseLocalDate(date), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                          </span>
+                          <div className="h-px flex-1 bg-border/50"></div>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-3">
+                        {dayLessons.map(l => {
+                          const lessonDate = parseLocalDate(l.date);
+                          const endTime = l.time && l.duration ? calculateEndTime(l.time, l.duration) : "--:--";
                           
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg" onClick={() => openEdit(l)}>
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
+                          return (
+                            <div key={l.id} className="group relative flex flex-col gap-2 p-4 rounded-2xl bg-muted/20 border border-border/50 hover:bg-muted/40 hover:border-primary/20 transition-all duration-300">
+                              <div className="flex justify-between items-start">
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-wider">
+                                      {l.time} às {endTime}
+                                    </span>
+                                    <Badge className={`text-[9px] font-bold px-1.5 h-4 uppercase ${statusStyle(l.status)}`} variant="outline">
+                                      {statusLabel(l.status)}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-base font-black text-foreground tracking-tight leading-tight mt-1">{l.students?.name}</p>
+                                </div>
+                                
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg" onClick={() => openEdit(l)}>
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
 
-                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/10 mt-1">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">Disciplina</span>
-                            <span className="text-[11px] font-semibold truncate">{l.subject || "Não informada"}</span>
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">Modalidade</span>
-                            <span className="text-[11px] font-semibold capitalize">{l.modality}</span>
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">Tipo</span>
-                            <span className={`text-[11px] font-bold ${l.lesson_type === "avulsa" ? "text-purple-600" : "text-primary"}`}>
-                              {l.lesson_type === "pacote" ? "Pacote" : "Avulsa"}
-                            </span>
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase">Duração</span>
-                            <span className="text-[11px] font-semibold">{formatHoursDisplay(l.duration)}</span>
-                          </div>
-                        </div>
+                              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/10 mt-1">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Disciplina</span>
+                                  <span className="text-[11px] font-semibold truncate">{l.subject || "Não informada"}</span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Modalidade</span>
+                                  <span className="text-[11px] font-semibold capitalize">{l.modality}</span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Tipo</span>
+                                  <span className={`text-[11px] font-bold ${l.lesson_type === "avulsa" ? "text-purple-600" : "text-primary"}`}>
+                                    {l.lesson_type === "pacote" ? "Pacote" : "Avulsa"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="text-[9px] font-bold text-muted-foreground uppercase">Duração</span>
+                                  <span className="text-[11px] font-semibold">{formatHoursDisplay(l.duration)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })
+                    </div>
+                  ))
                 ) : (
+
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
                       <Clock className="h-6 w-6 text-muted-foreground/40" />
