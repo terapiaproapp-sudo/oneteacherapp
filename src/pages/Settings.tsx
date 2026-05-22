@@ -513,6 +513,17 @@ export default function SettingsPage() {
               {testingNotif ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
               Enviar notificação de teste
             </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full rounded-xl gap-2"
+              onClick={reconfigureDevice}
+              disabled={reconfiguring}
+            >
+              {reconfiguring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
+              Reconfigurar notificações deste dispositivo
+            </Button>
           </div>
         </CardContent>
       </Card>
