@@ -16,7 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useGreeting } from "@/hooks/use-greeting";
-import logo from "@/assets/logo-oneteacher.png";
+
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -38,25 +38,28 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
       <SidebarContent>
         {/* Brand & User Greeting Area */}
-        <div className="flex flex-col px-4 pt-8 pb-6 border-b border-sidebar-border/50 shrink-0 transition-all duration-300 overflow-hidden">
+        {/* Premium Greeting Area */}
+        <div className="flex flex-col px-6 pt-10 pb-8 border-b border-sidebar-border/50 shrink-0 transition-all duration-300 overflow-hidden">
           {!collapsed ? (
-            <div className="animate-fade-in space-y-6">
-              <div className="flex items-center justify-start">
-                <img src={logo} alt="OneTeacher" className="h-14 w-auto object-contain" />
-              </div>
-              <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10 shadow-sm">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1 opacity-80">
-                  {greeting}
+            <div className="animate-fade-in space-y-1">
+              <p className="text-[11px] font-bold text-primary uppercase tracking-[0.25em] mb-0.5 opacity-90 drop-shadow-sm">
+                {greeting}
+              </p>
+              <h2 className="text-3xl font-black text-sidebar-foreground leading-none tracking-tight break-words">
+                {firstName}
+              </h2>
+              <div className="pt-4 flex flex-col gap-1">
+                <p className="text-[11px] text-muted-foreground font-medium flex items-center gap-2">
+                  <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
+                  Sua central de aulas
                 </p>
-                <h2 className="text-xl font-black text-sidebar-foreground leading-tight truncate tracking-tight">
-                  {firstName}
-                </h2>
-                <div className="h-1 w-6 bg-primary rounded-full mt-3" />
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center w-full gap-4">
-              <img src={logo} alt="T" className="h-6 w-6 object-contain" />
+            <div className="flex flex-col items-center justify-center w-full py-2">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                <span className="text-primary font-black text-lg">{firstName[0]}</span>
+              </div>
             </div>
           )}
         </div>
