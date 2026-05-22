@@ -458,10 +458,63 @@ export default function Agenda() {
       </div>
       
       {/* Existing Dialogs kept for functionality */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>...</Dialog>
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>...</Dialog>
-    </div>
-  );
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{selectedDate ? format(selectedDate, "dd 'de' MMMM", { locale: ptBR }) : "Aulas do dia"}</DialogTitle>
+            <DialogDescription>{selectedDayLessons.length} aula(s)</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {selectedDayLessons.map(l => (
+              <div key={l.id} className="flex items-center justify-between p-3 rounded-xl border border-border/50">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">{l.students?.name}</p>
+                  <p className="text-xs text-muted-foreground">{l.time} · {l.subject} · {formatHoursDisplay(l.duration)}</p>
+                  <Badge className={`mt-1 ${statusStyle(l.status)}`} variant="outline">{statusLabel(l.status)}</Badge>
+                </div>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setDetailOpen(false); openEdit(l); }}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button onClick={() => { setDetailOpen(false); openNew(selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined); }} className="rounded-xl gap-2">
+              <Plus className="h-4 w-4" /> Nova aula
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Editar Aula" : "Nova Aula"}</DialogTitle>
+            <DialogDescription>Preencha os dados da aula</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Aluno</Label>
+              <Select value={form.student_id} onValueChange={v => setForm({ ...form, student_id: v })}>
+                <SelectTrigger className="h-10 rounded-xl"><SelectValue placeholder="Selecione um aluno" /></SelectTrigger>
+                <SelectContent>
+                  {students.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Tipo de aula</Label>
+              <Select value={form.lesson_type} onValueChange={(v: "pacote" | "avulsa") => setForm({ ...form, lesson_type: v })}>
+                <SelectTrigger className="h-10 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pacote">Consumir do pacote</SelectItem>
+                  <SelectItem value="avulsa">Aula avulsa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
               <Label className="text-xs font-medium">Data</Label>
               <Input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="h-10 rounded-xl" />
             </div>
