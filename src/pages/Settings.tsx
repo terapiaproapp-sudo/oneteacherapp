@@ -79,6 +79,10 @@ export default function SettingsPage() {
 
   const env = getEnvironmentInfo();
   const [showDiagnosis, setShowDiagnosis] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
+  const [testingNotif, setTestingNotif] = useState(false);
+  
   const [diagnosis, setDiagnosis] = useState<Diagnosis>({
     env,
     support: {
@@ -96,6 +100,16 @@ export default function SettingsPage() {
       exists: false
     }
   });
+
+  const fetchSettings = useCallback(async () => {
+    if (!user) return;
+    try {
+      const dbSettings = await getNotificationSettings(user.id) as any;
+      if (dbSettings) setSettings(prev => ({ ...prev, ...dbSettings }));
+    } catch (error) {
+      console.error("Error fetching notification settings:", error);
+    }
+  }, [user]);
 
   const runDiagnosis = useCallback(async () => {
     const updatedDiagnosis: Diagnosis = {
@@ -160,31 +174,53 @@ export default function SettingsPage() {
 
   const requestNotifPermission = async () => {
     if (env.isRestricted) {
-      toast({ title: "Ambiente restrito", description: "Abra a versão pública do app para ativar notificações.", variant: "destructive" });
+      toast({ 
+        title: "Ambiente restrito", 
+        description: "Notificações não funcionam em iframes ou janelas de preview. Use o link público.", 
+        variant: "destructive" 
+      });
       return;
     }
-    if (!notifSupported) {
-      toast({ title: "Não suportado", description: "Seu navegador não suporta notificações.", variant: "destructive" });
+
+    if (!diagnosis.support.notifications) {
+      toast({ title: "Não suportado", description: "Seu navegador não suporta a API de Notificações.", variant: "destructive" });
       return;
     }
+
     try {
       const perm = await Notification.requestPermission();
-      setNotifPermission(perm);
+      await runDiagnosis();
       
       if (perm === "granted") {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        if (regs.length > 0) {
-          await subscribeToPush(regs[0], user!.id);
-          setSwStatus("active");
-          toast({ title: "Notificações ativadas! ✅" });
-        } else {
-          toast({ title: "Erro", description: "Service Worker não encontrado. Tente recarregar a página.", variant: "destructive" });
+        try {
+          toast({ title: "Configurando...", description: "Registrando Service Worker e gerando inscrição." });
+          const reg = await registerServiceWorker();
+          if (reg) {
+            await subscribeToPush(reg, user!.id);
+            await runDiagnosis();
+            toast({ title: "Notificações ativadas! ✅", description: "Este dispositivo agora receberá seus lembretes." });
+          }
+        } catch (swErr: any) {
+          console.error("SW/Push error:", swErr);
+          toast({ 
+            title: "Erro técnico", 
+            description: swErr.message || "Falha ao registrar Service Worker.", 
+            variant: "destructive" 
+          });
         }
       } else if (perm === "denied") {
-        toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
+        toast({ 
+          title: "Permissão negada", 
+          description: "Você bloqueou as notificações. Ative-as manualmente nas configurações do navegador.", 
+          variant: "destructive" 
+        });
       }
-    } catch (err) {
-      toast({ title: "Erro ao ativar", description: "Ocorreu um erro ao configurar as notificações.", variant: "destructive" });
+    } catch (err: any) {
+      toast({ 
+        title: "Erro ao ativar", 
+        description: err.message || "Ocorreu um erro ao configurar as notificações.", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -193,10 +229,10 @@ export default function SettingsPage() {
     setTestingNotif(true);
     try {
       const regs = await navigator.serviceWorker.getRegistrations();
-      if (regs.length === 0) throw new Error("Service Worker não registrado");
+      if (regs.length === 0) throw new Error("Service Worker não registrado. Tente reativar as notificações.");
       
       const sub = await regs[0].pushManager.getSubscription();
-      if (!sub) throw new Error("Inscrição de push não encontrada");
+      if (!sub) throw new Error("Inscrição de push não encontrada. Clique em ativar novamente.");
 
       const { error } = await supabase.functions.invoke('push-notifications', {
         body: {
@@ -207,7 +243,7 @@ export default function SettingsPage() {
         }
       });
 
-      if (error) throw error;
+      if (error) throw new Error(`Erro na Edge Function: ${error.message || JSON.stringify(error)}`);
       toast({ title: "Teste enviado!", description: "Você deve receber uma notificação em instantes." });
     } catch (err: any) {
       toast({ title: "Falha no teste", description: err?.message || "Erro desconhecido", variant: "destructive" });
