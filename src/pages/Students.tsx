@@ -687,8 +687,12 @@ export default function Students() {
                 <Textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={2} className="text-sm rounded-xl" placeholder="Anotações sobre o aluno..." />
               </div>
 
-              <Button onClick={handleSave} className="w-full h-11 rounded-xl font-semibold text-sm">
-                {editing ? "Salvar Alterações" : "Cadastrar Aluno"}
+              <Button onClick={handleSave} disabled={isLoading} className="w-full h-11 rounded-xl font-semibold text-sm">
+                {isLoading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...</>
+                ) : (
+                  editing ? "Salvar Alterações" : "Cadastrar Aluno"
+                )}
               </Button>
             </div>
           </DialogContent>
