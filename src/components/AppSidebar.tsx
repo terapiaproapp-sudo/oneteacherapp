@@ -38,27 +38,25 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/50">
       <SidebarContent>
         {/* Brand & User Greeting Area */}
-        <div className="flex flex-col px-4 pt-6 pb-4 border-b border-sidebar-border/50 shrink-0 transition-all duration-300 overflow-hidden bg-sidebar-accent/10">
+        <div className="flex flex-col px-4 pt-8 pb-6 border-b border-sidebar-border/50 shrink-0 transition-all duration-300 overflow-hidden">
           {!collapsed ? (
-            <div className="animate-fade-in space-y-4">
-              <div className="flex items-center gap-2">
-                <img src={logo} alt="OneTeacher" className="h-7 object-contain brightness-0 invert" />
+            <div className="animate-fade-in space-y-6">
+              <div className="flex items-center justify-start">
+                <img src={logo} alt="OneTeacher" className="h-10 w-auto object-contain" />
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">
+              <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10 shadow-sm">
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1 opacity-80">
                   {greeting}
                 </p>
                 <h2 className="text-xl font-black text-sidebar-foreground leading-tight truncate tracking-tight">
                   {firstName}
                 </h2>
-                <div className="h-1 w-8 bg-primary rounded-full mt-2" />
+                <div className="h-1 w-6 bg-primary rounded-full mt-3" />
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center w-full gap-4">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs border border-primary/20">
-                {firstName.charAt(0)}
-              </div>
+              <img src={logo} alt="T" className="h-6 w-6 object-contain" />
             </div>
           )}
         </div>
