@@ -817,7 +817,11 @@ export default function Agenda() {
                           const endTime = l.time && l.duration ? calculateEndTime(l.time, l.duration) : "--:--";
                           
                           return (
-                            <div key={l.id} className="group relative flex flex-col gap-2 p-4 rounded-2xl bg-muted/20 border border-border/50 hover:bg-muted/40 hover:border-primary/20 transition-all duration-300">
+                            <div 
+                              key={l.id} 
+                              onClick={() => { setLessonDetail(l); setShowLessonDetail(true); }}
+                              className="group relative cursor-pointer flex flex-col gap-2 p-4 rounded-2xl bg-white border border-border/80 hover:border-primary/40 hover:shadow-md transition-all duration-300"
+                            >
                               <div className="flex justify-between items-start">
                                 <div className="flex flex-col gap-0.5">
                                   <div className="flex items-center gap-2">
@@ -831,9 +835,15 @@ export default function Agenda() {
                                   <p className="text-base font-black text-foreground tracking-tight leading-tight mt-1">{l.students?.name}</p>
                                 </div>
                                 
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg" onClick={() => openEdit(l)}>
-                                    <Edit className="h-3.5 w-3.5" />
+                                <div className="flex gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    variant="secondary" 
+                                    className="h-8 px-2 rounded-lg gap-1.5 font-bold text-[10px] uppercase shadow-sm border border-border/50" 
+                                    onClick={(e) => { e.stopPropagation(); openEdit(l); }}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                    Editar
                                   </Button>
                                 </div>
                               </div>
