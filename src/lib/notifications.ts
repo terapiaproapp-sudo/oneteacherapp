@@ -44,9 +44,35 @@ export async function registerServiceWorker() {
 
 export async function subscribeToPush(registration: ServiceWorkerRegistration, userId: string) {
   try {
+    const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+
+    // If an existing subscription uses a different applicationServerKey, unsubscribe first
+    const existing = await registration.pushManager.getSubscription();
+    if (existing) {
+      const existingKey = existing.options?.applicationServerKey;
+      const sameKey =
+        existingKey &&
+        new Uint8Array(existingKey).every((b, i) => b === applicationServerKey[i]) &&
+        existingKey.byteLength === applicationServerKey.byteLength;
+
+      if (!sameKey) {
+        try {
+          await existing.unsubscribe();
+          // Remove stale subscription from DB
+          await supabase
+            .from("push_subscriptions")
+            .delete()
+            .eq("user_id", userId)
+            .eq("subscription->>endpoint", existing.endpoint);
+        } catch (e) {
+          console.warn("Failed to unsubscribe old subscription:", e);
+        }
+      }
+    }
+
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      applicationServerKey,
     });
 
     // Save subscription to database
@@ -69,6 +95,33 @@ export async function subscribeToPush(registration: ServiceWorkerRegistration, u
     console.error("Failed to subscribe to push notifications:", error);
     throw error;
   }
+}
+
+/**
+ * Force re-subscribe: unsubscribe any current subscription, clean DB, then subscribe again
+ * with the current VAPID_PUBLIC_KEY. Use when the device has a stale key.
+ */
+export async function reconfigurePushSubscription(userId: string) {
+  const registration = await registerServiceWorker();
+  if (!registration) throw new Error("Service Worker indisponível.");
+
+  const existing = await registration.pushManager.getSubscription();
+  if (existing) {
+    const endpoint = existing.endpoint;
+    try {
+      await existing.unsubscribe();
+    } catch (e) {
+      console.warn("Unsubscribe failed:", e);
+    }
+    await supabase
+      .from("push_subscriptions")
+      .delete()
+      .eq("user_id", userId)
+      .eq("subscription->>endpoint", endpoint);
+  }
+
+  const subscription = await subscribeToPush(registration, userId);
+  return subscription;
 }
 
 export async function unsubscribeFromPush() {
