@@ -7,11 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor, ExternalLink, CheckCircle2, XCircle, AlertCircle, Loader2, Smartphone, Download, Info } from "lucide-react";
+import { LogOut, User, Shield, Bell, Palette, Save, BellRing, Moon, Sun, Monitor, ExternalLink, CheckCircle2, XCircle, AlertCircle, Loader2, Smartphone, Clock } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { subscribeToPush, unsubscribeFromPush, getNotificationSettings, updateNotificationSettings } from "@/lib/notifications";
-
+import { subscribeToPush, getNotificationSettings, updateNotificationSettings } from "@/lib/notifications";
 
 type ThemeMode = "light" | "dark" | "system";
 
@@ -58,7 +57,6 @@ export default function SettingsPage() {
   const [notifPermission, setNotifPermission] = useState<string>("checking");
   const [notifSupported, setNotifSupported] = useState(true);
   const [swStatus, setSwStatus] = useState<"checking" | "active" | "inactive" | "unsupported">("checking");
-  const [diagLogs, setDiagLogs] = useState<{ label: string; status: "ok" | "warn" | "error" }[]>([]);
   const [testingNotif, setTestingNotif] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
@@ -87,7 +85,6 @@ export default function SettingsPage() {
       setSwStatus("unsupported");
     }
 
-    // iOS and PWA detection
     const userAgent = window.navigator.userAgent.toLowerCase();
     setIsIOS(/iphone|ipad|ipod/.test(userAgent));
     setIsPWA(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
@@ -104,8 +101,6 @@ export default function SettingsPage() {
       toast({ title: "Erro ao salvar", variant: "destructive" });
     }
   };
-
-  const allReady = !env.isRestricted && notifSupported && notifPermission === "granted";
 
   const requestNotifPermission = async () => {
     if (env.isRestricted) {
@@ -125,9 +120,9 @@ export default function SettingsPage() {
         if (regs.length > 0) {
           await subscribeToPush(regs[0], user!.id);
           setSwStatus("active");
-          toast({ title: "Notificações ativadas com sucesso! ✅" });
+          toast({ title: "Notificações ativadas! ✅" });
         } else {
-          toast({ title: "Erro", description: "Service Worker não encontrado.", variant: "destructive" });
+          toast({ title: "Erro", description: "Service Worker não encontrado. Tente recarregar a página.", variant: "destructive" });
         }
       } else if (perm === "denied") {
         toast({ title: "Permissão negada", description: "Vá em Configurações do navegador > Notificações e permita este site.", variant: "destructive" });
@@ -140,12 +135,16 @@ export default function SettingsPage() {
   const testNotification = async () => {
     if (!user) return;
     setTestingNotif(true);
-    const logs: typeof diagLogs = [];
-
     try {
-      const { data, error } = await supabase.functions.invoke('push-notifications', {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (regs.length === 0) throw new Error("Service Worker não registrado");
+      
+      const sub = await regs[0].pushManager.getSubscription();
+      if (!sub) throw new Error("Inscrição de push não encontrada");
+
+      const { error } = await supabase.functions.invoke('push-notifications', {
         body: {
-          subscription: (await (await navigator.serviceWorker.getRegistrations())[0].pushManager.getSubscription())?.toJSON(),
+          subscription: sub.toJSON(),
           title: "OneTeacher 📚",
           body: "Suas notificações estão funcionando! ✅",
           data: { url: "/settings" }
@@ -153,17 +152,10 @@ export default function SettingsPage() {
       });
 
       if (error) throw error;
-      logs.push({ label: "Notificação de teste enviada ✓", status: "ok" });
       toast({ title: "Teste enviado!", description: "Você deve receber uma notificação em instantes." });
     } catch (err: any) {
-      logs.push({ label: `Erro no teste: ${err?.message || "falha na entrega"}`, status: "error" });
-      toast({ title: "Falha no teste", description: err?.message, variant: "destructive" });
+      toast({ title: "Falha no teste", description: err?.message || "Erro desconhecido", variant: "destructive" });
     }
-
-    setDiagLogs(logs);
-    setTestingNotif(false);
-  };
-
     setTestingNotif(false);
   };
 
@@ -175,7 +167,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-4 animate-fade-in max-w-2xl">
+    <div className="space-y-4 animate-fade-in max-w-2xl pb-10">
       <div>
         <h1 className="page-title">Configurações</h1>
         <p className="section-subtitle">Gerencie sua conta e preferências.</p>
@@ -228,44 +220,112 @@ export default function SettingsPage() {
         <CardContent className="p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-9 h-9 rounded-xl bg-primary/8 flex items-center justify-center"><Bell className="h-4 w-4 text-primary" /></div>
-            <div><h2 className="text-sm font-bold">Notificações</h2><p className="text-[11px] text-muted-foreground">Lembretes e alertas</p></div>
+            <div><h2 className="text-sm font-bold">Notificações no Celular</h2><p className="text-[11px] text-muted-foreground">Lembretes e alertas push</p></div>
           </div>
 
           {isIOS && !isPWA && (
             <div className="p-4 rounded-xl mb-4 bg-primary/10 border border-primary/20 space-y-2">
               <div className="flex items-center gap-2 text-primary">
                 <Smartphone className="h-5 w-5" />
-                <p className="text-sm font-bold">Dica para iPhone</p>
+                <p className="text-sm font-bold">Instalar OneTeacher</p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Para receber notificações no iPhone, toque no botão de compartilhamento e selecione <strong>"Adicionar à Tela de Início"</strong>.
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                No iPhone, as notificações funcionam melhor com o app instalado. Toque no botão de compartilhamento e selecione <strong>"Adicionar à Tela de Início"</strong>.
               </p>
             </div>
           )}
 
-          {!env.isRestricted && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Ativar notificações</span>
-                <Switch checked={notifPermission === 'granted'} onCheckedChange={requestNotifPermission} />
+          {env.isRestricted && (
+            <div className="p-3 rounded-xl mb-4 bg-warning/8 border border-warning/15">
+              <div className="flex items-center gap-2 mb-1">
+                <AlertCircle className="h-4 w-4 text-warning" />
+                <p className="text-xs font-medium text-warning">Ambiente de preview</p>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Resumo diário da agenda</span>
-                <Switch checked={settings.daily_summary} onCheckedChange={(v) => updateSettings({ daily_summary: v })} />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Lembrete antes da aula</span>
-                <Switch checked={settings.lesson_reminder} onCheckedChange={(v) => updateSettings({ lesson_reminder: v })} />
-              </div>
-              
-              <Button variant="outline" size="sm" className="w-full rounded-xl gap-2" onClick={testNotification} disabled={!allReady}>
-                <BellRing className="h-4 w-4" /> Testar notificação
+              <p className="text-[11px] text-muted-foreground mb-2">
+                Notificações reais só funcionam na versão pública do app.
+              </p>
+              <Button size="sm" variant="outline" className="rounded-xl text-xs gap-1" onClick={() => window.open(PUBLISHED_URL, "_blank")}>
+                <ExternalLink className="h-3.5 w-3.5" /> Abrir versão pública
               </Button>
             </div>
           )}
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">Status do dispositivo</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {notifPermission === "granted" ? "Ativo ✅" : notifPermission === "denied" ? "Bloqueado ❌" : !notifSupported ? "Não suportado" : "Pendente"}
+                </p>
+              </div>
+              <Switch checked={notifPermission === 'granted'} onCheckedChange={requestNotifPermission} />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Resumo diário da agenda</p>
+                  <p className="text-[11px] text-muted-foreground">Receba as aulas do dia às {settings.daily_summary_time}</p>
+                </div>
+                <Switch checked={settings.daily_summary} onCheckedChange={(v) => updateSettings({ daily_summary: v })} />
+              </div>
+
+              {settings.daily_summary && (
+                <div className="flex items-center justify-between pl-4 border-l-2 border-primary/20">
+                  <span className="text-xs text-muted-foreground">Horário do resumo</span>
+                  <Input 
+                    type="time" 
+                    value={settings.daily_summary_time} 
+                    onChange={(e) => updateSettings({ daily_summary_time: e.target.value })}
+                    className="h-8 w-24 rounded-lg text-xs"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">Lembrete antes da aula</p>
+                  <p className="text-[11px] text-muted-foreground">Notificação popup antes de começar</p>
+                </div>
+                <Switch checked={settings.lesson_reminder} onCheckedChange={(v) => updateSettings({ lesson_reminder: v })} />
+              </div>
+
+              {settings.lesson_reminder && (
+                <div className="flex items-center justify-between pl-4 border-l-2 border-primary/20">
+                  <span className="text-xs text-muted-foreground">Lembrar quanto tempo antes?</span>
+                  <Select 
+                    value={settings.lesson_reminder_lead_time} 
+                    onValueChange={(v) => updateSettings({ lesson_reminder_lead_time: v })}
+                  >
+                    <SelectTrigger className="h-8 w-32 rounded-lg text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">No horário</SelectItem>
+                      <SelectItem value="5">5 minutos</SelectItem>
+                      <SelectItem value="10">10 minutos</SelectItem>
+                      <SelectItem value="15">15 minutos</SelectItem>
+                      <SelectItem value="30">30 minutos</SelectItem>
+                      <SelectItem value="60">1 hora</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full rounded-xl gap-2 mt-2" 
+              onClick={testNotification} 
+              disabled={notifPermission !== 'granted' || testingNotif}
+            >
+              {testingNotif ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
+              Enviar notificação de teste
+            </Button>
+          </div>
         </CardContent>
       </Card>
-
 
       {/* Appearance */}
       <Card className="card-premium">
@@ -275,17 +335,21 @@ export default function SettingsPage() {
             <div><h2 className="text-sm font-bold">Aparência</h2><p className="text-[11px] text-muted-foreground">Tema e personalização</p></div>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {([
-              { value: "light" as ThemeMode, icon: Sun, label: "Claro" },
-              { value: "dark" as ThemeMode, icon: Moon, label: "Escuro" },
-              { value: "system" as ThemeMode, icon: Monitor, label: "Sistema" },
-            ]).map(opt => (
-              <button key={opt.value} onClick={() => setTheme(opt.value)}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${theme === opt.value ? "border-primary bg-primary/8 text-primary" : "border-border/60 hover:bg-muted/50 text-muted-foreground"}`}>
-                <opt.icon className="h-5 w-5" />
-                <span className="text-xs font-semibold">{opt.label}</span>
-              </button>
-            ))}
+            {(["light", "dark", "system"] as ThemeMode[]).map(mode => {
+              const icons = { light: Sun, dark: Moon, system: Monitor };
+              const labels = { light: "Claro", dark: "Escuro", system: "Sistema" };
+              const Icon = icons[mode];
+              return (
+                <button 
+                  key={mode} 
+                  onClick={() => setTheme(mode)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${theme === mode ? "border-primary bg-primary/8 text-primary" : "border-border/60 hover:bg-muted/50 text-muted-foreground"}`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="text-xs font-semibold">{labels[mode]}</span>
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
