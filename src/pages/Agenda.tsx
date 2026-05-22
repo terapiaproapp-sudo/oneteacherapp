@@ -345,36 +345,72 @@ export default function Agenda() {
     toast({ title: "Comprovante removido" }); loadLessons();
   };
 
-  const statusStyle = (s: string) => ({ agendada: "bg-primary/10 text-primary border-primary/20", concluida: "bg-accent/10 text-accent border-accent/20", cancelada: "bg-destructive/10 text-destructive border-destructive/20", falta: "bg-warning/10 text-warning border-warning/20", remarcada: "bg-info/10 text-info border-info/20", noshow: "bg-destructive/10 text-destructive border-destructive/20" }[s] || "bg-muted text-muted-foreground");
-  const statusLabel = (s: string) => ({ agendada: "Agendada", concluida: "Realizada", cancelada: "Cancelada", falta: "Falta", remarcada: "Remarcada", noshow: "No-show" }[s] || s);
-  const dotColor = (s: string) => ({ agendada: "bg-primary", concluida: "bg-accent", cancelada: "bg-destructive", falta: "bg-warning", remarcada: "bg-info", noshow: "bg-destructive" }[s] || "bg-muted-foreground");
-
-
-  const ms = startOfMonth(currentDate);
-  const me = endOfMonth(currentDate);
-  const calendarDays = eachDayOfInterval({ start: startOfWeek(ms, { weekStartsOn: 1 }), end: endOfWeek(me, { weekStartsOn: 1 }) });
-
-  const handleDayClick = (day: Date) => {
-    setSelectedDate(day);
-    // Don't auto-open detail modal on day click to allow user to see stats updated on the page
-    // if (dl.length > 0) setDetailOpen(true);
-    // else openNew(format(day, "yyyy-MM-dd"));
+  const statusStyle = (s: string) => {
+    switch (s) {
+      case "agendada": return "bg-red-50 text-red-600 border-red-200";
+      case "concluida": return "bg-green-50 text-green-600 border-green-200";
+      case "noshow": return "bg-red-900/10 text-red-900 border-red-900/20";
+      case "remarcada": return "bg-orange-50 text-orange-600 border-orange-200";
+      case "cancelada": return "bg-gray-100 text-gray-500 border-gray-200";
+      case "falta": return "bg-yellow-50 text-yellow-600 border-yellow-200";
+      default: return "bg-muted text-muted-foreground";
+    }
   };
 
+  const statusLabel = (s: string) => ({ 
+    agendada: "Agendada", 
+    concluida: "Realizada", 
+    cancelada: "Cancelada", 
+    falta: "Falta", 
+    remarcada: "Remarcada", 
+    noshow: "No-show" 
+  }[s] || s);
 
-  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const dotColor = (s: string, type?: string) => {
+    if (type === "avulsa") return "bg-purple-500";
+    switch (s) {
+      case "agendada": return "bg-red-500";
+      case "concluida": return "bg-green-500";
+      case "noshow": return "bg-red-900";
+      case "remarcada": return "bg-orange-500";
+      case "cancelada": return "bg-gray-400";
+      case "falta": return "bg-yellow-500";
+      default: return "bg-muted-foreground";
+    }
+  };
+
+  const [viewType, setViewType] = useState<"dia" | "semana" | "mes">("dia");
 
   const stats = useMemo(() => {
     const referenceDate = selectedDate || new Date();
-    const dayLessons = getLessonsForDay(referenceDate);
+    let filteredLessons = [];
+
+    if (viewType === "dia") {
+      filteredLessons = getLessonsForDay(referenceDate);
+    } else if (viewType === "semana") {
+      const start = startOfWeek(referenceDate, { weekStartsOn: 1 });
+      const end = endOfWeek(referenceDate, { weekStartsOn: 1 });
+      filteredLessons = lessons.filter(l => {
+        const d = parseLocalDate(l.date);
+        return d >= start && d <= end;
+      });
+    } else {
+      const start = startOfMonth(referenceDate);
+      const end = endOfMonth(referenceDate);
+      filteredLessons = lessons.filter(l => {
+        const d = parseLocalDate(l.date);
+        return d >= start && d <= end;
+      });
+    }
+
     return {
-      total: dayLessons.length,
-      hours: dayLessons.reduce((s, l) => s + l.duration, 0),
-      avulsas: dayLessons.filter(l => l.lesson_type === "avulsa").length,
-      pending: dayLessons.filter(l => l.status === "agendada").length,
+      total: filteredLessons.length,
+      hours: filteredLessons.reduce((s, l) => s + l.duration, 0),
+      avulsas: filteredLessons.filter(l => l.lesson_type === "avulsa").length,
+      pending: filteredLessons.filter(l => l.status === "agendada").length,
       date: referenceDate
     };
-  }, [lessons, selectedDate]);
+  }, [lessons, selectedDate, viewType]);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto pb-20">

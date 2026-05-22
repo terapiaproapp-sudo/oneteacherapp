@@ -1,31 +1,39 @@
-# Nova Agenda Operacional do OneTeacher
+Implement visual and operational improvements to the Agenda page and Sidebar.
 
-Transformar a aba 'Agenda' em uma central operacional completa.
+### 1. Status Color Updates (Agenda.tsx)
+- Redefine `statusStyle`, `statusLabel`, and `dotColor` to match the requested color palette:
+    - **Agendada**: Red (replacing blue)
+    - **Realizada**: Green
+    - **No-show**: Dark red/Bordeaux
+    - **Remarcada**: Orange/Yellow
+    - **Cancelada**: Gray
+    - **Aula avulsa**: Purple (visual distinction)
 
-## 1. Componentes
-- Criar novo layout na `Agenda.tsx` com divisões para calendário (topo), resumo do dia (cards), próximas aulas (lista) e painel lateral.
-- Nova interface `OperationalAgenda`:
-  - `SummaryCards`: Exibe aulas, horas, alunos, avulsas, pendentes e atrasos.
-  - `UpcomingLessonsList`: Lista vertical com ordenação, filtros de status e tipo.
-  - `CalendarView`: Calendário mensal modernizado com status colorido.
-  - `InsightsPanel` (Sidebar): Próximas 3 aulas, métricas rápidas e alertas.
+### 2. View Mode and Filtering Logic
+- Add `viewType` state: "Dia" | "Semana" | "Mês".
+- Implement UI buttons/tabs to switch between these modes at the top of the Agenda.
+- Update the `stats` calculation to dynamically switch context:
+    - **Day**: Stats for the selected day.
+    - **Week**: Stats for the week containing the selected/current day.
+    - **Month**: Stats for the entire month currently viewed.
+- Ensure the right-side (or bottom) lesson list reflects the active filter and groups lessons by day for week/month views.
 
-## 2. Lógica e Dados
-- `loadOperationalStats`: Função para calcular métricas em tempo real (aulas, horas, avulsas, etc).
-- `filters`: Implementar estados para filtragem rápida.
-- `alerts`: Lógica para exibir avisos (pacotes acabando, pendentes).
+### 3. Detailed Lesson List
+- Enhance the lesson card UI to show:
+    - Start and End time (auto-calculating end time if missing: `start + duration`).
+    - Duration, Student Name, Subject, Modality, Type (Package/Avulsa), and Status.
+- Improve spacing and typography for a "premium" look.
 
-## 3. Visual
-- Design premium seguindo `card-premium` e estilo atual.
-- Microanimações de transição entre visualizações.
-- Responsividade ajustada para mobile/tablet/desktop.
+### 4. Navigation and Loading
+- Verify that changing months correctly triggers data fetching and updates all UI elements (calendar dots, stats, and list).
+- Ensure month display follows correct Portuguese capitalization ("Maio de 2026").
 
-## 4. Ordem de Implementação
-1. Refatoração estrutural da `Agenda.tsx`.
-2. Implementação da nova seção de resumo operacional.
-3. Modernização do calendário visual.
-4. Implementação de filtros e busca.
-5. Painel lateral informativo.
-6. Ajustes de responsividade e loading.
+### 5. Branding (AppSidebar.tsx)
+- Reposition and resize the logo for better visibility.
+- Refine the greeting area to look more professional.
 
-Não haverá alteração no banco de dados ou autenticação, apenas consumo de dados existentes.
+### Technical Details
+- Use `date-fns` for robust interval calculations (`isWithinInterval`, `startOfWeek`, etc.).
+- Maintain existing Supabase queries and state management to prevent breaking data integrity.
+- Use Tailwind classes for the new status colors.
+- Responsive layout adjustments: maintain the side-by-side view on desktop and stacked on mobile.
