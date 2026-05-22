@@ -189,7 +189,7 @@ export default function Agenda() {
       if (dates.length >= 500) break; // Absolute safety limit
     }
     
-    return dates.length > 0 ? dates : [{ date: baseDate, student_remaining_hours: remaining }];
+    return dates.length > 0 ? dates : [{ date: baseDate, studentRemainingHours: remaining }];
   };
 
   const [showRecurrencePreview, setShowRecurrencePreview] = useState(false);
