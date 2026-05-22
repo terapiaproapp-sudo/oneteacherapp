@@ -215,6 +215,7 @@ export default function Agenda() {
       setRecurrencePreviewData(preview);
     } else {
       setRecurrencePreviewData([]);
+      setShowRecurrencePreview(false);
     }
   }, [form.student_id, form.date, form.recurrence, form.recurrence_days, form.recurrence_end, form.duration, students, packages]);
 
