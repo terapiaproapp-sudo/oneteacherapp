@@ -104,6 +104,9 @@ export default function Students() {
   });
   const [editingPackage, setEditingPackage] = useState(false);
   const [editingFinancial, setEditingFinancial] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
 
   // Student access state
   const [accessRecords, setAccessRecords] = useState<Record<string, StudentAccessRecord>>({});
