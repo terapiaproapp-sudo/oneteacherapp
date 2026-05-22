@@ -78,41 +78,73 @@ export default function SettingsPage() {
   });
 
   const env = getEnvironmentInfo();
-  const [notifPermission, setNotifPermission] = useState<string>("checking");
-  const [notifSupported, setNotifSupported] = useState(true);
-  const [swStatus, setSwStatus] = useState<"checking" | "active" | "inactive" | "unsupported">("checking");
-  const [testingNotif, setTestingNotif] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isPWA, setIsPWA] = useState(false);
+  const [showDiagnosis, setShowDiagnosis] = useState(false);
+  const [diagnosis, setDiagnosis] = useState<Diagnosis>({
+    env,
+    support: {
+      notifications: "Notification" in window,
+      serviceWorker: "serviceWorker" in navigator,
+      pushManager: "PushManager" in window
+    },
+    permission: "checking",
+    sw: {
+      registered: false,
+      status: "checking",
+      controller: !!navigator.serviceWorker?.controller
+    },
+    subscription: {
+      exists: false
+    }
+  });
 
-  const fetchSettings = useCallback(async () => {
-    if (!user) return;
-    const dbSettings = await getNotificationSettings(user.id) as any;
-    if (dbSettings) setSettings(prev => ({ ...prev, ...dbSettings }));
-  }, [user]);
+  const runDiagnosis = useCallback(async () => {
+    const updatedDiagnosis: Diagnosis = {
+      env: getEnvironmentInfo(),
+      support: {
+        notifications: "Notification" in window,
+        serviceWorker: "serviceWorker" in navigator,
+        pushManager: "PushManager" in window
+      },
+      permission: "Notification" in window ? Notification.permission : "default",
+      sw: {
+        registered: false,
+        status: "none",
+        controller: !!navigator.serviceWorker?.controller
+      },
+      subscription: {
+        exists: false
+      }
+    };
+
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (regs.length > 0) {
+        updatedDiagnosis.sw.registered = true;
+        updatedDiagnosis.sw.status = regs[0].active ? "active" : regs[0].installing ? "installing" : "waiting";
+        
+        try {
+          const sub = await regs[0].pushManager.getSubscription();
+          updatedDiagnosis.subscription.exists = !!sub;
+          if (sub) {
+            updatedDiagnosis.subscription.details = sub.toJSON();
+          }
+        } catch (e: any) {
+          updatedDiagnosis.subscription.error = e.message;
+        }
+      }
+    }
+
+    setDiagnosis(updatedDiagnosis);
+  }, []);
 
   useEffect(() => {
     fetchSettings();
-    
-    if (!("Notification" in window)) { 
-      setNotifSupported(false); 
-      setNotifPermission("unsupported"); 
-    } else {
-      setNotifPermission(Notification.permission);
-    }
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        setSwStatus(regs.length > 0 ? "active" : "inactive");
-      }).catch(() => setSwStatus("inactive"));
-    } else {
-      setSwStatus("unsupported");
-    }
+    runDiagnosis();
 
     const userAgent = window.navigator.userAgent.toLowerCase();
     setIsIOS(/iphone|ipad|ipod/.test(userAgent));
     setIsPWA(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
-  }, [fetchSettings]);
+  }, [fetchSettings, runDiagnosis]);
 
   const updateSettings = async (newSettings: any) => {
     if (!user) return;
