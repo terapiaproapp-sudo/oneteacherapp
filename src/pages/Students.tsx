@@ -778,6 +778,9 @@ export default function Students() {
                       <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-accent hover:bg-accent/10 gap-1" onClick={() => openSummary(s)}>
                         <FileText className="h-3.5 w-3.5" /> Resumo
                       </Button>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-primary hover:bg-primary/10 gap-1" onClick={() => setNewPkgStudent(s)}>
+                        <Package className="h-3.5 w-3.5" /> Pacote
+                      </Button>
                     </div>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10" onClick={() => openEdit(s)}>
