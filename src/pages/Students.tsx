@@ -16,6 +16,9 @@ import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTri
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
 import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
+import NewPackageDialog from "@/components/students/NewPackageDialog";
+import PackageHistory from "@/components/students/PackageHistory";
+import { statusBadgeClasses, statusLabel } from "@/lib/packageUtils";
 
 interface StudentAccessRecord {
   id: string;
@@ -107,6 +110,7 @@ export default function Students() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
+  const [newPkgStudent, setNewPkgStudent] = useState<Student | null>(null);
 
   // Student access state
   const [accessRecords, setAccessRecords] = useState<Record<string, StudentAccessRecord>>({});
@@ -418,6 +422,8 @@ export default function Students() {
   const openNew = () => { setEditing(null); setEditingPackage(false); setEditingFinancial(false); setForm(emptyForm); setDialogOpen(true); };
 
   const getActivePackage = (studentId: string) => (packages[studentId] || []).find(p => p.status === "ativo");
+
+  const getStudentPackages = (studentId: string) => packages[studentId] || [];
 
   const getHoursInfo = (studentId: string) => {
     const activePkgs = (packages[studentId] || []).filter(p => p.status === "ativo");
