@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import webpush from "npm:web-push@3.6.7";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,29 @@ serve(async (req) => {
 
   let stage = "init";
   try {
+    stage = "authorize";
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnon = Deno.env.get("SUPABASE_ANON_KEY");
+    if (!authHeader.startsWith("Bearer ")) {
+      return json(401, { stage, error: "Unauthorized" });
+    }
+    const bearer = authHeader.slice("Bearer ".length);
+    const isServiceCall = !!serviceRoleKey && bearer === serviceRoleKey;
+    if (!isServiceCall) {
+      if (!supabaseUrl || !supabaseAnon) {
+        return json(500, { stage, error: "Auth not configured" });
+      }
+      const sb = createClient(supabaseUrl, supabaseAnon, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data, error } = await sb.auth.getClaims(bearer);
+      if (error || !data?.claims) {
+        return json(401, { stage, error: "Unauthorized" });
+      }
+    }
+
     stage = "parse_body";
     const { subscription, title, body, data } = await req.json();
 
