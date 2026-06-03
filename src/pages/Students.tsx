@@ -1209,6 +1209,25 @@ export default function Students() {
                   </div>
                 )}
 
+                {/* Histórico de pacotes do aluno */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                      <Package className="h-3 w-3" /> Histórico de pacotes
+                    </h3>
+                    <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg gap-1"
+                      onClick={() => setNewPkgStudent(summaryStudent)}>
+                      <Plus className="h-3 w-3" /> Novo pacote
+                    </Button>
+                  </div>
+                  <PackageHistory
+                    studentId={summaryStudent.id}
+                    studentName={summaryStudent.name}
+                    packages={getStudentPackages(summaryStudent.id) as any}
+                    onChanged={loadAll}
+                  />
+                </div>
+
                 {/* Lesson History */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
