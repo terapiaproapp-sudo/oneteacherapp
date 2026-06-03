@@ -7,6 +7,15 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 serve(async (req) => {
   try {
+    // Require shared cron secret to prevent unauthenticated mass-notification triggers
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const serviceRoleHeader = `Bearer ${supabaseServiceKey}`;
+    const cronHeader = cronSecret ? `Bearer ${cronSecret}` : null;
+    if (authHeader !== serviceRoleHeader && (!cronHeader || authHeader !== cronHeader)) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
     const { type } = await req.json();
 
     if (type === "daily-summary") {
