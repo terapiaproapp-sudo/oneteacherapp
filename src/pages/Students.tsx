@@ -1310,6 +1310,24 @@ export default function Students() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Novo pacote dialog */}
+      {newPkgStudent && user && (() => {
+        const active = getActivePackage(newPkgStudent.id);
+        const remaining = active ? Math.max(0, active.hours_total - active.hours_used) : 0;
+        return (
+          <NewPackageDialog
+            open={!!newPkgStudent}
+            onOpenChange={(v) => { if (!v) setNewPkgStudent(null); }}
+            teacherId={user.id}
+            studentId={newPkgStudent.id}
+            studentName={newPkgStudent.name}
+            hasActivePackage={!!active}
+            activePackageRemainingHours={remaining}
+            onCreated={loadAll}
+          />
+        );
+      })()}
     </div>
   );
 }
