@@ -891,6 +891,25 @@ export default function Students() {
                   </div>
                 )}
 
+                {/* Histórico de pacotes */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                      <Package className="h-3 w-3" /> Histórico de pacotes
+                    </h3>
+                    <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg gap-1"
+                      onClick={() => { setNewPkgStudent(detailStudent); }}>
+                      <Plus className="h-3 w-3" /> Novo pacote
+                    </Button>
+                  </div>
+                  <PackageHistory
+                    studentId={detailStudent.id}
+                    studentName={detailStudent.name}
+                    packages={getStudentPackages(detailStudent.id) as any}
+                    onChanged={loadAll}
+                  />
+                </div>
+
                 {studentPayments.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Pagamento</h3>
