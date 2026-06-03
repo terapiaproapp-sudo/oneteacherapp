@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/assets/logo-oneteacher.png";
+import Seo from "@/components/Seo";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -42,13 +43,18 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
+      <Seo
+        title="Recuperar senha | OneTeacher"
+        description="Receba um link por e-mail para redefinir a senha da sua conta OneTeacher em poucos minutos."
+        path="/forgot-password"
+      />
       <div className="w-full max-w-md space-y-8 animate-fade-in">
         <div className="text-center">
           <motion.img 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             src={logo} 
-            alt="OneTeacher" 
+            alt="OneTeacher - Gestão para professores particulares"
             className="h-16 mx-auto mb-6 object-contain" 
           />
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Recuperar senha</h1>

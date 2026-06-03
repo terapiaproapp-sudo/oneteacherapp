@@ -1,0 +1,15 @@
+# OneTeacher
+
+> Plataforma SaaS em português para professores particulares gerenciarem alunos, pacotes de horas, agenda e financeiro em um só lugar.
+
+OneTeacher ajuda professores particulares a organizar alunos, controlar pacotes de horas, registrar aulas, acompanhar pagamentos e ter previsibilidade de faturamento mensal. Otimizado para mobile, funciona direto no navegador.
+
+## Pages
+
+- [Home](/): Visão geral do produto, recursos, planos e perguntas frequentes.
+- [Cadastro](/signup): Criação de conta gratuita com 10 dias de teste.
+- [Login](/login): Entrada na plataforma para professores cadastrados.
+
+## Optional
+
+- [Recuperar senha](/forgot-password): Envio de link de redefinição de senha por e-mail.

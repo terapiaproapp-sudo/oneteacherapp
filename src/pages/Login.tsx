@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/assets/logo-oneteacher.png";
+import Seo from "@/components/Seo";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -44,13 +45,18 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
+      <Seo
+        title="Entrar | OneTeacher"
+        description="Acesse sua conta OneTeacher para gerenciar alunos, pacotes de horas, agenda e pagamentos em um só lugar."
+        path="/login"
+      />
       <div className="w-full max-w-md space-y-8 animate-fade-in">
         <div className="text-center">
           <motion.img 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             src={logo} 
-            alt="OneTeacher" 
+            alt="OneTeacher - Gestão para professores particulares"
             className="h-16 mx-auto mb-6 object-contain" 
           />
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Bem-vindo de volta</h1>
@@ -97,6 +103,7 @@ export default function Login() {
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
