@@ -16,6 +16,9 @@ import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTri
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
 import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
+import NewPackageDialog from "@/components/students/NewPackageDialog";
+import PackageHistory from "@/components/students/PackageHistory";
+import { statusBadgeClasses, statusLabel } from "@/lib/packageUtils";
 
 interface StudentAccessRecord {
   id: string;
@@ -107,6 +110,7 @@ export default function Students() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
+  const [newPkgStudent, setNewPkgStudent] = useState<Student | null>(null);
 
   // Student access state
   const [accessRecords, setAccessRecords] = useState<Record<string, StudentAccessRecord>>({});
@@ -418,6 +422,8 @@ export default function Students() {
   const openNew = () => { setEditing(null); setEditingPackage(false); setEditingFinancial(false); setForm(emptyForm); setDialogOpen(true); };
 
   const getActivePackage = (studentId: string) => (packages[studentId] || []).find(p => p.status === "ativo");
+
+  const getStudentPackages = (studentId: string) => packages[studentId] || [];
 
   const getHoursInfo = (studentId: string) => {
     const activePkgs = (packages[studentId] || []).filter(p => p.status === "ativo");
@@ -772,6 +778,9 @@ export default function Students() {
                       <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-accent hover:bg-accent/10 gap-1" onClick={() => openSummary(s)}>
                         <FileText className="h-3.5 w-3.5" /> Resumo
                       </Button>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs rounded-lg text-primary hover:bg-primary/10 gap-1" onClick={() => setNewPkgStudent(s)}>
+                        <Package className="h-3.5 w-3.5" /> Pacote
+                      </Button>
                     </div>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10" onClick={() => openEdit(s)}>
@@ -881,6 +890,25 @@ export default function Students() {
                     <p className="text-sm font-medium text-muted-foreground italic">Nenhum pacote definido</p>
                   </div>
                 )}
+
+                {/* Histórico de pacotes */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                      <Package className="h-3 w-3" /> Histórico de pacotes
+                    </h3>
+                    <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg gap-1"
+                      onClick={() => { setNewPkgStudent(detailStudent); }}>
+                      <Plus className="h-3 w-3" /> Novo pacote
+                    </Button>
+                  </div>
+                  <PackageHistory
+                    studentId={detailStudent.id}
+                    studentName={detailStudent.name}
+                    packages={getStudentPackages(detailStudent.id) as any}
+                    onChanged={loadAll}
+                  />
+                </div>
 
                 {studentPayments.length > 0 && (
                   <div className="space-y-2">
@@ -1181,6 +1209,25 @@ export default function Students() {
                   </div>
                 )}
 
+                {/* Histórico de pacotes do aluno */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
+                      <Package className="h-3 w-3" /> Histórico de pacotes
+                    </h3>
+                    <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg gap-1"
+                      onClick={() => setNewPkgStudent(summaryStudent)}>
+                      <Plus className="h-3 w-3" /> Novo pacote
+                    </Button>
+                  </div>
+                  <PackageHistory
+                    studentId={summaryStudent.id}
+                    studentName={summaryStudent.name}
+                    packages={getStudentPackages(summaryStudent.id) as any}
+                    onChanged={loadAll}
+                  />
+                </div>
+
                 {/* Lesson History */}
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
@@ -1263,6 +1310,24 @@ export default function Students() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Novo pacote dialog */}
+      {newPkgStudent && user && (() => {
+        const active = getActivePackage(newPkgStudent.id);
+        const remaining = active ? Math.max(0, active.hours_total - active.hours_used) : 0;
+        return (
+          <NewPackageDialog
+            open={!!newPkgStudent}
+            onOpenChange={(v) => { if (!v) setNewPkgStudent(null); }}
+            teacherId={user.id}
+            studentId={newPkgStudent.id}
+            studentName={newPkgStudent.name}
+            hasActivePackage={!!active}
+            activePackageRemainingHours={remaining}
+            onCreated={loadAll}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -131,6 +131,9 @@ export type Database = {
           hours_used: number
           id: string
           name: string
+          notes: string | null
+          payment_method: string | null
+          start_date: string | null
           status: string
           student_id: string
           teacher_id: string
@@ -145,6 +148,9 @@ export type Database = {
           hours_used?: number
           id?: string
           name?: string
+          notes?: string | null
+          payment_method?: string | null
+          start_date?: string | null
           status?: string
           student_id: string
           teacher_id: string
@@ -159,6 +165,9 @@ export type Database = {
           hours_used?: number
           id?: string
           name?: string
+          notes?: string | null
+          payment_method?: string | null
+          start_date?: string | null
           status?: string
           student_id?: string
           teacher_id?: string
