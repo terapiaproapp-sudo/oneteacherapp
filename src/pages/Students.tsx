@@ -783,10 +783,10 @@ export default function Students() {
                       </Button>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10" onClick={() => openEdit(s)}>
+                      <Button variant="ghost" size="sm" aria-label="Editar aluno" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10" onClick={() => openEdit(s)}>
                         <Edit className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10" onClick={() => setStudentToDelete(s.id)}>
+                      <Button variant="ghost" size="sm" aria-label="Excluir aluno" className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10" onClick={() => setStudentToDelete(s.id)}>
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/assets/logo-oneteacher.png";
+import Seo from "@/components/Seo";
 
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -59,13 +60,18 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] px-4">
+      <Seo
+        title="Redefinir senha | OneTeacher"
+        description="Defina uma nova senha para sua conta OneTeacher e volte a gerenciar suas aulas com segurança."
+        path="/reset-password"
+      />
       <div className="w-full max-w-md space-y-8 animate-fade-in">
         <div className="text-center">
           <motion.img 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             src={logo} 
-            alt="OneTeacher" 
+            alt="OneTeacher - Gestão para professores particulares"
             className="h-16 mx-auto mb-6 object-contain" 
           />
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Nova senha</h1>
@@ -93,6 +99,7 @@ export default function ResetPassword() {
                   <button 
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -133,6 +140,7 @@ export default function ResetPassword() {
                   <button 
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    aria-label={showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

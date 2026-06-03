@@ -12,6 +12,7 @@ import {
   ChevronRight, Shield, Smartphone, ArrowRight, Star, BarChart3, Package
 } from "lucide-react";
 import logo from "@/assets/logo-oneteacher.png";
+import Seo from "@/components/Seo";
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
 const stagger = { visible: { transition: { staggerChildren: 0.12 } } };
@@ -50,12 +51,28 @@ export default function Landing() {
     setSignupOpen(false);
   };
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map(f => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <Seo
+        title="OneTeacher — Gestão para professores particulares"
+        description="Organize alunos, pacotes de horas, agenda e pagamentos em um único sistema simples e inteligente. Teste 10 dias grátis."
+        path="/"
+        jsonLd={faqJsonLd}
+      />
       {/* Nav */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 sm:h-24 flex items-center justify-between">
-          <img src={logo} alt="OneTeacher" className="h-12 sm:h-16 lg:h-20 object-contain" />
+          <img src={logo} alt="OneTeacher - Gestão para professores particulares" className="h-12 sm:h-16 lg:h-20 object-contain" />
           <div className="flex items-center gap-2 sm:gap-3">
             <Button variant="ghost" size="sm" className="rounded-xl text-sm" onClick={() => navigate("/login")}>Entrar</Button>
             <Button size="sm" className="rounded-xl text-sm shadow-lg shadow-primary/20" onClick={() => setSignupOpen(true)}>Começar grátis</Button>

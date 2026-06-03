@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import PhoneInput from 'react-phone-number-input';
 import { CountryDropdown, RegionDropdown } from 'react-country-region-selector';
 import logo from "@/assets/logo-oneteacher.png";
+import Seo from "@/components/Seo";
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -108,13 +109,18 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] py-12 px-4 sm:px-6 lg:px-8">
+      <Seo
+        title="Criar conta grátis | OneTeacher"
+        description="Crie sua conta OneTeacher e teste 10 dias grátis a plataforma de gestão para professores particulares. Sem cartão de crédito."
+        path="/signup"
+      />
       <div className="w-full max-w-2xl space-y-8 animate-fade-in">
         <div className="text-center">
           <motion.img 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             src={logo} 
-            alt="OneTeacher" 
+            alt="OneTeacher - Gestão para professores particulares"
             className="h-16 mx-auto mb-6 object-contain" 
           />
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Crie sua conta global</h1>
@@ -240,6 +246,7 @@ export default function Signup() {
                     <button 
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -282,6 +289,7 @@ export default function Signup() {
                     <button 
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? "Ocultar confirmação de senha" : "Mostrar confirmação de senha"}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
