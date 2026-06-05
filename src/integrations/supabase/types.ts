@@ -475,6 +475,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      temp_trigger_daily_summary: { Args: never; Returns: string }
       upsert_service_role_secret: {
         Args: { p_value: string }
         Returns: undefined
