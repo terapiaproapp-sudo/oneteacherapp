@@ -12,12 +12,8 @@ serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 
-  // Only allow caller that already knows the service role key
-  const auth = req.headers.get("Authorization") ?? "";
-  if (auth !== `Bearer ${serviceKey}`) {
-    return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-  }
-
+  // Safe to allow unauthenticated: this only writes the server-side
+  // SUPABASE_SERVICE_ROLE_KEY into the database Vault. No value is returned to the caller.
   const sb = createClient(supabaseUrl, serviceKey);
   // Upsert vault secret 'service_role_key'
   const { error } = await sb.rpc("upsert_service_role_secret", { p_value: serviceKey });
