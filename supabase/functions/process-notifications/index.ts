@@ -32,19 +32,14 @@ serve(async (req) => {
 });
 
 async function handleDailySummary() {
-  console.log("Processing daily summaries function started...");
+  console.log("Processing daily summaries...");
   const now = new Date();
   
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select("id, full_name, notification_settings");
     
-  if (error) {
-    console.error("Profiles fetch error:", error);
-    throw error;
-  }
-  
-  console.log(`Found ${profiles?.length || 0} profiles to check.`);
+  if (error) throw error;
   
   for (const profile of profiles) {
     const settings = profile.notification_settings || {};
@@ -69,7 +64,7 @@ async function handleDailySummary() {
       hour12: false
     }).format(now);
     
-    if (true) { // Temporarily forced for testing summary delivery
+    if (userLocalTime === targetTime) {
       // Get today's date in user's timezone
       const userLocalDate = new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
@@ -90,11 +85,7 @@ async function handleDailySummary() {
         .neq("status", "cancelled")
         .order("time", { ascending: true });
         
-      console.log(`Lessons for ${profile.full_name}:`, lessons?.length || 0);
-      if (!lessons || lessons.length === 0) {
-        console.log(`No lessons for ${profile.full_name} on ${todayString}`);
-        continue;
-      }
+      if (!lessons || lessons.length === 0) continue;
       
       const lessonCount = lessons.length;
       const lessonSummary = lessons.map(l => `${l.time} — ${l.student?.name || "Aluno"}`).join("\n");
@@ -103,7 +94,6 @@ async function handleDailySummary() {
       const body = `Você tem ${lessonCount} aula${lessonCount > 1 ? "s" : ""} hoje:\n${lessonSummary}`;
       
       for (const sub of subscriptions) {
-        console.log(`Triggering sendPush for ${profile.full_name} to endpoint: ${sub.subscription.endpoint}`);
         await sendPush(sub.subscription, title, body);
       }
     }
@@ -122,7 +112,7 @@ async function handleLessonReminders() {
   const { data: lessons, error } = await supabase
     .from("lessons")
     .select("id, date, time, teacher_id, student:students(name), status")
-    .eq("date", todayUTC) // Simplified, might miss edge cases across midnight but usually teachers don't teach then
+    .eq("date", todayUTC) 
     .neq("status", "cancelled")
     .neq("status", "completed")
     .neq("status", "no-show");
@@ -143,9 +133,6 @@ async function handleLessonReminders() {
     // Parse lesson time
     const [hours, minutes] = lesson.time.split(":").map(Number);
     const lessonDate = new Date(lesson.date + "T" + lesson.time + ":00");
-    
-    // We need to know the teacher's timezone to correctly interpret "lessonDate"
-    // For now assume the stored date/time are relative to teacher's local time
     
     const reminderTime = new Date(lessonDate.getTime() - leadTime * 60 * 1000);
     
