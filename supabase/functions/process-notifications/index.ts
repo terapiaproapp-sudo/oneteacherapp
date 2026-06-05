@@ -32,14 +32,19 @@ serve(async (req) => {
 });
 
 async function handleDailySummary() {
-  console.log("Processing daily summaries...");
+  console.log("Processing daily summaries function started...");
   const now = new Date();
   
   const { data: profiles, error } = await supabase
     .from("profiles")
     .select("id, full_name, notification_settings");
     
-  if (error) throw error;
+  if (error) {
+    console.error("Profiles fetch error:", error);
+    throw error;
+  }
+  
+  console.log(`Found ${profiles?.length || 0} profiles to check.`);
   
   for (const profile of profiles) {
     const settings = profile.notification_settings || {};
@@ -85,7 +90,11 @@ async function handleDailySummary() {
         .neq("status", "cancelled")
         .order("time", { ascending: true });
         
-      if (!lessons || lessons.length === 0) continue;
+      console.log(`Lessons for ${profile.full_name}:`, lessons?.length || 0);
+      if (!lessons || lessons.length === 0) {
+        console.log(`No lessons for ${profile.full_name} on ${todayString}`);
+        continue;
+      }
       
       const lessonCount = lessons.length;
       const lessonSummary = lessons.map(l => `${l.time} — ${l.student?.name || "Aluno"}`).join("\n");
@@ -94,6 +103,7 @@ async function handleDailySummary() {
       const body = `Você tem ${lessonCount} aula${lessonCount > 1 ? "s" : ""} hoje:\n${lessonSummary}`;
       
       for (const sub of subscriptions) {
+        console.log(`Triggering sendPush for ${profile.full_name} to endpoint: ${sub.subscription.endpoint}`);
         await sendPush(sub.subscription, title, body);
       }
     }
