@@ -475,6 +475,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      upsert_service_role_secret: {
+        Args: { p_value: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
