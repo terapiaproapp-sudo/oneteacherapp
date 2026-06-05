@@ -64,7 +64,7 @@ async function handleDailySummary() {
       hour12: false
     }).format(now);
     
-    if (userLocalTime === targetTime) {
+    if (true) { // Temporarily forced for testing summary delivery
       // Get today's date in user's timezone
       const userLocalDate = new Intl.DateTimeFormat("en-US", {
         timeZone: timezone,
