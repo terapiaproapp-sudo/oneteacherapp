@@ -112,7 +112,7 @@ async function handleLessonReminders() {
   const { data: lessons, error } = await supabase
     .from("lessons")
     .select("id, date, time, teacher_id, student:students(name), status")
-    .eq("date", todayUTC) // Simplified, might miss edge cases across midnight but usually teachers don't teach then
+    .eq("date", todayUTC) 
     .neq("status", "cancelled")
     .neq("status", "completed")
     .neq("status", "no-show");
@@ -133,9 +133,6 @@ async function handleLessonReminders() {
     // Parse lesson time
     const [hours, minutes] = lesson.time.split(":").map(Number);
     const lessonDate = new Date(lesson.date + "T" + lesson.time + ":00");
-    
-    // We need to know the teacher's timezone to correctly interpret "lessonDate"
-    // For now assume the stored date/time are relative to teacher's local time
     
     const reminderTime = new Date(lessonDate.getTime() - leadTime * 60 * 1000);
     
