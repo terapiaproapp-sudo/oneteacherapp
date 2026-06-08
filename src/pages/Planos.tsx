@@ -63,7 +63,7 @@ export default function Planos() {
   const handleSubscribe = async (plan: typeof plans[0]) => {
     if (plan.id === "teste") {
       if (!profile) {
-        navigate("/login?redirect=/planos");
+        navigate("/cadastro");
         return;
       }
 
