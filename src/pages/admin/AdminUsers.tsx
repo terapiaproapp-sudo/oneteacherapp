@@ -4,11 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Eye, Ban, Trash2, Edit, Users, BookOpen, Calendar, CheckCircle, DollarSign } from "lucide-react";
+import { Search, Eye, Ban, Trash2, Edit, Users, BookOpen, Calendar, CheckCircle, DollarSign, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Profile {
   id: string;
@@ -39,6 +50,9 @@ export default function AdminUsers() {
   const [filterPlan, setFilterPlan] = useState("all");
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
+  const { isAdmin, loading: adminLoading } = useAdminAuth();
   const { toast } = useToast();
 
   useEffect(() => { loadProfiles(); }, []);
@@ -100,6 +114,41 @@ export default function AdminUsers() {
     loadProfiles();
   };
 
+  const suspendUser = async (userId: string) => {
+    await supabase.from("profiles").update({ status: "suspenso" }).eq("id", userId);
+    toast({ title: "Usuário suspenso" });
+    loadProfiles();
+    if (selectedUser?.id === userId) setSelectedUser({ ...selectedUser, status: "suspenso" });
+  };
+
+  const deleteUser = async () => {
+    if (!userToDelete || !isAdmin) return;
+
+    try {
+      const { error } = await supabase.rpc("delete_user_by_admin", { 
+        target_user_id: userToDelete.id 
+      });
+
+      if (error) throw error;
+      
+      toast({ 
+        title: "Usuário excluído", 
+        description: `O professor ${userToDelete.full_name} e seus dados foram removidos.` 
+      });
+      
+      loadProfiles();
+      setDeleteConfirmOpen(false);
+      setUserToDelete(null);
+      if (selectedUser?.id === userToDelete.id) setDetailOpen(false);
+    } catch (error: any) {
+      toast({ 
+        title: "Erro ao excluir", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    }
+  };
+
   const filtered = profiles.filter(p => {
     const matchSearch = !search ||
       p.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -120,7 +169,10 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Gestão de Usuários</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-foreground">Gestão de Usuários</h1>
+        {isAdmin && <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">Admin Ativo</Badge>}
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -176,6 +228,19 @@ export default function AdminUsers() {
                         <Button size="sm" variant="ghost" onClick={() => toggleStatus(p.id, p.status)}>
                           <Ban className="h-4 w-4" />
                         </Button>
+                        {isAdmin && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              setUserToDelete(p);
+                              setDeleteConfirmOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -300,11 +365,50 @@ export default function AdminUsers() {
                   <Ban className="h-4 w-4 mr-1" />
                   {selectedUser.status === "ativo" ? "Bloquear" : "Ativar"}
                 </Button>
+                <Button size="sm" variant="outline" onClick={() => suspendUser(selectedUser.id)} className="flex-1 text-warning hover:text-warning hover:bg-warning/10">
+                  <AlertTriangle className="h-4 w-4 mr-1" />
+                  Suspender
+                </Button>
+                {isAdmin && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setUserToDelete(selectedUser);
+                      setDeleteConfirmOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Excluir
+                  </Button>
+                )}
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja excluir o professor?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A exclusão de <strong>{userToDelete?.full_name}</strong> é permanente. 
+              Todos os alunos, aulas, registros financeiros e dados vinculados serão removidos permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={deleteUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir Permanente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

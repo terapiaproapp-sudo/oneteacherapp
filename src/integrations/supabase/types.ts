@@ -471,6 +471,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_user_by_admin: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       has_role:
         | {
             Args: {
