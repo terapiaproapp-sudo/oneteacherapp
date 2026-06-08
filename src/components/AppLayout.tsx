@@ -10,14 +10,23 @@ import logo from "@/assets/logo-oneteacher.png";
 
 
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const { isLoading: planLoading } = usePlanGuard();
+  const { isLoading: planLoading, profile } = usePlanGuard();
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const greeting = useGreeting();
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "Professor";
 
-  if (planLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Verificando assinatura...</div></div>;
+  if (planLoading || (authLoading && !profile)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-primary font-semibold text-center">
+          <p>Verificando assinatura...</p>
+        </div>
+      </div>
+    );
+  }
+
 
   if (isMobile) {
     return (

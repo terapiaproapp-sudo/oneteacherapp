@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
+
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -12,20 +13,22 @@ export const usePlanGuard = () => {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile-guard"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return null;
 
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
-        .single();
+        .eq("id", session.user.id)
+        .maybeSingle();
 
       if (error) throw error;
       return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false,
   });
+
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
@@ -41,23 +44,39 @@ export const usePlanGuard = () => {
     },
   });
 
+
   useEffect(() => {
-    if (isLoading || !profile) return;
+    // 1. If still loading profile or mutation is active, wait
+    if (isLoading || updateStatusMutation.isPending) return;
 
-    // Public routes that don't need guard
-    const publicRoutes = ["/", "/login", "/signup", "/planos"];
-    if (publicRoutes.includes(location.pathname)) return;
 
+    // 2. Identify current route
+    const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing"];
+    const isPublicRoute = publicRoutes.includes(location.pathname);
+
+    // 3. If no profile exists (user not logged in)
+    if (!profile) {
+      // Only redirect to login if we are NOT on a public route
+      if (!isPublicRoute) {
+        navigate("/login");
+      }
+      return;
+    }
+
+    // 4. If user is logged in but on a public route, don't guard
+    if (isPublicRoute) return;
+
+    // 5. Subscription Logic (for Private Routes only)
     const today = new Date().toISOString().split("T")[0];
 
-    // 1. Se status != 'ativo'
+    // Case: Status is not active
     if (profile.status !== "ativo") {
       toast.error("Sua assinatura está inativa.");
       navigate("/planos");
       return;
     }
 
-    // 2. Se validade < hoje
+    // Case: Subscription expired
     if (profile.validade && profile.validade < today) {
       updateStatusMutation.mutate("suspenso");
       toast.error("Sua assinatura venceu. Renove para continuar.");
@@ -65,6 +84,7 @@ export const usePlanGuard = () => {
       return;
     }
   }, [profile, isLoading, location.pathname, navigate, updateStatusMutation]);
+
 
   return { profile, isLoading };
 };
