@@ -53,8 +53,11 @@ export const usePlanGuard = () => {
     const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing", "/diagnostico"];
     const isPublicRoute = publicRoutes.includes(location.pathname);
 
+    // If it's a public route, we don't need to enforce plan restrictions
+    if (isPublicRoute) return;
+
     // 3. Se não houver perfil (não logado), o App.tsx já cuida do redirecionamento
-    // Não fazemos nada aqui para evitar conflitos de navegação.
+    // Mas se estivermos em uma rota privada e não houver perfil, retornamos
     if (!profile) return;
 
     // 4. Lógica de Assinatura (apenas para rotas privadas)
@@ -63,7 +66,7 @@ export const usePlanGuard = () => {
     // Caso: Status não é ativo
     if (profile.status !== "ativo") {
       toast.error("Sua assinatura está inativa.");
-      navigate("/planos");
+      navigate("/planos", { replace: true });
       return;
     }
 
@@ -71,7 +74,7 @@ export const usePlanGuard = () => {
     if (profile.validade && profile.validade < today) {
       updateStatusMutation.mutate("suspenso");
       toast.error("Sua assinatura venceu. Renove para continuar.");
-      navigate("/planos");
+      navigate("/planos", { replace: true });
       return;
     }
   }, [profile, isLoading, location.pathname, navigate]);

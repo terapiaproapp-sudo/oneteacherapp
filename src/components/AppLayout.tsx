@@ -10,18 +10,19 @@ import logo from "@/assets/logo-oneteacher.png";
 
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
   const { isLoading: planLoading, profile } = usePlanGuard();
   const isMobile = useIsMobile();
-  const { user, loading: authLoading } = useAuth();
   const greeting = useGreeting();
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "Professor";
 
-  if (planLoading || (authLoading && !profile)) {
+  // Só mostramos loading se realmente não tivermos nem o usuário nem o perfil ainda
+  if (authLoading || (planLoading && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse text-primary font-semibold text-center">
-          <p>Verificando assinatura...</p>
+          <p>Carregando...</p>
         </div>
       </div>
     );
