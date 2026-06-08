@@ -44,8 +44,9 @@ export const usePlanGuard = () => {
   });
 
   useEffect(() => {
-    // 1. If still loading profile, wait
-    if (isLoading) return;
+    // 1. If still loading profile or mutation is active, wait
+    if (isLoading || updateStatusMutation.isPending) return;
+
 
     // 2. Identify current route
     const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing"];
