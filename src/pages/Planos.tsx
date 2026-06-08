@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Check, ChevronRight, Zap, Star, Shield, Smartphone, Clock, CalendarDays, Users, BarChart3, Package, Percent } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePlanGuard } from "@/hooks/usePlanGuard";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import logo from "@/assets/logo-oneteacher.png";
 
