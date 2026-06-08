@@ -64,6 +64,11 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4">
+      <Seo 
+        title="Finalizar Assinatura | Newexy"
+        description="Página de checkout seguro da Newexy. Finalize sua assinatura e comece a usar agora mesmo."
+        path="/checkout"
+      />
       <div className="mb-8">
         <img src={logo} alt="OneTeacher" className="h-12 object-contain" />
       </div>
