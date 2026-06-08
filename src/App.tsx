@@ -24,6 +24,7 @@ import AdminActivity from "@/pages/admin/AdminActivity";
 import AdminFinancial from "@/pages/admin/AdminFinancial";
 import StudentPortal from "@/pages/student/StudentPortal";
 import Planos from "@/pages/Planos";
+import Checkout from "@/pages/Checkout";
 import Diagnostic from "@/pages/Diagnostic";
 
 const queryClient = new QueryClient();
