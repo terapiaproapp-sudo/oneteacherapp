@@ -286,7 +286,7 @@ export default function Landing() {
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-4">
               Comece agora e tenha <span className="text-primary">controle total</span> das suas aulas.
             </h2>
-            <p className="text-muted-foreground text-sm mb-6">Teste grátis por 10 dias. Sem compromisso.</p>
+            <p className="text-muted-foreground text-sm mb-6">Teste grátis por 7 dias. Sem compromisso.</p>
             <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25" onClick={() => setSignupOpen(true)}>
               Criar conta grátis <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
