@@ -13,8 +13,13 @@ export function useAdminAuth() {
 
     const checkRole = async () => {
       try {
-        const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-        setIsAdmin(!!data);
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        
+        const adminRole = roles?.some(r => r.role === "admin");
+        setIsAdmin(!!adminRole);
       } catch {
         setIsAdmin(false);
       }
