@@ -50,14 +50,13 @@ export const usePlanGuard = () => {
     if (isLoading || updateStatusMutation.isPending) return;
 
     // 2. Identify current route
-    const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing", "/diagnostico"];
+    const publicRoutes = ["/", "/login", "/signup", "/cadastro", "/planos", "/landing", "/diagnostico", "/checkout"];
     const isPublicRoute = publicRoutes.includes(location.pathname);
 
     // If it's a public route, we don't need to enforce plan restrictions
     if (isPublicRoute) return;
 
     // 3. Se não houver perfil (não logado), o App.tsx já cuida do redirecionamento
-    // Mas se estivermos em uma rota privada e não houver perfil, retornamos
     if (!profile) return;
 
     // 4. Lógica de Assinatura (apenas para rotas privadas)
@@ -65,6 +64,7 @@ export const usePlanGuard = () => {
     
     // Caso: Perfil sem plano ou plano pendente
     if (!profile.plan || profile.status === "pendente") {
+      console.log("PlanGuard: No plan or pending status, redirecting to /planos");
       toast.error("Escolha um plano para continuar");
       navigate("/planos", { replace: true });
       return;
@@ -72,6 +72,7 @@ export const usePlanGuard = () => {
 
     // Caso: Status não é ativo
     if (profile.status !== "ativo") {
+      console.log("PlanGuard: Inactive status, redirecting to /planos");
       toast.error("Sua assinatura está inativa.");
       navigate("/planos", { replace: true });
       return;
@@ -79,6 +80,7 @@ export const usePlanGuard = () => {
 
     // Caso: Assinatura expirada
     if (profile.validade && profile.validade < today) {
+      console.log("PlanGuard: Expired plan, redirecting to /planos");
       updateStatusMutation.mutate("suspenso");
       toast.error("Sua assinatura venceu. Renove para continuar.");
       navigate("/planos", { replace: true });

@@ -1,0 +1,3 @@
+ALTER TABLE public.profiles 
+ALTER COLUMN plan SET DEFAULT NULL,
+ALTER COLUMN status SET DEFAULT 'pendente';
