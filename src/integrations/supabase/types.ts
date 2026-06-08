@@ -261,6 +261,7 @@ export type Database = {
           phone: string | null
           plan: string | null
           status: string | null
+          validade: string | null
         }
         Insert: {
           created_at?: string
@@ -272,6 +273,7 @@ export type Database = {
           phone?: string | null
           plan?: string | null
           status?: string | null
+          validade?: string | null
         }
         Update: {
           created_at?: string
@@ -283,6 +285,7 @@ export type Database = {
           phone?: string | null
           plan?: string | null
           status?: string | null
+          validade?: string | null
         }
         Relationships: []
       }
