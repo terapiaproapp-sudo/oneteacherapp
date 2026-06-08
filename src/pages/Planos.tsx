@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import logo from "@/assets/logo-oneteacher.png";
 
-const PRODUCT_ID = "67290000-0000-0000-0000-000000000000"; // Substituir pelo UUID real da Newexy
+const PRODUCT_ID = "c5ea9b9b-17c3-420c-95df-08bb7950513b";
 const REDIRECT_URL = "https://oneteacherapp.lovable.app";
 
 const plans = [
@@ -96,9 +96,8 @@ export default function Planos() {
       return;
     }
 
-    if (plan.id) {
-      // Navigate to internal checkout
-      navigate(`/checkout?product=${PRODUCT_ID}&plan=${plan.id}&redirect=${REDIRECT_URL}`);
+    if (plan.newexy_url) {
+      window.location.href = plan.newexy_url;
     }
   };
 
