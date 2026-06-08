@@ -13,13 +13,13 @@ export const usePlanGuard = () => {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile-guard"],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return null;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .maybeSingle();
 
       if (error) throw error;
@@ -53,14 +53,9 @@ export const usePlanGuard = () => {
     const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing", "/diagnostico"];
     const isPublicRoute = publicRoutes.includes(location.pathname);
 
-    // 3. If no profile exists (user not logged in)
-    if (!profile) {
-      // Only redirect to login if we are NOT on a public route
-      if (!isPublicRoute) {
-        navigate("/login");
-      }
-      return;
-    }
+    // 3. Se não houver perfil (não logado), o App.tsx já cuida do redirecionamento
+    // Não fazemos nada aqui para evitar conflitos de navegação.
+    if (!profile) return;
 
     // 4. Lógica de Assinatura (apenas para rotas privadas)
     const today = new Date().toISOString().split("T")[0];
