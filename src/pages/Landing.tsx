@@ -65,7 +65,7 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Seo
         title="OneTeacher — Gestão para professores particulares"
-        description="Organize alunos, pacotes de horas, agenda e pagamentos em um único sistema simples e inteligente. Teste 10 dias grátis."
+        description="Organize alunos, pacotes de horas, agenda e pagamentos em um único sistema simples e inteligente. Teste 7 dias grátis."
         path="/"
         jsonLd={faqJsonLd}
       />
