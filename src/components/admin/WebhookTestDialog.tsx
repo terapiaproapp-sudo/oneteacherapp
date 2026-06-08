@@ -30,13 +30,23 @@ export function WebhookTestDialog() {
     try {
       const webhookUrl = "https://vazqhruppvzaytenqdtt.supabase.co/functions/v1/newexy-webhook";
       
+      const getNextBilling = (plan: string) => {
+        const date = new Date();
+        if (plan === "teste") date.setDate(date.getDate() + 7);
+        else if (plan === "mensal") date.setMonth(date.getMonth() + 1);
+        else if (plan === "semestral") date.setMonth(date.getMonth() + 6);
+        else if (plan === "anual") date.setFullYear(date.getFullYear() + 1);
+        return date.toISOString().split('T')[0];
+      };
+
       const payload = {
         event: "payment.approved",
         email: formData.email,
         plan: formData.plan,
-        next_billing: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        next_billing: getNextBilling(formData.plan),
         api_key: formData.apiKey,
       };
+
 
       const response = await fetch(webhookUrl, {
         method: "POST",
