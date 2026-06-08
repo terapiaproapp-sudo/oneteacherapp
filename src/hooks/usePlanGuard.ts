@@ -62,6 +62,13 @@ export const usePlanGuard = () => {
 
     // 4. Lógica de Assinatura (apenas para rotas privadas)
     const today = new Date().toISOString().split("T")[0];
+    
+    // Caso: Perfil sem plano ou plano pendente
+    if (!profile.plan || profile.status === "pendente") {
+      toast.error("Escolha um plano para começar");
+      navigate("/planos", { replace: true });
+      return;
+    }
 
     // Caso: Status não é ativo
     if (profile.status !== "ativo") {
