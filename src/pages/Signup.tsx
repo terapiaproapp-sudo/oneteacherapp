@@ -94,7 +94,7 @@ export default function Signup() {
       }
 
       toast({ title: "Conta criada!", description: "Bem-vindo ao OneTeacher." });
-      navigate("/planos");
+      navigate("/planos", { replace: true });
     } catch (err: any) {
       toast({ title: "Erro inesperado", description: err.message, variant: "destructive" });
     } finally {
