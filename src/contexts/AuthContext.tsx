@@ -18,8 +18,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const initialized = useRef(false)
 
   const checkRole = async (userId: string) => {
-    // Check if user is a student
     try {
+      // Check if user is a student
       const { data: studentAccess } = await supabase
         .from("student_access")
         .select("id")
@@ -31,19 +31,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRole("student");
         return;
       }
-    } catch (err) {
-      console.error("Error checking student role:", err);
-    }
 
-    // Check admin role
-    try {
+      // Check admin role
       const { data: isAdmin } = await supabase.rpc("has_role", { 
         _user_id: userId, 
         _role: "admin" 
       });
       setRole(isAdmin ? "admin" : "teacher");
     } catch (err) {
-      console.error("Error checking admin role:", err);
+      console.error("Error checking role:", err);
       setRole("teacher");
     }
   };
@@ -52,15 +48,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (initialized.current) return
     initialized.current = true
 
+    // Timeout de segurança: se em 3s não houver resposta, libera o loading
+    const timeout = setTimeout(() => {
+      console.warn("Auth check timed out, forcing loading false");
+      setLoading(false)
+    }, 3000)
+
     // Verifica sessão existente primeiro
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser)
       if (currentUser) {
-        checkRole(currentUser.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false)
+        await checkRole(currentUser.id);
       }
+      clearTimeout(timeout)
+      setLoading(false)
+    }).catch((err) => {
+      console.error("Error getting session:", err);
+      clearTimeout(timeout)
+      setLoading(false)
     })
 
     // Escuta mudanças de auth
@@ -72,17 +78,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (currentUser) {
           await checkRole(currentUser.id);
         }
+        setLoading(false);
       }
       
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setRole(null);
+        setLoading(false);
       }
-
-      setLoading(false);
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signOut = async () => {
