@@ -15,6 +15,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<"teacher" | "student" | "admin" | null>(null)
+  const [showRetry, setShowRetry] = useState(false)
   const initialized = useRef(false)
 
   const checkRole = async (userId: string) => {
@@ -98,9 +99,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const handleRetry = () => {
+    window.location.reload();
+  };
+
   return (
     <AuthContext.Provider value={{ user, loading, role, signOut }}>
-      {children}
+      {loading && showRetry ? (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center">
+          <div className="space-y-4 max-w-sm">
+            <h2 className="text-xl font-semibold text-foreground">O carregamento está demorando mais que o esperado</h2>
+            <p className="text-muted-foreground">Isso pode ser um problema de conexão. Deseja tentar carregar novamente?</p>
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={handleRetry}
+                className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90 transition-colors"
+              >
+                Tentar novamente
+              </button>
+              <button 
+                onClick={() => setLoading(false)}
+                className="w-full py-2 px-4 bg-secondary text-secondary-foreground rounded-md font-medium hover:bg-secondary/80 transition-colors"
+              >
+                Continuar mesmo assim
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   )
 }
