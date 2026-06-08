@@ -29,42 +29,25 @@ import Diagnostic from "@/pages/Diagnostic";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-primary font-semibold text-center">
-          <p>Verificando acesso...</p>
-        </div>
-      </div>
-    );
-  }
-
+  const { user, loading, role } = useAuth();
+  if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
+  if (role === "student") return <Navigate to="/portal" replace />;
   return <AppLayout>{children}</AppLayout>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-primary font-semibold text-center">
-          <p>Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
+  const { user, loading, role } = useAuth();
+  if (loading) return null;
+  if (user && !role) return null;
+  if (user && role === "student") return <Navigate to="/portal" replace />;
   if (user) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isAdmin, loading, user } = useAdminAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Verificando permissões...</div></div>;
+  if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return <AdminLayout>{children}</AdminLayout>;
@@ -72,7 +55,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function StudentRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, role } = useAuth();
-  if (loading || (user && !role)) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Carregando...</div></div>;
+  if (loading || (user && !role)) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (role !== "student") return <Navigate to="/dashboard" replace />;
   return <StudentLayout>{children}</StudentLayout>;
