@@ -264,11 +264,11 @@ export default function Landing() {
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      className={`rounded-xl w-full text-sm ${plan.highlight ? "shadow-lg shadow-primary/20" : ""}`}
-                      variant={plan.highlight ? "default" : "outline"}
-                      onClick={() => setSignupOpen(true)}
-                    >
+                      <Button
+                        className={`rounded-xl w-full text-sm ${plan.highlight ? "shadow-lg shadow-primary/20" : ""}`}
+                        variant={plan.highlight ? "default" : "outline"}
+                        onClick={() => navigate("/planos")}
+                      >
                       {plan.price === "Grátis" ? "Começar grátis" : "Assinar"} <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                   </CardContent>

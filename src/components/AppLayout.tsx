@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { usePlanGuard } from "@/hooks/usePlanGuard";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
@@ -9,11 +10,14 @@ import logo from "@/assets/logo-oneteacher.png";
 
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+  const { isLoading: planLoading } = usePlanGuard();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const greeting = useGreeting();
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "Professor";
+
+  if (planLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Verificando assinatura...</div></div>;
 
   if (isMobile) {
     return (
