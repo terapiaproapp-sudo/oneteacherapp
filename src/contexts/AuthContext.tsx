@@ -49,10 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (initialized.current) return
     initialized.current = true
 
-    // Timeout de segurança: se em 3s não houver resposta, libera o loading
+    // Timeout de segurança: se em 3s não houver resposta, mostra opção de tentar novamente
     const timeout = setTimeout(() => {
-      console.warn("Auth check timed out, forcing loading false");
-      setLoading(false)
+      console.warn("Auth check timed out, showing retry option");
+      setShowRetry(true)
     }, 3000)
 
     // Verifica sessão existente primeiro
