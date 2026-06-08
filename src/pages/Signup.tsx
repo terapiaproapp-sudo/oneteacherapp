@@ -111,7 +111,7 @@ export default function Signup() {
     <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] py-12 px-4 sm:px-6 lg:px-8">
       <Seo
         title="Criar conta grátis | OneTeacher"
-        description="Crie sua conta OneTeacher e teste 10 dias grátis a plataforma de gestão para professores particulares. Sem cartão de crédito."
+        description="Crie sua conta OneTeacher e teste 7 dias grátis a plataforma de gestão para professores particulares. Sem cartão de crédito."
         path="/signup"
       />
       <div className="w-full max-w-2xl space-y-8 animate-fade-in">

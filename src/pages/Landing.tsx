@@ -27,10 +27,10 @@ const features = [
 ];
 
 const plans = [
-  { name: "Teste", price: "Grátis", period: "10 dias", desc: "Acesso completo", highlight: false, features: ["Todos os recursos", "10 dias grátis", "Sem cartão de crédito"] },
-  { name: "Mensal", price: "R$ 19,90", period: "/mês", desc: "Para quem quer começar", highlight: false, features: ["Alunos ilimitados", "Agenda completa", "Financeiro integrado", "Suporte por e-mail"] },
-  { name: "Semestral", price: "R$ 99,90", period: "/6 meses", desc: "Economia de 16%", highlight: false, features: ["Tudo do Mensal", "R$ 16,65/mês", "Prioridade no suporte"] },
-  { name: "Anual", price: "R$ 179,90", period: "/ano", desc: "Melhor custo-benefício", highlight: true, features: ["Tudo do Semestral", "R$ 14,99/mês", "Economia de 25%", "Suporte prioritário"] },
+  { name: "Teste", price: "Grátis", period: "7 dias", desc: "Acesso completo", highlight: false, features: ["Todos os recursos", "7 dias grátis", "Sem cartão de crédito"] },
+  { name: "Mensal", price: "R$ 39,90", period: "/mês", desc: "Para quem quer começar", highlight: false, features: ["Alunos ilimitados", "Agenda completa", "Financeiro integrado", "Suporte por e-mail"] },
+  { name: "Semestral", price: "R$ 197,00", period: "/6 meses", desc: "R$ 32,83/mês · economia de 17%", highlight: false, features: ["Tudo do Mensal", "R$ 32,83/mês", "Prioridade no suporte"] },
+  { name: "Anual", price: "R$ 347,00", period: "/ano", desc: "Melhor custo-benefício", highlight: true, features: ["Tudo do Semestral", "R$ 28,91/mês", "Economia de 27%", "Suporte prioritário"] },
 ];
 
 const faqs = [
@@ -65,7 +65,7 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Seo
         title="OneTeacher — Gestão para professores particulares"
-        description="Organize alunos, pacotes de horas, agenda e pagamentos em um único sistema simples e inteligente. Teste 10 dias grátis."
+        description="Organize alunos, pacotes de horas, agenda e pagamentos em um único sistema simples e inteligente. Teste 7 dias grátis."
         path="/"
         jsonLd={faqJsonLd}
       />
@@ -286,7 +286,7 @@ export default function Landing() {
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-4">
               Comece agora e tenha <span className="text-primary">controle total</span> das suas aulas.
             </h2>
-            <p className="text-muted-foreground text-sm mb-6">Teste grátis por 10 dias. Sem compromisso.</p>
+            <p className="text-muted-foreground text-sm mb-6">Teste grátis por 7 dias. Sem compromisso.</p>
             <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25" onClick={() => setSignupOpen(true)}>
               Criar conta grátis <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
@@ -326,7 +326,7 @@ export default function Landing() {
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">Crie sua conta gratuita</DialogTitle>
-            <p className="text-xs text-muted-foreground">10 dias grátis. Sem cartão de crédito.</p>
+            <p className="text-xs text-muted-foreground">7 dias grátis. Sem cartão de crédito.</p>
           </DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="space-y-1.5">

@@ -7,7 +7,7 @@ OneTeacher ajuda professores particulares a organizar alunos, controlar pacotes 
 ## Pages
 
 - [Home](/): Visão geral do produto, recursos, planos e perguntas frequentes.
-- [Cadastro](/signup): Criação de conta gratuita com 10 dias de teste.
+- [Cadastro](/signup): Criação de conta gratuita com 7 dias de teste.
 - [Login](/login): Entrada na plataforma para professores cadastrados.
 
 ## Optional
