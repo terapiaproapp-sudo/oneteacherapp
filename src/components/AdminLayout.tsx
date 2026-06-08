@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Users, Activity, DollarSign, ArrowLeft, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },

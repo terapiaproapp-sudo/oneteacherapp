@@ -3,7 +3,8 @@ import {
   LayoutDashboard, Users, Calendar, DollarSign, Settings, LogOut, Shield
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -29,7 +30,8 @@ const navItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { signOut, user, role } = useAuth();
+  const { signOut, user } = useAuth();
+  const { isAdmin } = useAdminAuth();
   const greeting = useGreeting();
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "Professor";
@@ -83,7 +85,7 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {role === "admin" && (
+              {isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
                     <NavLink
