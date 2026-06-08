@@ -23,6 +23,7 @@ import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminActivity from "@/pages/admin/AdminActivity";
 import AdminFinancial from "@/pages/admin/AdminFinancial";
 import StudentPortal from "@/pages/student/StudentPortal";
+import Planos from "@/pages/Planos";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const App = () => (
             <Route path="/admin/usuarios" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="/admin/atividade" element={<AdminRoute><AdminActivity /></AdminRoute>} />
             <Route path="/admin/financeiro" element={<AdminRoute><AdminFinancial /></AdminRoute>} />
+            <Route path="/planos" element={<Planos />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
