@@ -12,20 +12,22 @@ export const usePlanGuard = () => {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile-guard"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return null;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return null;
 
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user.id)
-        .single();
+        .eq("id", session.user.id)
+        .maybeSingle();
 
       if (error) throw error;
       return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: false,
   });
+
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
