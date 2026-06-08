@@ -24,6 +24,7 @@ import AdminActivity from "@/pages/admin/AdminActivity";
 import AdminFinancial from "@/pages/admin/AdminFinancial";
 import StudentPortal from "@/pages/student/StudentPortal";
 import Planos from "@/pages/Planos";
+import Diagnostic from "@/pages/Diagnostic";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="/admin/atividade" element={<AdminRoute><AdminActivity /></AdminRoute>} />
             <Route path="/admin/financeiro" element={<AdminRoute><AdminFinancial /></AdminRoute>} />
             <Route path="/planos" element={<Planos />} />
+            <Route path="/diagnostico" element={<Diagnostic />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
