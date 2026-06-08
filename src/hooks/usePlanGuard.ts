@@ -51,7 +51,7 @@ export const usePlanGuard = () => {
 
 
     // 2. Identify current route
-    const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing"];
+    const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing", "/diagnostico"];
     const isPublicRoute = publicRoutes.includes(location.pathname);
 
     // 3. If no profile exists (user not logged in)
