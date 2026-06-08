@@ -93,8 +93,8 @@ export default function Signup() {
         return;
       }
 
-      toast({ title: "Conta criada!", description: "Verifique seu e-mail para confirmar." });
-      navigate("/login");
+      toast({ title: "Conta criada!", description: "Bem-vindo ao OneTeacher." });
+      navigate("/planos");
     } catch (err: any) {
       toast({ title: "Erro inesperado", description: err.message, variant: "destructive" });
     } finally {

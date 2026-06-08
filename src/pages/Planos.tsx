@@ -91,7 +91,7 @@ export default function Planos() {
         toast.error("Erro ao ativar teste. Tente novamente.");
       } else {
         toast.success("Teste de 7 dias ativado!");
-        navigate("/");
+        navigate("/dashboard");
       }
       return;
     }
