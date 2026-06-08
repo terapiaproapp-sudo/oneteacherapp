@@ -7,10 +7,12 @@ export function useAuth() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Auth session loaded:", session?.user?.id ? "authenticated" : "anonymous");
       setUser(session?.user ?? null)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state change:", event, session?.user?.id ? "authenticated" : "anonymous");
       setUser(session?.user ?? null)
     })
 
