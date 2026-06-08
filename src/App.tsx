@@ -38,10 +38,18 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, role } = useAuth();
-  if (loading) return null;
-  if (user && !role) return null;
-  if (user && role === "student") return <Navigate to="/portal" replace />;
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-primary font-semibold text-center">
+          <p>Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (user) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
