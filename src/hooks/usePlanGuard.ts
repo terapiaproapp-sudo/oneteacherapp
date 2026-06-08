@@ -42,29 +42,44 @@ export const usePlanGuard = () => {
   });
 
   useEffect(() => {
-    if (isLoading || !profile) return;
+    // 1. If still loading profile, wait
+    if (isLoading) return;
 
-    // Public routes that don't need guard
-    const publicRoutes = ["/", "/login", "/signup", "/planos"];
-    if (publicRoutes.includes(location.pathname)) return;
+    // 2. Identify current route
+    const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing"];
+    const isPublicRoute = publicRoutes.includes(location.pathname);
 
+    // 3. If no profile exists (user not logged in)
+    if (!profile) {
+      // Only redirect to login if we are NOT on a public route
+      if (!isPublicRoute) {
+        navigate("/login");
+      }
+      return;
+    }
+
+    // 4. If user is logged in but on a public route, don't guard
+    if (isPublicRoute) return;
+
+    // 5. Subscription Logic (for Private Routes only)
     const today = new Date().toISOString().split("T")[0];
 
-    // 1. Se status != 'ativo'
+    // Case: Status is not active
     if (profile.status !== "ativo") {
       toast.error("Sua assinatura está inativa.");
       navigate("/planos");
       return;
     }
 
-    // 2. Se validade < hoje
+    // Case: Subscription expired
     if (profile.validade && profile.validade < today) {
       updateStatusMutation.mutate("suspenso");
       toast.error("Sua assinatura venceu. Renove para continuar.");
       navigate("/planos");
       return;
     }
-  }, [profile, isLoading, location.pathname, navigate, updateStatusMutation]);
+  }, [profile, isLoading, location.pathname, navigate]);
+
 
   return { profile, isLoading };
 };
