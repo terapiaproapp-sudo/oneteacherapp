@@ -153,6 +153,9 @@ export default function Login() {
               Não tem conta?{" "}
               <Link to="/signup" className="text-primary font-bold hover:underline underline-offset-4 decoration-2">Criar conta</Link>
             </p>
+            <div className="mt-4">
+              <Link to="/diagnostico" className="text-[10px] text-slate-400 hover:text-slate-600 uppercase tracking-widest font-semibold transition-colors">Problemas de acesso?</Link>
+            </div>
           </div>
         </Card>
       </div>
