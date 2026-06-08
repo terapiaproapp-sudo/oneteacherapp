@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Check, CreditCard, Lock, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo-oneteacher.png";
+import Seo from "@/components/Seo";
 
 export default function Checkout() {
   const [searchParams] = useSearchParams();
