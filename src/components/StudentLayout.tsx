@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { LogOut } from "lucide-react";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
