@@ -65,7 +65,7 @@ export const usePlanGuard = () => {
     
     // Caso: Perfil sem plano ou plano pendente
     if (!profile.plan || profile.status === "pendente") {
-      toast.error("Escolha um plano para começar");
+      toast.error("Escolha um plano para continuar");
       navigate("/planos", { replace: true });
       return;
     }

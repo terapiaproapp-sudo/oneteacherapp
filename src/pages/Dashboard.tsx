@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlanGuard } from "@/hooks/usePlanGuard";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +9,7 @@ import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { formatHoursDisplay } from "@/lib/formatMinutes";
 import { useToast } from "@/hooks/use-toast";
+import { PlanBanner } from "@/components/PlanBanner";
 
 interface Stats {
   totalStudents: number; activeStudents: number; todayLessons: number;
@@ -18,6 +20,7 @@ interface Alert { type: "warning" | "danger" | "info"; title: string; descriptio
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { profile } = usePlanGuard();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats>({ totalStudents: 0, activeStudents: 0, todayLessons: 0, monthRevenue: 0, pendingPayments: 0, totalHoursRemaining: 0, totalHoursSold: 0, overduePayments: 0 });
   const [recentLessons, setRecentLessons] = useState<any[]>([]);
@@ -77,6 +80,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl">
       <div>
+        <PlanBanner profile={profile} />
         <h1 className="page-title">Olá, {userName} 👋</h1>
         <p className="section-subtitle mt-0.5">Aqui está o resumo do seu dia.</p>
       </div>
