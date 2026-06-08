@@ -125,20 +125,11 @@ export default function AdminUsers() {
     if (!userToDelete || !isAdmin) return;
 
     try {
-      // 1. Excluir perfil (RLS e FKs devem cuidar do resto se configurado, ou precisamos deletar manualmente)
-      // Nota: No Supabase, se profiles tiver ON DELETE CASCADE para outras tabelas, funciona.
-      // Caso contrário, precisamos garantir que dados vinculados sejam removidos.
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .delete()
-        .eq("id", userToDelete.id);
+      const { error } = await supabase.rpc("delete_user_by_admin", { 
+        target_user_id: userToDelete.id 
+      });
 
-      if (profileError) throw profileError;
-
-      // 2. Excluir da autenticação (Requer service_role ou Edge Function, pois admin.deleteUser não é acessível direto do client anon/auth)
-      // Como estamos no frontend, a forma correta é via Edge Function ou se o projeto tiver uma RPC/Trigger específica.
-      // Se tentarmos direto supabase.auth.admin.deleteUser(id), vai dar erro 403 no client side comum.
-      // Vou simular a chamada ou sugerir o fluxo correto.
+      if (error) throw error;
       
       toast({ 
         title: "Usuário excluído", 
@@ -148,6 +139,7 @@ export default function AdminUsers() {
       loadProfiles();
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
+      if (selectedUser?.id === userToDelete.id) setDetailOpen(false);
     } catch (error: any) {
       toast({ 
         title: "Erro ao excluir", 
