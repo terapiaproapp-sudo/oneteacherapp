@@ -150,8 +150,8 @@ export default function Login() {
           
           <div className="bg-slate-50/50 p-6 border-t border-slate-100 text-center">
             <p className="text-slate-600 font-medium text-sm">
-              Não tem conta?{" "}
-              <Link to="/signup" className="text-primary font-bold hover:underline underline-offset-4 decoration-2">Criar conta</Link>
+              Não tem uma conta?{" "}
+              <Link to="/cadastro" className="text-primary font-bold hover:underline underline-offset-4 decoration-2">Cadastre-se grátis</Link>
             </p>
             <div className="mt-4">
               <Link to="/diagnostico" className="text-[10px] text-slate-400 hover:text-slate-600 uppercase tracking-widest font-semibold transition-colors">Problemas de acesso?</Link>

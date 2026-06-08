@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,10 +45,19 @@ const faqs = [
 export default function Landing() {
   const [signupOpen, setSignupOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [signupForm, setSignupForm] = useState({ name: "", email: "", password: "" });
 
+  const handleAction = () => {
+    if (user) {
+      navigate("/planos");
+    } else {
+      navigate("/cadastro");
+    }
+  };
+
   const handleSignup = () => {
-    navigate("/signup");
+    handleAction();
     setSignupOpen(false);
   };
 
@@ -75,7 +85,7 @@ export default function Landing() {
           <img src={logo} alt="OneTeacher - Gestão para professores particulares" className="h-12 sm:h-16 lg:h-20 object-contain" />
           <div className="flex items-center gap-2 sm:gap-3">
             <Button variant="ghost" size="sm" className="rounded-xl text-sm" onClick={() => navigate("/login")}>Entrar</Button>
-            <Button size="sm" className="rounded-xl text-sm shadow-lg shadow-primary/20" onClick={() => setSignupOpen(true)}>Começar grátis</Button>
+            <Button size="sm" className="rounded-xl text-sm shadow-lg shadow-primary/20" onClick={handleAction}>Começar grátis</Button>
           </div>
         </div>
       </nav>
@@ -99,7 +109,7 @@ export default function Landing() {
             Organize alunos, pacotes, agenda e pagamentos em um único sistema simples, inteligente e feito para professores particulares.
           </motion.p>
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25 w-full sm:w-auto" onClick={() => setSignupOpen(true)}>
+            <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25 w-full sm:w-auto" onClick={handleAction}>
               Começar teste grátis <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
             <Button variant="outline" size="lg" className="rounded-2xl h-12 px-8 text-base w-full sm:w-auto" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>
@@ -267,7 +277,7 @@ export default function Landing() {
                       <Button
                         className={`rounded-xl w-full text-sm ${plan.highlight ? "shadow-lg shadow-primary/20" : ""}`}
                         variant={plan.highlight ? "default" : "outline"}
-                        onClick={() => navigate("/planos")}
+                        onClick={handleAction}
                       >
                       {plan.price === "Grátis" ? "Começar grátis" : "Assinar"} <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
@@ -287,7 +297,7 @@ export default function Landing() {
               Comece agora e tenha <span className="text-primary">controle total</span> das suas aulas.
             </h2>
             <p className="text-muted-foreground text-sm mb-6">Teste grátis por 7 dias. Sem compromisso.</p>
-            <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25" onClick={() => setSignupOpen(true)}>
+            <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25" onClick={handleAction}>
               Criar conta grátis <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </motion.div>
