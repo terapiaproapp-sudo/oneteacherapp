@@ -326,7 +326,7 @@ export default function Landing() {
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">Crie sua conta gratuita</DialogTitle>
-            <p className="text-xs text-muted-foreground">10 dias grátis. Sem cartão de crédito.</p>
+            <p className="text-xs text-muted-foreground">7 dias grátis. Sem cartão de crédito.</p>
           </DialogHeader>
           <div className="space-y-3 pt-2">
             <div className="space-y-1.5">
