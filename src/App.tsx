@@ -29,10 +29,11 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, role } = useAuth();
-  if (loading || (user && !role)) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold">Carregando...</div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-pulse text-primary font-semibold text-center"><p>Carregando...</p></div></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (role === "student") return <Navigate to="/portal" replace />;
   return <AppLayout>{children}</AppLayout>;
+
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
