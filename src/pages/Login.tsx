@@ -24,13 +24,13 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { 
         toast({ title: "Erro no login", description: "E-mail ou senha incorretos.", variant: "destructive" }); 
         return; 
       }
       logActivity("login_realizado");
-      navigate("/dashboard");
+      if (data.session) navigate("/dashboard", { replace: true });
     } catch (err: any) {
       toast({ title: "Erro inesperado", description: err.message, variant: "destructive" });
     } finally {

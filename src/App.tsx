@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import AppLayout from "@/components/AppLayout";
 import AdminLayout from "@/components/AdminLayout";
@@ -29,18 +29,15 @@ import Diagnostic from "@/pages/Diagnostic";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, role } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (role === "student") return <Navigate to="/portal" replace />;
   return <AppLayout>{children}</AppLayout>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, role } = useAuth();
+  const { user, loading } = useAuth();
   if (loading) return null;
-  if (user && !role) return null;
-  if (user && role === "student") return <Navigate to="/portal" replace />;
   if (user) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
@@ -54,10 +51,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 }
 
 function StudentRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, role } = useAuth();
-  if (loading || (user && !role)) return null;
+  const { user, loading } = useAuth();
+  if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (role !== "student") return <Navigate to="/dashboard" replace />;
   return <StudentLayout>{children}</StudentLayout>;
 }
 
@@ -65,7 +61,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <AuthProvider>
+      <>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
@@ -90,7 +86,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </AuthProvider>
+      </>
     </TooltipProvider>
   </QueryClientProvider>
 );
