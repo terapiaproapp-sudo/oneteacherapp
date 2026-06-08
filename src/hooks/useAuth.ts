@@ -17,5 +17,10 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
-  return { user, loading: user === undefined }
+  const signOut = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+  }
+
+  return { user, loading: user === undefined, signOut }
 }
