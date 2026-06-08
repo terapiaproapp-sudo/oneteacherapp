@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, UserX, CreditCard, TrendingUp, Clock } from "lucide-react";
+import { Users, UserCheck, UserX, CreditCard, TrendingUp, Clock, Send } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format, subDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { WebhookTestDialog } from "@/components/admin/WebhookTestDialog";
+
 
 interface Stats {
   total: number;
@@ -69,7 +71,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Painel Administrativo</h1>
+        <WebhookTestDialog />
+      </div>
+
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {statCards.map((s) => (
