@@ -27,10 +27,10 @@ const features = [
 ];
 
 const plans = [
-  { name: "Teste", price: "Grátis", period: "10 dias", desc: "Acesso completo", highlight: false, features: ["Todos os recursos", "10 dias grátis", "Sem cartão de crédito"] },
-  { name: "Mensal", price: "R$ 19,90", period: "/mês", desc: "Para quem quer começar", highlight: false, features: ["Alunos ilimitados", "Agenda completa", "Financeiro integrado", "Suporte por e-mail"] },
-  { name: "Semestral", price: "R$ 99,90", period: "/6 meses", desc: "Economia de 16%", highlight: false, features: ["Tudo do Mensal", "R$ 16,65/mês", "Prioridade no suporte"] },
-  { name: "Anual", price: "R$ 179,90", period: "/ano", desc: "Melhor custo-benefício", highlight: true, features: ["Tudo do Semestral", "R$ 14,99/mês", "Economia de 25%", "Suporte prioritário"] },
+  { name: "Teste", price: "Grátis", period: "7 dias", desc: "Acesso completo", highlight: false, features: ["Todos os recursos", "7 dias grátis", "Sem cartão de crédito"] },
+  { name: "Mensal", price: "R$ 39,90", period: "/mês", desc: "Para quem quer começar", highlight: false, features: ["Alunos ilimitados", "Agenda completa", "Financeiro integrado", "Suporte por e-mail"] },
+  { name: "Semestral", price: "R$ 197,00", period: "/6 meses", desc: "R$ 32,83/mês · economia de 17%", highlight: false, features: ["Tudo do Mensal", "R$ 32,83/mês", "Prioridade no suporte"] },
+  { name: "Anual", price: "R$ 347,00", period: "/ano", desc: "Melhor custo-benefício", highlight: true, features: ["Tudo do Semestral", "R$ 28,91/mês", "Economia de 27%", "Suporte prioritário"] },
 ];
 
 const faqs = [
