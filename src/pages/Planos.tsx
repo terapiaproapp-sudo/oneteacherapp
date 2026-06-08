@@ -61,12 +61,12 @@ export default function Planos() {
   const [isActivatingTrial, setIsActivatingTrial] = useState(false);
 
   const handleSubscribe = async (plan: typeof plans[0]) => {
-    if (!profile) {
-      navigate("/login?redirect=/planos");
-      return;
-    }
-
     if (plan.id === "teste") {
+      if (!profile) {
+        navigate("/login?redirect=/planos");
+        return;
+      }
+
       if (profile.plan) {
         toast.error("Você já utilizou ou possui um plano ativo.");
         return;
@@ -96,8 +96,9 @@ export default function Planos() {
       return;
     }
 
-    if (plan.newexy_url) {
-      window.location.href = plan.newexy_url;
+    if (plan.id) {
+      // Navigate to internal checkout
+      navigate(`/checkout?product=${PRODUCT_ID}&plan=${plan.id}&redirect=${REDIRECT_URL}`);
     }
   };
 

@@ -24,6 +24,7 @@ import AdminActivity from "@/pages/admin/AdminActivity";
 import AdminFinancial from "@/pages/admin/AdminFinancial";
 import StudentPortal from "@/pages/student/StudentPortal";
 import Planos from "@/pages/Planos";
+import Checkout from "@/pages/Checkout";
 import Diagnostic from "@/pages/Diagnostic";
 
 const queryClient = new QueryClient();
@@ -64,23 +65,29 @@ const App = () => (
       <>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+            <Route path="/" element={<Landing />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+            <Route path="/cadastro" element={<PublicRoute><Signup /></PublicRoute>} />
+            <Route path="/checkout" element={<Checkout />} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            
+            {/* Protected Teacher/App routes */}
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/alunos" element={<ProtectedRoute><Students /></ProtectedRoute>} />
             <Route path="/agenda" element={<ProtectedRoute><Agenda /></ProtectedRoute>} />
             <Route path="/financeiro" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
             <Route path="/configuracoes" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/portal" element={<StudentRoute><StudentPortal /></StudentRoute>} />
+            
             {/* Admin routes */}
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/usuarios" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="/admin/atividade" element={<AdminRoute><AdminActivity /></AdminRoute>} />
             <Route path="/admin/financeiro" element={<AdminRoute><AdminFinancial /></AdminRoute>} />
+            
             <Route path="/planos" element={<Planos />} />
             <Route path="/diagnostico" element={<Diagnostic />} />
             <Route path="*" element={<NotFound />} />
