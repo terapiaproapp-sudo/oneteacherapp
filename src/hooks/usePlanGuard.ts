@@ -83,7 +83,7 @@ export const usePlanGuard = () => {
       navigate("/planos");
       return;
     }
-  }, [profile, isLoading, location.pathname, navigate]);
+  }, [profile, isLoading, location.pathname, navigate, updateStatusMutation]);
 
 
   return { profile, isLoading };
