@@ -46,15 +46,21 @@ export const usePlanGuard = () => {
 
 
   useEffect(() => {
-    // 1. Identifica se a rota é pública
+    // 1. If still loading profile or mutation is active, wait
+    if (isLoading || updateStatusMutation.isPending) return;
+
+    // 2. Identify current route
     const publicRoutes = ["/", "/login", "/signup", "/planos", "/landing", "/diagnostico"];
     const isPublicRoute = publicRoutes.includes(location.pathname);
 
-    // 2. Se for rota pública ou estiver carregando, não faz nada aqui
-    if (isPublicRoute || isLoading || updateStatusMutation.isPending) return;
-
-    // 3. Se não houver perfil (não logado), o App.tsx já cuida do redirecionamento
-    if (!profile) return;
+    // 3. If no profile exists (user not logged in)
+    if (!profile) {
+      // Only redirect to login if we are NOT on a public route
+      if (!isPublicRoute) {
+        navigate("/login");
+      }
+      return;
+    }
 
     // 4. Lógica de Assinatura (apenas para rotas privadas)
     const today = new Date().toISOString().split("T")[0];
