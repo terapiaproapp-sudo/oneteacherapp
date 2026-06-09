@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { usePlanGuard } from "@/hooks/usePlanGuard";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import {
   Sidebar,
@@ -31,8 +32,17 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { signOut, user } = useAuth();
+  const { profile } = usePlanGuard();
   const { isAdmin } = useAdminAuth();
   const greeting = useGreeting();
+
+  const planLabel = profile?.plan 
+    ? profile.plan === "teste" ? "Plano Teste" : `Plano ${profile.plan.charAt(0).toUpperCase() + profile.plan.slice(1)}`
+    : "";
+  
+  const validityDate = profile?.validade 
+    ? new Date(profile.validade).toLocaleDateString("pt-BR")
+    : "";
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "Professor";
 
@@ -50,11 +60,17 @@ export function AppSidebar() {
               <h2 className="text-3xl font-black text-sidebar-foreground leading-none tracking-tight break-words">
                 {firstName}
               </h2>
-              <div className="pt-4 flex flex-col gap-1">
-                <p className="text-[11px] text-muted-foreground font-medium flex items-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-                  Sua central de aulas
-                </p>
+              <div className="pt-4 flex flex-col gap-1.5">
+                {planLabel && (
+                  <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 w-fit">
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{planLabel}</span>
+                  </div>
+                )}
+                {validityDate && (
+                  <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1.5 ml-1">
+                    Válido até {validityDate}
+                  </p>
+                )}
               </div>
             </div>
           ) : (
