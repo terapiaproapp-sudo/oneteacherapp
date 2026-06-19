@@ -26,6 +26,10 @@ import StudentPortal from "@/pages/student/StudentPortal";
 import Planos from "@/pages/Planos";
 import Checkout from "@/pages/Checkout";
 import Diagnostic from "@/pages/Diagnostic";
+import Sobre from "@/pages/Sobre";
+import Contato from "@/pages/Contato";
+import PoliticaDePrivacidade from "@/pages/PoliticaDePrivacidade";
+import TermosDeUso from "@/pages/TermosDeUso";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +93,10 @@ const App = () => (
             
             <Route path="/planos" element={<Planos />} />
             <Route path="/diagnostico" element={<Diagnostic />} />
+            <Route path="/sobre" element={<Sobre />} />
+            <Route path="/contato" element={<Contato />} />
+            <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidade />} />
+            <Route path="/termos-de-uso" element={<TermosDeUso />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
