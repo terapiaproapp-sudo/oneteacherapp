@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, MoreVertical, Play, X, CheckCircle2 } from "lucide-react";
+import { Package, MoreVertical, Play, X, CheckCircle2, Link2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +9,7 @@ import { logActivity } from "@/lib/activityLogger";
 import { formatHoursDisplay } from "@/lib/formatMinutes";
 import { statusBadgeClasses, statusLabel } from "@/lib/packageUtils";
 import { format } from "date-fns";
+import ReconcilePackageDialog from "./ReconcilePackageDialog";
 
 interface PackageRow {
   id: string; name: string; hours_total: number; hours_used: number;
@@ -26,6 +27,23 @@ interface Props {
 export default function PackageHistory({ studentId, studentName, packages, onChanged }: Props) {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
+  const [reconcilePkg, setReconcilePkg] = useState<PackageRow | null>(null);
+  const [pendingCount, setPendingCount] = useState<number>(0);
+
+  const loadPendingCount = async () => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    const { count } = await supabase
+      .from("lessons")
+      .select("id", { count: "exact", head: true })
+      .eq("student_id", studentId)
+      .is("package_id", null)
+      .eq("lesson_type", "pacote")
+      .in("status", ["concluida", "noshow"])
+      .lte("date", today);
+    setPendingCount(count || 0);
+  };
+
+  useEffect(() => { loadPendingCount(); /* eslint-disable-next-line */ }, [studentId, packages]);
 
   const updateStatus = async (pkg: PackageRow, next: string) => {
     setBusy(true);
@@ -77,6 +95,7 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
       {sorted.map((p) => {
         const remaining = Math.max(0, p.hours_total - p.hours_used);
         const isClosed = p.status === "encerrado" || p.status === "concluido" || p.status === "cancelado";
+        const isActive = p.status === "ativo";
         return (
           <div key={p.id} className="p-3 rounded-xl border border-border/60 bg-card space-y-2">
             <div className="flex items-start justify-between gap-2">
@@ -135,9 +154,37 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
               <span className="text-muted-foreground">R$ {p.total_value.toFixed(2)}</span>
               <span className="text-muted-foreground capitalize">{p.payment_method === "parcelado" ? "Parcelado" : "À vista"}</span>
             </div>
+            {isActive && (
+              <div className="pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full h-8 text-xs rounded-lg gap-1.5"
+                  onClick={() => setReconcilePkg(p)}
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Reconciliar consumo
+                  {pendingCount > 0 && (
+                    <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-warning/15 text-warning border-warning/30 ml-1">
+                      {pendingCount} aula{pendingCount > 1 ? "s" : ""} aguardando vínculo
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         );
       })}
+      {reconcilePkg && (
+        <ReconcilePackageDialog
+          open={!!reconcilePkg}
+          onOpenChange={(v) => { if (!v) setReconcilePkg(null); }}
+          pkg={reconcilePkg}
+          studentId={studentId}
+          studentName={studentName}
+          onChanged={() => { onChanged(); loadPendingCount(); }}
+        />
+      )}
     </div>
   );
 }
