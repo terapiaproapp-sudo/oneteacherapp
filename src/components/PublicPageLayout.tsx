@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import logo from "@/assets/logo-oneteacher.png";
 import { MessageCircle } from "lucide-react";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
 
 const WHATSAPP_URL =
   "https://wa.me/5519997663294?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20o%20OneTeacher.";
@@ -65,6 +66,7 @@ export default function PublicPageLayout({
           <p>© {new Date().getFullYear()} OneTeacher. Todos os direitos reservados.</p>
         </div>
       </footer>
+      <WhatsAppFloat />
     </div>
   );
 }

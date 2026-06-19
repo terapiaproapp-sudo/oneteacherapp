@@ -8,6 +8,7 @@ import { usePlanGuard } from "@/hooks/usePlanGuard";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import logo from "@/assets/logo-oneteacher.png";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
 
 const PRODUCT_ID = "c5ea9b9b-17c3-420c-95df-08bb7950513b";
 const REDIRECT_URL = "https://oneteacherapp.lovable.app";
@@ -241,6 +242,7 @@ export default function Planos() {
           ))}
         </div>
       </main>
+      <WhatsAppFloat />
     </div>
   );
 }
