@@ -39,7 +39,7 @@ const faqs = [
   { q: "Preciso instalar algo?", a: "Não. Basta acessar pelo navegador. Sem downloads, sem instalações." },
   { q: "Posso cancelar quando quiser?", a: "Sim, sem multa, sem burocracia. Cancele a qualquer momento." },
   { q: "Serve para qualquer tipo de aula?", a: "Sim. O OneTeacher foi feito para professores particulares de qualquer modalidade — aulas online ou presenciais — e qualquer disciplina ou conteúdo." },
-  { q: "Meus dados estão seguros?", a: "Totalmente. Usamos criptografia de ponta e servidores seguros para proteger suas informações." },
+  { q: "Meus dados estão seguros?", a: "Utilizamos medidas técnicas e controles de acesso para proteger os dados armazenados na plataforma. Nenhum sistema é totalmente imune a riscos, por isso mantemos práticas de segurança e revisão contínua." },
 ];
 
 const routineBenefits = [

@@ -92,7 +92,8 @@ const App = () => (
             <Route path="/admin/financeiro" element={<AdminRoute><AdminFinancial /></AdminRoute>} />
             
             <Route path="/planos" element={<Planos />} />
-            <Route path="/diagnostico" element={<Diagnostic />} />
+            {/* /diagnostico exige autenticação — expõe id do usuário, e-mail e status do perfil */}
+            <Route path="/diagnostico" element={<ProtectedRoute><Diagnostic /></ProtectedRoute>} />
             <Route path="/sobre" element={<Sobre />} />
             <Route path="/contato" element={<Contato />} />
             <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidade />} />
