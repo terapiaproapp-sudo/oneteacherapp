@@ -20,10 +20,10 @@ const stagger = { visible: { transition: { staggerChildren: 0.12 } } };
 
 const features = [
   { icon: Users, title: "Gestão completa de alunos", desc: "Cadastro com pacote, financeiro e saldo de horas integrados." },
-  { icon: Clock, title: "Controle automático de horas", desc: "Abatimento inteligente conforme status da aula." },
-  { icon: CalendarDays, title: "Agenda inteligente", desc: "Calendário mensal com detalhes e ações por aula." },
+  { icon: CalendarDays, title: "Agenda inteligente", desc: "Calendário mensal com detecção automática de conflitos de horário." },
+  { icon: Clock, title: "Controle automático de horas", desc: "Abatimento automático conforme o status de cada aula." },
   { icon: BarChart3, title: "Financeiro com previsão mensal", desc: "Projeção de receita, parcelas e status de pagamento." },
-  { icon: Package, title: "Parcelamento automático", desc: "Parcelas geradas e distribuídas nos meses certos." },
+  { icon: Package, title: "Parcelamento automático", desc: "Parcelas geradas e organizadas automaticamente nos meses certos." },
   { icon: Percent, title: "Desconto à vista", desc: "Cálculo automático com percentual configurável." },
 ];
 
@@ -38,8 +38,17 @@ const faqs = [
   { q: "Funciona no celular?", a: "Sim! O OneTeacher é otimizado para mobile, funciona direto no navegador do seu celular como um app." },
   { q: "Preciso instalar algo?", a: "Não. Basta acessar pelo navegador. Sem downloads, sem instalações." },
   { q: "Posso cancelar quando quiser?", a: "Sim, sem multa, sem burocracia. Cancele a qualquer momento." },
-  { q: "Serve para qualquer tipo de aula?", a: "Sim! Funciona para aulas de idiomas, música, reforço escolar, preparatório e qualquer disciplina." },
+  { q: "Serve para qualquer tipo de aula?", a: "Sim. O OneTeacher foi feito para professores particulares de qualquer modalidade — aulas online ou presenciais — e qualquer disciplina ou conteúdo." },
   { q: "Meus dados estão seguros?", a: "Totalmente. Usamos criptografia de ponta e servidores seguros para proteger suas informações." },
+];
+
+const routineBenefits = [
+  { icon: Shield, title: "Organização real, sem depender de memória", desc: "Pacotes, aulas e histórico de cada aluno reunidos em um único lugar." },
+  { icon: Clock, title: "Controle completo de horas", desc: "Saiba exatamente quantas aulas cada aluno já usou e quantas ainda tem disponíveis." },
+  { icon: CalendarDays, title: "Menos erros de agenda", desc: "Conflitos de horário identificados automaticamente, sem precisar checar manualmente." },
+  { icon: Star, title: "Mais profissionalismo no dia a dia", desc: "Pacotes, parcelas e descontos organizados de forma clara para você e para o aluno." },
+  { icon: BarChart3, title: "Previsibilidade financeira", desc: "Saiba quanto tem a receber no mês, com parcelas e status de pagamento sempre visíveis." },
+  { icon: Smartphone, title: "Funciona no celular", desc: "Acesse de onde estiver, sem precisar instalar nada." },
 ];
 
 export default function Landing() {
