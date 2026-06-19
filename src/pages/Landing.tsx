@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import logo from "@/assets/logo-oneteacher.png";
 import Seo from "@/components/Seo";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
 
 const fadeUp = { hidden: { opacity: 0, y: 30 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
 const stagger = { visible: { transition: { staggerChildren: 0.12 } } };
@@ -380,6 +381,7 @@ export default function Landing() {
           </div>
         </DialogContent>
       </Dialog>
+      <WhatsAppFloat />
     </div>
   );
 }
