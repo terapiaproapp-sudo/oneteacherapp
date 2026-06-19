@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check, ChevronRight, Zap, Star, Shield, Smartphone, Clock, CalendarDays, Users, BarChart3, Package, Percent } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { usePlanGuard } from "@/hooks/usePlanGuard";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -11,6 +11,25 @@ import logo from "@/assets/logo-oneteacher.png";
 
 const PRODUCT_ID = "c5ea9b9b-17c3-420c-95df-08bb7950513b";
 const REDIRECT_URL = "https://oneteacherapp.lovable.app";
+const NEWEXY_CHECKOUT_BASE = "https://newexyapp.lovable.app/checkout";
+
+// Whitelist de planos pagos. Qualquer valor fora desta lista é rejeitado.
+const PAID_PLAN_IDS = ["mensal", "semestral", "anual"] as const;
+type PaidPlanId = typeof PAID_PLAN_IDS[number];
+const isPaidPlan = (v: unknown): v is PaidPlanId =>
+  typeof v === "string" && (PAID_PLAN_IDS as readonly string[]).includes(v);
+
+// Chave usada para preservar a escolha do plano durante o cadastro/login.
+const PENDING_PLAN_KEY = "oneteacher.pendingPlan";
+
+function buildNewexyUrl(planId: PaidPlanId): string {
+  const params = new URLSearchParams({
+    product: PRODUCT_ID,
+    plan: planId,
+    redirect: REDIRECT_URL,
+  });
+  return `${NEWEXY_CHECKOUT_BASE}?${params.toString()}`;
+}
 
 const plans = [
   { 
@@ -31,7 +50,6 @@ const plans = [
     desc: "Para quem quer começar", 
     highlight: false, 
     features: ["Alunos ilimitados", "Agenda completa", "Financeiro integrado", "Suporte por e-mail"],
-    newexy_url: `https://newexyapp.lovable.app/checkout?product=${PRODUCT_ID}&plan=mensal&redirect=${REDIRECT_URL}`
   },
   { 
     id: "semestral",
@@ -41,7 +59,6 @@ const plans = [
     desc: "R$ 32,83/mês · economia de 17%", 
     highlight: false, 
     features: ["Tudo do Mensal", "R$ 32,83/mês", "Prioridade no suporte"],
-    newexy_url: `https://newexyapp.lovable.app/checkout?product=${PRODUCT_ID}&plan=semestral&redirect=${REDIRECT_URL}`
   },
   { 
     id: "anual",
@@ -51,7 +68,6 @@ const plans = [
     desc: "Melhor custo-benefício", 
     highlight: true, 
     features: ["Tudo do Semestral", "R$ 28,91/mês", "Economia de 27%", "Suporte prioritário"],
-    newexy_url: `https://newexyapp.lovable.app/checkout?product=${PRODUCT_ID}&plan=anual&redirect=${REDIRECT_URL}`
   },
 ];
 
@@ -59,6 +75,27 @@ export default function Planos() {
   const navigate = useNavigate();
   const { profile, isLoading } = usePlanGuard();
   const [isActivatingTrial, setIsActivatingTrial] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Se o usuário voltar autenticado e havia uma escolha pendente em sessionStorage
+  // (ou parâmetro ?plan=), retoma o redirecionamento ao checkout oficial.
+  useEffect(() => {
+    if (isLoading || !profile?.email) return;
+    const queryPlan = searchParams.get("plan");
+    const stored = typeof window !== "undefined"
+      ? window.sessionStorage.getItem(PENDING_PLAN_KEY)
+      : null;
+    const candidate = queryPlan ?? stored;
+    if (isPaidPlan(candidate)) {
+      window.sessionStorage.removeItem(PENDING_PLAN_KEY);
+      if (queryPlan) {
+        searchParams.delete("plan");
+        setSearchParams(searchParams, { replace: true });
+      }
+      window.location.href = buildNewexyUrl(candidate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, profile?.email]);
 
   const handleSubscribe = async (plan: typeof plans[0]) => {
     if (plan.id === "teste") {
@@ -96,9 +133,28 @@ export default function Planos() {
       return;
     }
 
-    if (plan.newexy_url) {
-      window.location.href = plan.newexy_url;
+    // Plano pago — exige whitelist + autenticação + perfil com e-mail válido
+    if (!isPaidPlan(plan.id)) {
+      toast.error("Plano inválido.");
+      return;
     }
+
+    if (!profile) {
+      // Não autenticado → guarda escolha e envia para cadastro.
+      try {
+        window.sessionStorage.setItem(PENDING_PLAN_KEY, plan.id);
+      } catch { /* sessionStorage indisponível */ }
+      toast.info("Crie sua conta para continuar.");
+      navigate(`/cadastro?next=/planos&plan=${plan.id}`);
+      return;
+    }
+
+    if (!profile.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(profile.email)) {
+      toast.error("Seu perfil está sem e-mail válido. Atualize antes de continuar.");
+      return;
+    }
+
+    window.location.href = buildNewexyUrl(plan.id);
   };
 
   const getButtonText = (planId: string) => {

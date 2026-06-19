@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,11 @@ export default function Signup() {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const planParam = searchParams.get("plan");
+  const allowedPlans = new Set(["mensal", "semestral", "anual"]);
+  const planSuffix =
+    planParam && allowedPlans.has(planParam) ? `?plan=${planParam}` : "";
 
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -94,7 +99,7 @@ export default function Signup() {
       }
 
       toast({ title: "Conta criada!", description: "Bem-vindo ao OneTeacher." });
-      navigate("/planos", { replace: true });
+      navigate(`/planos${planSuffix}`, { replace: true });
     } catch (err: any) {
       toast({ title: "Erro inesperado", description: err.message, variant: "destructive" });
     } finally {

@@ -12,41 +12,11 @@ const json = (status: number, body: Record<string, unknown>) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-// Mapeia o evento recebido para a ação comercial a ser aplicada no perfil.
-// Apenas eventos confirmados nesta integração são tratados; demais ficam registrados
-// como "ignored" (idempotência) sem alterar o estado do usuário.
-type Action =
-  | { type: "activate"; plan?: string; next_billing?: string }
-  | { type: "mark_pending" }
-  | { type: "mark_recusado" }
-  | { type: "mark_cancelado" }
-  | { type: "mark_expirado" }
-  | { type: "mark_reembolsado" }
-  | { type: "ignore" };
-
-function classifyEvent(event: string): Action {
-  switch (event) {
-    case "payment.approved":
-      return { type: "activate" };
-    case "payment.pending":
-      return { type: "mark_pending" };
-    case "payment.refused":
-    case "payment.declined":
-    case "payment.failed":
-      return { type: "mark_recusado" };
-    case "subscription.canceled":
-    case "subscription.cancelled":
-      return { type: "mark_cancelado" };
-    case "subscription.expired":
-      return { type: "mark_expirado" };
-    case "payment.refunded":
-    case "payment.chargeback":
-    case "payment.disputed":
-      return { type: "mark_reembolsado" };
-    default:
-      return { type: "ignore" };
-  }
-}
+// Único evento confirmado por payload real recebido em produção.
+// Qualquer outro evento é gravado como `nao_mapeado` para auditoria,
+// SEM alterar plano/status/validade do perfil. Aliases especulativos
+// foram removidos para evitar mudanças de acesso baseadas em suposição.
+const CONFIRMED_APPROVED_EVENT = "payment.approved";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -79,20 +49,64 @@ serve(async (req) => {
   const next_billing =
     typeof body.next_billing === "string" ? body.next_billing : undefined;
 
-  // Identificador único do evento — usado para idempotência.
-  // A Newexy deve enviar um dos campos abaixo; se nenhum vier, derivamos um id estável.
-  const event_id =
+  // Identificador único e imutável do evento — APENAS campos reais da Newexy.
+  // Sem fallback derivado de e-mail/plano/data: se não houver id real, NÃO ativamos.
+  const realEventId =
     (typeof body.event_id === "string" && body.event_id) ||
-    (typeof body.id === "string" && body.id) ||
     (typeof body.transaction_id === "string" && body.transaction_id) ||
     (typeof body.payment_id === "string" && body.payment_id) ||
-    `${event}:${email}:${next_billing ?? ""}`;
+    (typeof body.id === "string" && body.id) ||
+    "";
 
   if (!event) {
     return json(400, { error: "missing_event" });
   }
 
-  // 2. Idempotência: tenta reservar o evento antes de processar.
+  const isConfirmedApproved = event === CONFIRMED_APPROVED_EVENT;
+
+  // ---- Evento não confirmado: SOMENTE auditoria, nunca altera perfil. ----
+  if (!isConfirmedApproved) {
+    // Usa um id sintético APENAS para evitar lotar a tabela com chamadas iguais;
+    // nunca é usado para ativar plano.
+    const auditId =
+      realEventId || `audit:${event}:${email}:${Date.now()}:${crypto.randomUUID()}`;
+    const { error: auditError } = await supabase
+      .from("webhook_events")
+      .insert({
+        provider: "newexy",
+        event_id: auditId,
+        event_type: event,
+        status: "nao_mapeado",
+        email: email || null,
+        plan: plan ?? null,
+        error: "EVENT_NOT_CONFIRMED",
+      });
+    if (auditError && (auditError as any).code !== "23505") {
+      console.error("failed to audit unmapped event", auditError.message);
+    }
+    return json(200, { success: true, audited: true, mutated: false });
+  }
+
+  // ---- A partir daqui, somente payment.approved confirmado ----
+
+  // Idempotência: exige id único REAL.
+  if (!realEventId) {
+    await supabase.from("webhook_events").insert({
+      provider: "newexy",
+      event_id: `missing:${crypto.randomUUID()}`,
+      event_type: event,
+      status: "error",
+      email: email || null,
+      plan: plan ?? null,
+      error: "WEBHOOK_UNIQUE_ID_MISSING",
+    });
+    console.error("WEBHOOK_UNIQUE_ID_MISSING");
+    return json(400, { error: "missing_unique_id" });
+  }
+
+  const event_id = realEventId;
+
+  // Reserva o evento antes de processar.
   const { error: reserveError } = await supabase
     .from("webhook_events")
     .insert({
@@ -125,13 +139,6 @@ serve(async (req) => {
       .eq("provider", "newexy")
       .eq("event_id", event_id);
   };
-
-  const action = classifyEvent(event);
-
-  if (action.type === "ignore") {
-    await finalize("ignored", null);
-    return json(200, { success: true, ignored: true });
-  }
 
   if (!email) {
     await finalize("error", null, "MISSING_EMAIL");
@@ -169,33 +176,12 @@ serve(async (req) => {
     return json(404, { error: "user_not_found" });
   }
 
-  // 4. Aplica a mudança comercial conforme o tipo de evento.
-  let update: Record<string, unknown> = {};
-  switch (action.type) {
-    case "activate":
-      update = { plan: plan ?? undefined, status: "ativo", validade: next_billing ?? undefined };
-      break;
-    case "mark_pending":
-      // Não libera plano pago; apenas registra estado. Se o usuário ainda tiver
-      // teste/plano válido, o usePlanGuard mantém o acesso até o vencimento.
-      update = { status: "pendente" };
-      break;
-    case "mark_recusado":
-      update = { status: "recusado" };
-      break;
-    case "mark_cancelado":
-      // Mantém validade já paga; impede renovação futura (sem alterar validade).
-      update = { status: "cancelado" };
-      break;
-    case "mark_expirado":
-      update = { status: "expirado" };
-      break;
-    case "mark_reembolsado":
-      update = { status: "reembolsado", validade: new Date().toISOString().slice(0, 10) };
-      break;
-  }
-
-  // Remove chaves undefined antes do update
+  // Ativação por payment.approved confirmado.
+  const update: Record<string, unknown> = {
+    plan: plan ?? undefined,
+    status: "ativo",
+    validade: next_billing ?? undefined,
+  };
   Object.keys(update).forEach((k) => update[k] === undefined && delete update[k]);
 
   if (Object.keys(update).length > 0) {
