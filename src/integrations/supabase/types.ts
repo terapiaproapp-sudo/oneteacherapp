@@ -466,6 +466,48 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_events: {
+        Row: {
+          created_at: string
+          email: string | null
+          error: string | null
+          event_id: string
+          event_type: string
+          id: string
+          plan: string | null
+          provider: string
+          received_at: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          error?: string | null
+          event_id: string
+          event_type: string
+          id?: string
+          plan?: string | null
+          provider?: string
+          received_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          error?: string | null
+          event_id?: string
+          event_type?: string
+          id?: string
+          plan?: string | null
+          provider?: string
+          received_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
