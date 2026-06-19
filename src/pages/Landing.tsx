@@ -105,24 +105,24 @@ export default function Landing() {
         <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/[0.04] rounded-full blur-3xl" />
         <motion.div className="max-w-3xl mx-auto text-center relative" initial="hidden" animate="visible" variants={stagger}>
           <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/8 border border-primary/15 text-xs font-semibold text-primary mb-6">
-            <Zap className="h-3.5 w-3.5" /> Feito para professores particulares
+            <Zap className="h-3.5 w-3.5" /> Feito para professores particulares — aulas online ou presenciais
           </motion.div>
           <motion.h1 variants={fadeUp} className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-5">
-            Pare de perder o controle{" "}
-            <span className="text-primary">das suas aulas.</span>
+            Organize suas aulas, pacotes e alunos{" "}
+            <span className="text-primary">em um só lugar.</span>
           </motion.h1>
           <motion.p variants={fadeUp} className="text-base sm:text-xl text-primary font-semibold mb-2">
-            Comece a ter previsibilidade no seu faturamento.
+            Tenha controle total da sua rotina — e ainda saiba quanto vai receber a cada mês.
           </motion.p>
           <motion.p variants={fadeUp} className="text-sm sm:text-lg text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed">
-            Organize alunos, pacotes, agenda e pagamentos em um único sistema simples, inteligente e feito para professores particulares.
+            Centralize alunos, pacotes de aula, agenda e pagamentos em um sistema simples, pensado para professores particulares — seja em aulas online ou presenciais.
           </motion.p>
           <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25 w-full sm:w-auto" onClick={handleAction}>
               Começar teste grátis <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
             <Button variant="outline" size="lg" className="rounded-2xl h-12 px-8 text-base w-full sm:w-auto" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>
-              Ver como funciona
+              Ver funcionalidades
             </Button>
           </motion.div>
         </motion.div>
@@ -153,6 +153,9 @@ export default function Landing() {
               ))}
             </div>
           </div>
+          <p className="text-[11px] sm:text-xs text-muted-foreground text-center mt-4 italic px-4">
+            Exemplo ilustrativo do painel do OneTeacher. Os dados acima são fictícios e usados apenas para demonstração.
+          </p>
         </motion.div>
       </section>
 
@@ -163,35 +166,22 @@ export default function Landing() {
             Você sabe <span className="text-primary">exatamente</span> quantas horas cada aluno ainda tem?
           </motion.h2>
           <motion.div variants={fadeUp} className="space-y-4 text-sm sm:text-base text-muted-foreground leading-relaxed">
-            <p>Sabe quem já pagou, quem ainda vai pagar e quanto você vai receber no mês que vem?</p>
-            <p>Ou ainda depende de anotações, memória e planilhas confusas?</p>
-            <p className="font-semibold text-foreground">A maioria dos professores perde dinheiro e tempo por falta de organização.</p>
+            <p>Sabe quem já pagou, quem ainda vai pagar e quanto você vai receber no mês que vem? Ou ainda depende de anotações, memória e planilhas confusas?</p>
+            <p className="font-semibold text-foreground">A maioria dos professores particulares perde tempo e dinheiro por falta de organização — não por falta de esforço.</p>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* TURN */}
+      {/* BRIDGE TO SOLUTION */}
       <section className="py-16 sm:py-20 px-4">
-        <motion.div className="max-w-2xl mx-auto text-center" initial="hidden" whileInView="visible" viewport={{ once: true }}>
+        <motion.div className="max-w-2xl mx-auto text-center" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
           <motion.div variants={fadeUp} className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-6">
             <Zap className="h-8 w-8 text-primary" />
           </motion.div>
           <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-4">
-            O problema não é falta de esforço.
+            É falta de um sistema feito para a <span className="text-primary">sua rotina.</span>
           </motion.h2>
-          <motion.p variants={fadeUp} className="text-base sm:text-lg text-primary font-semibold">
-            É falta de um sistema feito para a sua realidade.
-          </motion.p>
-        </motion.div>
-      </section>
-
-      {/* SOLUTION */}
-      <section className="py-16 sm:py-20 px-4 bg-muted/30">
-        <motion.div className="max-w-2xl mx-auto text-center" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-          <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-4">
-            O OneTeacher resolve isso de forma <span className="text-primary">simples e inteligente.</span>
-          </motion.h2>
-          <motion.p variants={fadeUp} className="text-muted-foreground mb-8">Ele conecta tudo em um único lugar:</motion.p>
+          <motion.p variants={fadeUp} className="text-muted-foreground mb-8">O OneTeacher conecta tudo em um único lugar:</motion.p>
           <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-3">
             {["Alunos", "Pacotes de horas", "Agenda", "Financeiro"].map(item => (
               <span key={item} className="px-4 py-2 rounded-full bg-primary/8 border border-primary/15 text-sm font-semibold text-primary">{item}</span>
@@ -202,7 +192,7 @@ export default function Landing() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="py-16 sm:py-24 px-4">
+      <section id="features" className="py-16 sm:py-24 px-4 bg-muted/30">
         <motion.div className="max-w-5xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={stagger}>
           <motion.div variants={fadeUp} className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3">Tudo que você precisa</h2>
@@ -227,33 +217,36 @@ export default function Landing() {
       </section>
 
       {/* BENEFITS */}
-      <section className="py-16 sm:py-20 px-4 bg-muted/30">
-        <motion.div className="max-w-3xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-          <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl font-extrabold tracking-tight text-center mb-10">
+      <section className="py-16 sm:py-24 px-4">
+        <motion.div className="max-w-5xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={stagger}>
+          <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl font-extrabold tracking-tight text-center mb-12">
             O que muda na sua rotina
           </motion.h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {[
-              { icon: Shield, text: "Mais organização" },
-              { icon: Zap, text: "Mais controle" },
-              { icon: Check, text: "Menos erros" },
-              { icon: Star, text: "Mais profissionalismo" },
-              { icon: BarChart3, text: "Mais previsibilidade financeira" },
-              { icon: Smartphone, text: "Funciona no celular" },
-            ].map((b, i) => (
-              <motion.div key={i} variants={fadeUp} className="flex items-center gap-3.5 p-4 rounded-xl bg-card border border-border/40">
-                <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-                  <b.icon className="h-4 w-4 text-accent" />
-                </div>
-                <span className="text-sm font-semibold">{b.text}</span>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {routineBenefits.map((b, i) => (
+              <motion.div key={i} variants={fadeUp}>
+                <Card className="card-premium h-full border-border/40">
+                  <CardContent className="p-5 sm:p-6">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-3">
+                      <b.icon className="h-5 w-5 text-accent" />
+                    </div>
+                    <h3 className="text-sm font-bold mb-1.5">{b.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{b.desc}</p>
+                  </CardContent>
+                </Card>
               </motion.div>
             ))}
           </div>
         </motion.div>
       </section>
 
+      {/* TESTIMONIAL (hidden until released) */}
+      {false && (
+        <section id="testimonial" className="py-16 sm:py-24 px-4 bg-muted/30" aria-hidden="true" />
+      )}
+
       {/* PLANS */}
-      <section className="py-16 sm:py-24 px-4">
+      <section className="py-16 sm:py-24 px-4 bg-muted/30">
         <motion.div className="max-w-5xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={stagger}>
           <motion.div variants={fadeUp} className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3">Planos</h2>
@@ -303,9 +296,9 @@ export default function Landing() {
         <motion.div className="max-w-2xl mx-auto text-center" initial="hidden" whileInView="visible" viewport={{ once: true }}>
           <motion.div variants={fadeUp} className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/15">
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-4">
-              Comece agora e tenha <span className="text-primary">controle total</span> das suas aulas.
+              Comece a organizar sua rotina <span className="text-primary">hoje mesmo.</span>
             </h2>
-            <p className="text-muted-foreground text-sm mb-6">Teste grátis por 7 dias. Sem compromisso.</p>
+            <p className="text-muted-foreground text-sm mb-6">Teste grátis por 7 dias. Sem cartão de crédito. Cancele quando quiser.</p>
             <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25" onClick={handleAction}>
               Criar conta grátis <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
