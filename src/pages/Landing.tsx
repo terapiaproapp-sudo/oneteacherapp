@@ -121,7 +121,7 @@ export default function Landing() {
             <Button size="lg" className="rounded-2xl h-12 px-8 text-base font-semibold shadow-xl shadow-primary/25 w-full sm:w-auto" onClick={handleAction}>
               Começar teste grátis <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
-            <Button variant="outline" size="lg" className="rounded-2xl h-12 px-8 text-base w-full sm:w-auto" onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}>
+            <Button variant="outline" size="lg" className="rounded-2xl h-12 px-8 text-base w-full sm:w-auto" onClick={() => document.getElementById("funcionalidades")?.scrollIntoView({ behavior: "smooth" })}>
               Ver funcionalidades
             </Button>
           </motion.div>
@@ -192,7 +192,7 @@ export default function Landing() {
       </section>
 
       {/* FEATURES */}
-      <section id="features" className="py-16 sm:py-24 px-4 bg-muted/30">
+      <section id="funcionalidades" className="py-16 sm:py-24 px-4 bg-muted/30">
         <motion.div className="max-w-5xl mx-auto" initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.1 }} variants={stagger}>
           <motion.div variants={fadeUp} className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3">Tudo que você precisa</h2>
