@@ -326,10 +326,28 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-border/40">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <img src={logo} alt="OneTeacher" className="h-6 object-contain opacity-60" />
-          <p className="text-xs text-muted-foreground">© {new Date().getFullYear()} OneTeacher. Todos os direitos reservados.</p>
+      <footer className="py-10 px-4 border-t border-border/40">
+        <div className="max-w-6xl mx-auto flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <img src={logo} alt="OneTeacher" className="h-6 object-contain opacity-60" />
+            <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <Link to="/sobre" className="hover:text-foreground">Sobre</Link>
+              <Link to="/contato" className="hover:text-foreground">Contato</Link>
+              <Link to="/politica-de-privacidade" className="hover:text-foreground">Política de Privacidade</Link>
+              <Link to="/termos-de-uso" className="hover:text-foreground">Termos de Uso</Link>
+              <a
+                href="https://wa.me/5519997663294?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20o%20OneTeacher."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground"
+              >
+                WhatsApp: (19) 99766-3294
+              </a>
+            </nav>
+          </div>
+          <p className="text-xs text-muted-foreground text-center sm:text-left">
+            © {new Date().getFullYear()} OneTeacher. Todos os direitos reservados.
+          </p>
         </div>
       </footer>
 
