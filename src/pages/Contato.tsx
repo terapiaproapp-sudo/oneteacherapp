@@ -9,6 +9,7 @@ export default function Contato() {
       <Seo
         title="Contato e suporte | OneTeacher"
         description="Fale com a equipe do OneTeacher pelo WhatsApp. Tire dúvidas, peça ajuda ou conheça melhor a plataforma para professores particulares."
+        path="/contato"
       />
       <PublicPageLayout title="Contato e suporte">
         <p>

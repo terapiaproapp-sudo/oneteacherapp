@@ -7,6 +7,7 @@ export default function TermosDeUso() {
       <Seo
         title="Termos de Uso | OneTeacher"
         description="Leia os Termos de Uso do OneTeacher: regras para utilização da plataforma, cadastro, assinaturas, cancelamento e responsabilidades."
+        path="/termos-de-uso"
       />
       <PublicPageLayout title="Termos de Uso" updatedAt="19/06/2026">
         <h2>1. Aceitação dos termos</h2>

@@ -7,6 +7,7 @@ export default function PoliticaDePrivacidade() {
       <Seo
         title="Política de Privacidade | OneTeacher"
         description="Saiba como o OneTeacher coleta, utiliza, armazena e protege os dados pessoais de professores e alunos cadastrados na plataforma."
+        path="/politica-de-privacidade"
       />
       <PublicPageLayout
         title="Política de Privacidade"

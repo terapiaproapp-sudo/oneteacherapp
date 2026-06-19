@@ -9,6 +9,7 @@ export default function Sobre() {
       <Seo
         title="Sobre o OneTeacher | Gestão para professores particulares"
         description="Conheça o OneTeacher: a plataforma que ajuda professores particulares a organizar alunos, aulas, pacotes, agenda e pagamentos em um único lugar."
+        path="/sobre"
       />
       <PublicPageLayout title="Sobre o OneTeacher">
         <p>
