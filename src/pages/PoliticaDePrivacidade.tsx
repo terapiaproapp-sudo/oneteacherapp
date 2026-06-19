@@ -87,31 +87,49 @@ export default function PoliticaDePrivacidade() {
         <h2>6. Compartilhamento com prestadores e integrações</h2>
         <p>
           Para operar a plataforma, podemos compartilhar dados estritamente
-          necessários com prestadores de serviço, incluindo:
+          necessários com prestadores de serviço. Os serviços atualmente
+          utilizados, conforme configuração do projeto, são:
         </p>
         <ul>
-          <li>provedor de banco de dados e autenticação;</li>
-          <li>provedor de processamento de pagamentos das assinaturas;</li>
-          <li>provedor de envio de notificações.</li>
+          <li>
+            <strong>Hospedagem, banco de dados e autenticação:</strong>{" "}
+            Lovable Cloud, que provê a infraestrutura, o banco de dados e o
+            serviço de autenticação utilizados pela plataforma.
+          </li>
+          <li>
+            <strong>Processamento de pagamentos das assinaturas:</strong>{" "}
+            Newexy, responsável pelo checkout das assinaturas contratadas pelos
+            professores.
+          </li>
+          <li>
+            <strong>Notificações push no navegador:</strong> serviço de envio
+            de notificações web operado por meio dos servidores de push do
+            próprio navegador do usuário (por exemplo, Google ou Mozilla), a
+            partir das funções da plataforma.
+          </li>
         </ul>
         <p>
           Esses prestadores tratam os dados apenas para as finalidades
-          contratadas pelo OneTeacher.
+          contratadas pelo OneTeacher. Outros fornecedores eventualmente
+          adicionados no futuro serão refletidos nesta página.
         </p>
 
         <h2>7. Autenticação</h2>
         <p>
-          O acesso à área restrita é realizado por e-mail e senha. A senha é
-          armazenada de forma criptografada por nosso provedor de
-          autenticação, e o OneTeacher não tem acesso ao seu valor original.
+          O acesso à área restrita é realizado por e-mail e senha. A
+          autenticação é processada pelo serviço de autenticação do Lovable
+          Cloud. O OneTeacher não exibe nem armazena senhas em texto aberto
+          em sua aplicação, e não tem acesso ao valor original da senha
+          definida pelo usuário, que é tratada diretamente pelo provedor de
+          autenticação.
         </p>
 
         <h2>8. Pagamentos e assinaturas</h2>
         <p>
-          O pagamento das assinaturas é processado por um parceiro externo de
-          checkout. Dados financeiros sensíveis, como número completo de
-          cartão, são tratados diretamente pelo provedor de pagamento e não
-          ficam armazenados no OneTeacher.
+          O pagamento das assinaturas é processado pelo parceiro externo de
+          checkout Newexy. Dados financeiros sensíveis, como número completo
+          de cartão, são tratados diretamente pelo provedor de pagamento e
+          não ficam armazenados no OneTeacher.
         </p>
 
         <h2>9. Cookies e tecnologias semelhantes</h2>
@@ -130,9 +148,11 @@ export default function PoliticaDePrivacidade() {
 
         <h2>11. Conservação dos dados</h2>
         <p>
-          Os dados são mantidos enquanto a conta do professor estiver ativa e
-          pelo tempo necessário para cumprir as finalidades descritas nesta
-          política ou obrigações legais aplicáveis.
+          Os dados são mantidos enquanto a conta do professor estiver ativa.
+          Após o encerramento da conta, parte das informações pode permanecer
+          armazenada temporariamente em razão de rotinas operacionais e
+          eventuais cópias de segurança da infraestrutura utilizada, bem como
+          de obrigações legais aplicáveis.
         </p>
 
         <h2>12. Direitos do titular</h2>
@@ -145,23 +165,59 @@ export default function PoliticaDePrivacidade() {
         <h2>13. Correção e exclusão de dados</h2>
         <p>
           O professor pode editar seus dados de cadastro e os dados dos alunos
-          diretamente na plataforma. Para solicitar a exclusão da conta, basta
-          entrar em contato pelo canal indicado abaixo.
+          diretamente na plataforma. Para solicitar a exclusão da conta, o
+          professor deve entrar em contato pelo WhatsApp indicado abaixo.
+          Após a solicitação, os dados vinculados à conta são removidos das
+          áreas operacionais da plataforma. Cópias residuais podem permanecer
+          em mecanismos internos da infraestrutura (como rotinas de cópia de
+          segurança) por período limitado, até serem substituídas pelos
+          ciclos normais desses sistemas.
         </p>
 
         <h2>14. Responsabilidades do professor</h2>
         <p>
-          O professor é o responsável pelos dados que insere sobre seus alunos
-          e deve garantir que possui autorização para esse tratamento, bem
-          como informar seus alunos quando necessário.
+          O professor é responsável pelos dados que insere e gerencia sobre
+          seus alunos. Ao utilizar a plataforma para esse fim, o professor
+          deve, entre outras boas práticas:
+        </p>
+        <ul>
+          <li>
+            possuir finalidade legítima para o cadastro e o tratamento das
+            informações de cada aluno;
+          </li>
+          <li>
+            cadastrar somente os dados estritamente necessários à prestação
+            das aulas e à organização administrativa correspondente;
+          </li>
+          <li>
+            manter as informações corretas, atualizadas e protegidas contra
+            acessos indevidos a partir de seus próprios dispositivos;
+          </li>
+          <li>
+            atender, quando aplicável, solicitações de seus alunos relativas
+            aos dados deles, como acesso, correção ou exclusão;
+          </li>
+          <li>
+            informar seus alunos sobre o uso da plataforma, quando isso for
+            relevante para o contexto da relação entre professor e aluno.
+          </li>
+        </ul>
+        <p>
+          O OneTeacher fornece as ferramentas de gestão, mas não autoriza o
+          professor a coletar ou utilizar dados de alunos sem fundamento
+          adequado. As definições jurídicas específicas de papéis de
+          tratamento de dados entre professor e plataforma devem ser
+          avaliadas conforme o contexto de uso e a legislação aplicável.
         </p>
 
         <h2>15. Dados de crianças e adolescentes</h2>
         <p>
-          Caso o professor cadastre informações sobre alunos menores de idade,
-          é sua responsabilidade obter a devida autorização dos responsáveis
-          legais e limitar a coleta ao estritamente necessário para a
-          prestação das aulas.
+          Caso o professor cadastre informações sobre alunos crianças ou
+          adolescentes, deve adotar cuidado reforçado, observando o melhor
+          interesse do menor. Cabe ao professor obter a devida autorização
+          dos responsáveis legais e limitar a coleta ao estritamente
+          necessário para a prestação das aulas, evitando registrar dados
+          sensíveis ou desnecessários.
         </p>
 
         <h2>16. Contato para assuntos de privacidade</h2>
