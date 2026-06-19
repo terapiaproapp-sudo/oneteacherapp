@@ -30,20 +30,24 @@ export default function WhatsAppFloat() {
     };
   }, [open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const trimmed = text.trim();
     if (!trimmed) {
+      e.preventDefault();
       setError("Digite sua dúvida antes de continuar.");
       return;
     }
     setError(null);
-    const message = `Olá! Estou no site do OneTeacher e tenho esta dúvida: ${trimmed}`;
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-    setText("");
-    setOpen(false);
+    // Deixa o navegador abrir o link nativamente em nova aba.
+    // Limpa o campo e fecha a caixa após o clique ter iniciado o redirecionamento.
+    setTimeout(() => {
+      setText("");
+      setOpen(false);
+    }, 0);
   };
+
+  const message = `Olá! Estou no site do OneTeacher e tenho esta dúvida: ${text.trim()}`;
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 
   return (
     <div ref={containerRef} className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
@@ -69,7 +73,7 @@ export default function WhatsAppFloat() {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <form onSubmit={handleSubmit} className="p-4 space-y-3">
+          <div className="p-4 space-y-3">
             <textarea
               ref={textareaRef}
               value={text}
@@ -88,14 +92,17 @@ export default function WhatsAppFloat() {
                 {error ?? `${text.length}/${MAX_LEN}`}
               </span>
             </div>
-            <button
-              type="submit"
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={handleSendClick}
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#22A851] px-4 py-2 text-sm font-medium text-white shadow hover:bg-[#1e9648] focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition"
             >
               <Send className="h-4 w-4" />
               Enviar no WhatsApp
-            </button>
-          </form>
+            </a>
+          </div>
         </div>
       )}
       <button
