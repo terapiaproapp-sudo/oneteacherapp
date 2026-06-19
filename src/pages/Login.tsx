@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { logActivity } from "@/lib/activityLogger";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,18 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
+  // Apenas rotas internas conhecidas são permitidas como destino pós-login.
+  const SAFE_NEXT = new Set(["/planos", "/dashboard"]);
+  const rawNext = searchParams.get("next") ?? "";
+  const nextPath = SAFE_NEXT.has(rawNext) ? rawNext : "/dashboard";
+  const planParam = searchParams.get("plan");
+  const allowedPlans = new Set(["mensal", "semestral", "anual"]);
+  const planSuffix =
+    nextPath === "/planos" && planParam && allowedPlans.has(planParam)
+      ? `?plan=${planParam}`
+      : "";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +42,7 @@ export default function Login() {
         return; 
       }
       logActivity("login_realizado");
-      if (data.session) navigate("/dashboard", { replace: true });
+      if (data.session) navigate(`${nextPath}${planSuffix}`, { replace: true });
     } catch (err: any) {
       toast({ title: "Erro inesperado", description: err.message, variant: "destructive" });
     } finally {
