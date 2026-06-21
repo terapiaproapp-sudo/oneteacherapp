@@ -225,6 +225,19 @@ export default function Agenda() {
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  type ConflictItem = {
+    date: string;
+    time: string;
+    end: string;
+    studentName?: string;
+    subject?: string;
+    modality?: string;
+    status?: string;
+    newTime?: string;
+    newEnd?: string;
+  };
+  const [conflictDialog, setConflictDialog] = useState<{ open: boolean; items: ConflictItem[] }>({ open: false, items: [] });
+
   const validateForm = () => {
     if (!form.student_id) {
       toast({ title: "Atenção", description: "Selecione um aluno", variant: "destructive" });
@@ -257,23 +270,68 @@ export default function Agenda() {
     return true;
   };
 
-  const checkConflicts = async (payloads: any[]) => {
-    // Basic conflict check: same teacher, same date, overlapping time
-    const conflicts = [];
-    for (const p of payloads) {
-      const dayLessons = lessons.filter(l => l.date.split("T")[0] === p.date && l.id !== editing?.id);
-      for (const l of dayLessons) {
-        const pStart = p.time;
-        const pEnd = calculateEndTime(p.time, p.duration);
-        const lStart = l.time;
-        const lEnd = calculateEndTime(l.time, l.duration);
-        
-        if ((pStart >= lStart && pStart < lEnd) || (pEnd > lStart && pEnd <= lEnd) || (pStart <= lStart && pEnd >= lEnd)) {
-          conflicts.push({ date: p.date, time: p.time, student: l.students?.name });
+  // Converts "HH:MM" to total minutes.
+  const toMinutes = (t: string) => {
+    if (!t) return 0;
+    const [h, m] = t.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  /**
+   * Database-backed conflict check for the current teacher.
+   * A conflict occurs only when intervals OVERLAP — touching edges (e.g. 11-12 vs 12-13) are allowed.
+   * Ignored statuses: "cancelada", "excluida".
+   *
+   * @param slots  list of { date (YYYY-MM-DD), time (HH:MM), duration (decimal hours) } to test
+   * @param excludeIds  lesson ids to ignore (the lesson being edited, or recurrence members being shifted together)
+   */
+  const findConflictsInDb = async (
+    slots: { date: string; time: string; duration: number }[],
+    excludeIds: string[] = []
+  ): Promise<ConflictItem[]> => {
+    if (!slots.length || !user) return [];
+    const dates = Array.from(new Set(slots.map(s => s.date)));
+    const { data, error } = await supabase
+      .from("lessons")
+      .select("id,date,time,duration,subject,modality,status,students(name)")
+      .eq("teacher_id", user.id)
+      .in("date", dates)
+      .not("status", "in", "(cancelada,excluida)");
+    if (error) throw error;
+    const excludeSet = new Set(excludeIds);
+    const conflicts: ConflictItem[] = [];
+    for (const s of slots) {
+      const sStart = toMinutes(s.time);
+      const sEnd = sStart + Math.round((s.duration || 0) * 60);
+      const sEndStr = calculateEndTime(s.time, s.duration);
+      for (const l of (data || []) as any[]) {
+        if (excludeSet.has(l.id)) continue;
+        const lDate = String(l.date).split("T")[0];
+        if (lDate !== s.date) continue;
+        const lStart = toMinutes(l.time);
+        const lEnd = lStart + Math.round((l.duration || 0) * 60);
+        // Overlap (touching edges allowed)
+        if (sStart < lEnd && sEnd > lStart) {
+          conflicts.push({
+            date: s.date,
+            time: l.time,
+            end: calculateEndTime(l.time, l.duration || 0),
+            studentName: l.students?.name,
+            subject: l.subject,
+            modality: l.modality,
+            status: l.status,
+            newTime: s.time,
+            newEnd: sEndStr,
+          });
         }
       }
     }
     return conflicts;
+  };
+
+  const blockWithConflicts = (items: ConflictItem[]) => {
+    setConflictDialog({ open: true, items });
+    setIsSaving(false);
   };
 
   const handleSave = async (forceMode?: "this" | "next" | "all") => {
@@ -310,9 +368,31 @@ export default function Agenda() {
           let affectedCount = 0;
           
           if (forceMode === "this") {
+            const conflicts = await findConflictsInDb(
+              [{ date: payload.date, time: payload.time, duration: payload.duration }],
+              [editing.id]
+            );
+            if (conflicts.length > 0) { blockWithConflicts(conflicts); return; }
             await supabase.from("lessons").update(payload).eq("id", editing.id);
             affectedCount = 1;
           } else if (forceMode === "next") {
+            // Fetch the recurrence members that will be shifted, then validate each new slot
+            const { data: affected } = await supabase.from("lessons")
+              .select("id,date")
+              .eq("teacher_id", user!.id)
+              .eq("recurrence_id", recurrenceId)
+              .gte("date", editing.date)
+              .neq("status", "concluida")
+              .neq("status", "noshow")
+              .neq("status", "cancelada");
+            const affectedRows = (affected || []) as { id: string; date: string }[];
+            const slots = affectedRows.map(r => ({
+              date: String(r.date).split("T")[0],
+              time: payload.time,
+              duration: payload.duration,
+            }));
+            const conflicts = await findConflictsInDb(slots, affectedRows.map(r => r.id));
+            if (conflicts.length > 0) { blockWithConflicts(conflicts); return; }
             const { data: futures } = await supabase.from("lessons")
               .update({
                 time: payload.time,
@@ -327,6 +407,21 @@ export default function Agenda() {
               .neq("status", "noshow");
             affectedCount = lessons.filter(l => l.recurrence_id === recurrenceId && l.date >= editing.date && l.status !== "concluida" && l.status !== "noshow").length;
           } else if (forceMode === "all") {
+            const { data: affected } = await supabase.from("lessons")
+              .select("id,date")
+              .eq("teacher_id", user!.id)
+              .eq("recurrence_id", recurrenceId)
+              .neq("status", "concluida")
+              .neq("status", "noshow")
+              .neq("status", "cancelada");
+            const affectedRows = (affected || []) as { id: string; date: string }[];
+            const slots = affectedRows.map(r => ({
+              date: String(r.date).split("T")[0],
+              time: payload.time,
+              duration: payload.duration,
+            }));
+            const conflicts = await findConflictsInDb(slots, affectedRows.map(r => r.id));
+            if (conflicts.length > 0) { blockWithConflicts(conflicts); return; }
             await supabase.from("lessons")
               .update({
                 time: payload.time,
@@ -352,6 +447,11 @@ export default function Agenda() {
 
           toast({ title: "Recorrência atualizada!", description: `${affectedCount} aulas afetadas.` });
         } else {
+          const conflicts = await findConflictsInDb(
+            [{ date: payload.date, time: payload.time, duration: payload.duration }],
+            [editing.id]
+          );
+          if (conflicts.length > 0) { blockWithConflicts(conflicts); return; }
           await supabase.from("lessons").update(payload).eq("id", editing.id);
           toast({ title: "Aula atualizada!" });
         }
@@ -373,14 +473,10 @@ export default function Agenda() {
             status: "agendada"
           }));
 
-          const conflicts = await checkConflicts(rows);
-          if (conflicts.length > 0) {
-            const confirmMsg = `Existem ${conflicts.length} possíveis conflitos de horário. Deseja prosseguir mesmo assim?`;
-            if (!confirm(confirmMsg)) {
-              setIsSaving(false);
-              return;
-            }
-          }
+          const conflicts = await findConflictsInDb(
+            rows.map(r => ({ date: r.date, time: r.time, duration: r.duration }))
+          );
+          if (conflicts.length > 0) { blockWithConflicts(conflicts); return; }
 
           const { error: insertError } = await supabase.from("lessons").insert(rows);
           if (insertError) throw insertError;
@@ -401,6 +497,10 @@ export default function Agenda() {
 
           toast({ title: `${recurrencePreviewData.length} aulas agendadas!`, description: `Recorrência ${form.recurrence} criada.` });
         } else {
+          const conflicts = await findConflictsInDb(
+            [{ date: payload.date, time: payload.time, duration: payload.duration }]
+          );
+          if (conflicts.length > 0) { blockWithConflicts(conflicts); return; }
           const { error: insertError } = await supabase.from("lessons").insert(payload);
           if (insertError) throw insertError;
           toast({ title: "Aula agendada!" });
