@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, MoreVertical, Play, X, CheckCircle2, Link2, ArrowRightLeft, AlertTriangle } from "lucide-react";
+import { Package, MoreVertical, Play, X, CheckCircle2, Link2, ArrowRightLeft, AlertTriangle, Unlink } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -131,7 +131,7 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
                   {p.status === "ativo" && (
                     <>
                       <DropdownMenuItem onClick={() => setReconcilePkg(p)}>
-                        <Link2 className="h-4 w-4 mr-2" /> Conciliar consumo
+                        <Link2 className="h-4 w-4 mr-2" /> Vincular aulas sem pacote
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => updateStatus(p, "encerrado")}>
                         <CheckCircle2 className="h-4 w-4 mr-2" /> Encerrar
@@ -140,7 +140,7 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
                   )}
                   {hasExcess && (
                     <DropdownMenuItem onClick={() => setTransferPkg(p)}>
-                      <ArrowRightLeft className="h-4 w-4 mr-2" /> Corrigir excesso de consumo
+                      <ArrowRightLeft className="h-4 w-4 mr-2" /> Corrigir excesso
                     </DropdownMenuItem>
                   )}
                   {!isClosed && (
@@ -194,8 +194,8 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
                   className="w-full h-8 text-xs rounded-lg gap-1.5"
                   onClick={() => setReconcilePkg(p)}
                 >
-                  <Link2 className="h-3.5 w-3.5" />
-                  Reconciliar consumo
+                  <Unlink className="h-3.5 w-3.5" />
+                  Vincular aulas sem pacote
                   {pendingCount > 0 && (
                     <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-warning/15 text-warning border-warning/30 ml-1">
                       {pendingCount} aula{pendingCount > 1 ? "s" : ""} aguardando vínculo
