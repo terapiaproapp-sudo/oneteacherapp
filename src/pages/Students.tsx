@@ -1398,6 +1398,19 @@ export default function Students() {
           />
         );
       })()}
+
+      {/* Transfer excess from summary */}
+      {excessTransfer && (
+        <TransferExcessDialog
+          open={!!excessTransfer}
+          onOpenChange={(v) => { if (!v) setExcessTransfer(null); }}
+          sourcePkg={excessTransfer.source as any}
+          destPkg={excessTransfer.dest as any}
+          studentId={excessTransfer.student.id}
+          studentName={excessTransfer.student.name}
+          onChanged={() => { loadAll(); }}
+        />
+      )}
     </div>
   );
 }
