@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil, KeyRound, ShieldCheck, ShieldOff, Loader2, FileText, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Phone, Mail, User, Clock, Package, AlertTriangle, Eye, CreditCard, Pencil, KeyRound, ShieldCheck, ShieldOff, Loader2, FileText, Calendar as CalendarIcon, ArrowRightLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, addMonths } from "date-fns";
 import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
@@ -48,6 +48,7 @@ interface StudentPackage {
   id: string; student_id: string; teacher_id: string; name: string;
   hours_total: number; hours_used: number; total_value: number;
   hourly_rate: number; expires_at: string | null; status: string;
+  created_at?: string;
 }
 interface Payment {
   id: string; student_id: string; amount: number; status: string;
