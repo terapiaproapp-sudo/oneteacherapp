@@ -303,6 +303,10 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
     setSaving(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
+      const reconciledBy = userData.user?.id;
+      if (!reconciledBy) {
+        throw new Error("Usuário não identificado. Entre novamente e tente marcar a aula como tratada.");
+      }
       const note = `Consumo tratado por ajuste numérico de pacote em ${format(new Date(), "dd/MM/yyyy")} (${formatHoursDisplay(lastNumericHours)} · ${sourcePkg.name} → ${destPkg.name}).`;
       const { data: updated, error } = await supabase
         .from("lessons")
@@ -310,7 +314,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
           reconciliation_status: "numeric_adjustment",
           reconciliation_note: note,
           reconciled_at: new Date().toISOString(),
-          reconciled_by: userData.user?.id || null,
+          reconciled_by: reconciledBy,
         })
         .in("id", ids)
         .eq("student_id", studentId)
@@ -341,6 +345,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
         lesson.reconciliation_status !== "numeric_adjustment" ||
         !lesson.reconciliation_note ||
         !lesson.reconciled_at ||
+        !lesson.reconciled_by ||
         lesson.package_id !== null
       );
       if (invalidRows.length > 0 || (validatedRows || []).length !== ids.length) {
@@ -356,7 +361,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
           dest_package_id: destPkg.id,
           dest_package_name: destPkg.name,
           hours_adjusted: lastNumericHours,
-          reconciled_by: userData.user?.id || null,
+          reconciled_by: reconciledBy,
         });
       }
       toast({
