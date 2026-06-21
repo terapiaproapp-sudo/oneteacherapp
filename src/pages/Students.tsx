@@ -18,6 +18,7 @@ import { format, addMonths } from "date-fns";
 import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 import NewPackageDialog from "@/components/students/NewPackageDialog";
 import PackageHistory from "@/components/students/PackageHistory";
+import TransferExcessDialog from "@/components/students/TransferExcessDialog";
 import { statusBadgeClasses, statusLabel } from "@/lib/packageUtils";
 
 interface StudentAccessRecord {
@@ -111,6 +112,7 @@ export default function Students() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<string | null>(null);
   const [newPkgStudent, setNewPkgStudent] = useState<Student | null>(null);
+  const [excessTransfer, setExcessTransfer] = useState<{ source: StudentPackage; dest: StudentPackage | null; student: Student } | null>(null);
 
   // Student access state
   const [accessRecords, setAccessRecords] = useState<Record<string, StudentAccessRecord>>({});
@@ -1140,9 +1142,64 @@ export default function Students() {
           {summaryStudent && (() => {
             const info = getHoursInfo(summaryStudent.id);
             const activePkg = getActivePackage(summaryStudent.id);
-            
+            const allPkgs = getStudentPackages(summaryStudent.id);
+            const sortedPkgs = [...allPkgs].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+            const lastClosedPkg = sortedPkgs.find((p) => p.status !== "ativo") || null;
+            const primaryPkg: StudentPackage | null = activePkg || lastClosedPkg;
+            const primaryHoursMin = primaryPkg ? primaryPkg.hours_total * 60 : 0;
+            const primaryUsedMin = primaryPkg ? primaryPkg.hours_used : 0;
+            const primaryRemainMin = primaryHoursMin - primaryUsedMin;
+            const excessMin = primaryPkg ? Math.max(0, primaryUsedMin - primaryHoursMin) : 0;
+            const pctPrimary = primaryHoursMin > 0 ? Math.min(100, Math.round((primaryUsedMin / primaryHoursMin) * 100)) : 0;
+
             return (
               <div className="space-y-6 py-2">
+                {/* Empty state — no packages at all */}
+                {allPkgs.length === 0 && summaryStudent.enrollment_type === "pacote" && (
+                  <div className="p-6 rounded-xl border border-dashed border-border bg-muted/20 text-center space-y-3">
+                    <Package className="h-8 w-8 text-muted-foreground mx-auto" />
+                    <p className="text-sm font-medium">Este aluno ainda não possui pacote cadastrado.</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Button size="sm" className="rounded-lg gap-1" onClick={() => setNewPkgStudent(summaryStudent)}>
+                        <Plus className="h-3.5 w-3.5" /> Adicionar pacote
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Closed-package banner */}
+                {!activePkg && lastClosedPkg && (
+                  <div className="p-3 rounded-xl border border-warning/30 bg-warning/5 text-xs text-warning font-medium">
+                    Este aluno não possui pacote ativo no momento. Exibindo dados do último pacote ({statusLabel(lastClosedPkg.status)}).
+                  </div>
+                )}
+
+                {/* Excess alert */}
+                {excessMin > 0 && primaryPkg && (
+                  <div className="p-3 rounded-xl border border-destructive/30 bg-destructive/5 flex items-start gap-3">
+                    <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <p className="text-xs font-bold text-destructive">
+                        Excesso de {formatHoursDisplay(excessMin)} consumidas no pacote {activePkg ? "" : "anterior "}({primaryPkg.name}).
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {activePkg
+                          ? "Você pode transferir as aulas excedentes para o pacote ativo."
+                          : "Crie um novo pacote ativo para transferir as aulas excedentes."}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs rounded-lg gap-1 mt-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                        disabled={!activePkg}
+                        onClick={() => activePkg && setExcessTransfer({ source: primaryPkg as any, dest: activePkg as any, student: summaryStudent })}
+                      >
+                        <ArrowRightLeft className="h-3 w-3" /> Corrigir excesso
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Metrics Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
@@ -1152,19 +1209,27 @@ export default function Students() {
                        summaryStudent.enrollment_type === "avulsa" ? "Aula avulsa" : "Sem pacote"}
                     </p>
                   </div>
-                  {summaryStudent.enrollment_type === "pacote" ? (
+                  {summaryStudent.enrollment_type === "pacote" && primaryPkg ? (
                     <>
                       <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Total do Pacote</p>
-                        <p className="text-lg font-bold text-primary">{formatHoursDisplay(info.totalHours)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">
+                          {activePkg ? "Total do Pacote" : "Último Pacote"}
+                        </p>
+                        <p className="text-lg font-bold text-primary">{formatHoursDisplay(primaryHoursMin)}</p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
                         <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumidas</p>
-                        <p className="text-lg font-bold text-green-600">{formatHoursDisplay(studentLessonsSummary.packageHoursConsumed)}</p>
+                        <p className={`text-lg font-bold ${excessMin > 0 ? "text-destructive" : "text-green-600"}`}>
+                          {formatHoursDisplay(primaryUsedMin)}
+                        </p>
                       </div>
                       <div className="p-3 rounded-xl bg-muted/40 border border-border/40">
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Saldo Restante</p>
-                        <p className="text-lg font-bold text-accent">{formatHoursDisplay(info.totalHours - studentLessonsSummary.packageHoursConsumed)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">
+                          {excessMin > 0 ? "Excesso" : "Saldo Restante"}
+                        </p>
+                        <p className={`text-lg font-bold ${excessMin > 0 ? "text-destructive" : "text-accent"}`}>
+                          {excessMin > 0 ? formatHoursDisplay(excessMin) : formatHoursDisplay(Math.max(0, primaryRemainMin))}
+                        </p>
                       </div>
                     </>
                   ) : (
@@ -1197,15 +1262,19 @@ export default function Students() {
                 </div>
 
                 {/* Package Progress */}
-                {summaryStudent.enrollment_type === "pacote" && activePkg && (
+                {primaryPkg && (
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1">
-                        <Package className="h-3 w-3" /> Pacote: {activePkg.name}
+                        <Package className="h-3 w-3" />
+                        {activePkg ? "Pacote ativo: " : "Último pacote: "}{primaryPkg.name}
+                        <Badge variant="outline" className={`ml-1 text-[9px] h-4 px-1 ${statusBadgeClasses(primaryPkg.status)}`}>
+                          {statusLabel(primaryPkg.status)}
+                        </Badge>
                       </h3>
-                      <span className="text-[11px] font-medium">{info.percentage}% consumido</span>
+                      <span className="text-[11px] font-medium">{pctPrimary}% consumido</span>
                     </div>
-                    <Progress value={info.percentage} className="h-3" />
+                    <Progress value={pctPrimary} className="h-3" />
                   </div>
                 )}
 
