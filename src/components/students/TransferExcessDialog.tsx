@@ -346,6 +346,62 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
   return (
     <Dialog open={open} onOpenChange={(v) => !saving && onOpenChange(v)}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        {step === "markOrphans" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Marcar aulas como tratadas?
+              </DialogTitle>
+              <DialogDescription>
+                Existe{orphanLessons.length > 1 ? "m" : ""} <strong>{orphanLessons.length}</strong> aula{orphanLessons.length > 1 ? "s" : ""} sem pacote
+                relacionada{orphanLessons.length > 1 ? "s" : ""} a este aluno. Como o excesso já foi corrigido por <strong>ajuste numérico</strong>,
+                você pode marcá-la{orphanLessons.length > 1 ? "s" : ""} como tratada{orphanLessons.length > 1 ? "s" : ""} para que não apareça{orphanLessons.length > 1 ? "m" : ""} mais como pendente.
+                A aula continua existindo no histórico — apenas deixa de aparecer em "aulas aguardando vínculo".
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              <div className="border border-border/60 rounded-lg divide-y">
+                {orphanLessons.map((l) => {
+                  const end = calculateEndTime(l.time, Number(l.duration || 0));
+                  return (
+                    <label key={l.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/30">
+                      <Checkbox
+                        checked={!!orphanSelected[l.id]}
+                        onCheckedChange={(v) => setOrphanSelected((s) => ({ ...s, [l.id]: !!v }))}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy")}</span>
+                          <span className="text-xs text-muted-foreground">{l.time}–{end} · {formatHoursDisplay(Number(l.duration || 0))}</span>
+                          {l.subject && <span className="text-xs text-muted-foreground truncate">· {l.subject}</span>}
+                        </div>
+                        <div className="mt-0.5">
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-muted text-muted-foreground border-border">sem pacote</Badge>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Marcar como tratada <strong>não</strong> vincula a aula ao pacote, não altera consumo, financeiro ou pagamentos. Apenas registra que o consumo já foi resolvido pelo ajuste numérico.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => markOrphansAsTreated(false)} disabled={saving}>
+                Não, manter pendente
+              </Button>
+              <Button onClick={() => markOrphansAsTreated(true)} disabled={saving}>
+                {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Marcando…</> : "Sim, marcar como tratada"}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+        <>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />
@@ -520,6 +576,8 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
             )}
           </Button>
         </DialogFooter>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
