@@ -187,7 +187,7 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
                 </Button>
               </div>
             )}
-            {isActive && (
+            {isActive && pendingCount > 0 && (
               <div className="pt-1">
                 <Button
                   size="sm"
@@ -197,11 +197,9 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
                 >
                   <Unlink className="h-3.5 w-3.5" />
                   Vincular aulas sem pacote
-                  {pendingCount > 0 && (
-                    <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-warning/15 text-warning border-warning/30 ml-1">
-                      {pendingCount} aula{pendingCount > 1 ? "s" : ""} aguardando vínculo
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-warning/15 text-warning border-warning/30 ml-1">
+                    {pendingCount} aula{pendingCount > 1 ? "s" : ""} aguardando vínculo
+                  </Badge>
                 </Button>
               </div>
             )}

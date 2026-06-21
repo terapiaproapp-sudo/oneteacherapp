@@ -104,6 +104,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
   }, [open, studentId, sourcePkg.id, excess, toast]);
 
   const selectedLessons = useMemo(() => lessons.filter((l) => selected[l.id]), [lessons, selected]);
+  const selectedOrphanLessons = useMemo(() => orphanLessons.filter((l) => orphanSelected[l.id]), [orphanLessons, orphanSelected]);
   const lessonHoursSelected = useMemo(
     () => selectedLessons.reduce((acc, l) => acc + Number(l.duration || 0), 0),
     [selectedLessons]
@@ -272,9 +273,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
         const rows = (orphans || []) as LessonRow[];
         if (rows.length > 0) {
           setOrphanLessons(rows);
-          const init: Record<string, boolean> = {};
-          rows.forEach((l) => { init[l.id] = true; });
-          setOrphanSelected(init);
+          setOrphanSelected({});
           setLastNumericHours(movedHours);
           setStep("markOrphans");
           onChanged();
@@ -296,27 +295,62 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
       onOpenChange(false);
       return;
     }
-    const ids = orphanLessons.filter((l) => orphanSelected[l.id]).map((l) => l.id);
+    const ids = selectedOrphanLessons.map((l) => l.id);
     if (ids.length === 0) {
-      onOpenChange(false);
+      toast({ title: "Selecione ao menos uma aula", description: "Nenhuma aula foi marcada como tratada.", variant: "destructive" });
       return;
     }
     setSaving(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
+      const reconciledBy = userData.user?.id;
+      if (!reconciledBy) {
+        throw new Error("Usuário não identificado. Entre novamente e tente marcar a aula como tratada.");
+      }
       const note = `Consumo tratado por ajuste numérico de pacote em ${format(new Date(), "dd/MM/yyyy")} (${formatHoursDisplay(lastNumericHours)} · ${sourcePkg.name} → ${destPkg.name}).`;
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("lessons")
         .update({
           reconciliation_status: "numeric_adjustment",
           reconciliation_note: note,
           reconciled_at: new Date().toISOString(),
-          reconciled_by: userData.user?.id || null,
+          reconciled_by: reconciledBy,
         })
         .in("id", ids)
+        .eq("student_id", studentId)
+        .eq("lesson_type", "pacote")
+        .in("status", ["concluida", "noshow"])
         .is("package_id", null)
-        .is("reconciliation_status", null);
+        .is("reconciliation_status", null)
+        .select("id,reconciliation_status,reconciliation_note,reconciled_at,reconciled_by,package_id");
       if (error) throw error;
+      const updatedRows = (updated || []) as Array<{
+        id: string;
+        reconciliation_status: string | null;
+        reconciliation_note: string | null;
+        reconciled_at: string | null;
+        reconciled_by: string | null;
+        package_id: string | null;
+      }>;
+      if (updatedRows.length !== ids.length) {
+        throw new Error("Nem todas as aulas selecionadas foram marcadas. Reabra o modal e tente novamente.");
+      }
+
+      const { data: validatedRows, error: validationError } = await supabase
+        .from("lessons")
+        .select("id,reconciliation_status,reconciliation_note,reconciled_at,reconciled_by,package_id")
+        .in("id", ids);
+      if (validationError) throw validationError;
+      const invalidRows = (validatedRows || []).filter((lesson: any) =>
+        lesson.reconciliation_status !== "numeric_adjustment" ||
+        !lesson.reconciliation_note ||
+        !lesson.reconciled_at ||
+        !lesson.reconciled_by ||
+        lesson.package_id !== null
+      );
+      if (invalidRows.length > 0 || (validatedRows || []).length !== ids.length) {
+        throw new Error("A validação da marcação falhou. A aula não foi removida das pendências.");
+      }
       for (const lid of ids) {
         await logActivity("lesson_marked_as_reconciled_by_numeric_adjustment", {
           student_id: studentId,
@@ -327,7 +361,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
           dest_package_id: destPkg.id,
           dest_package_name: destPkg.name,
           hours_adjusted: lastNumericHours,
-          reconciled_by: userData.user?.id || null,
+          reconciled_by: reconciledBy,
         });
       }
       toast({
@@ -361,6 +395,10 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
               </DialogDescription>
             </DialogHeader>
             <div className="flex-1 overflow-y-auto space-y-2">
+              <div className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-2 text-xs">
+                <span className="font-medium">{selectedOrphanLessons.length} de {orphanLessons.length} selecionada(s)</span>
+                <span className="text-muted-foreground">Apenas selecionadas serão tratadas</span>
+              </div>
               <div className="border border-border/60 rounded-lg divide-y">
                 {orphanLessons.map((l) => {
                   const end = calculateEndTime(l.time, Number(l.duration || 0));
@@ -395,7 +433,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
               <Button variant="outline" onClick={() => markOrphansAsTreated(false)} disabled={saving}>
                 Não, manter pendente
               </Button>
-              <Button onClick={() => markOrphansAsTreated(true)} disabled={saving}>
+              <Button onClick={() => markOrphansAsTreated(true)} disabled={saving || selectedOrphanLessons.length === 0}>
                 {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Marcando…</> : "Sim, marcar como tratada"}
               </Button>
             </DialogFooter>
