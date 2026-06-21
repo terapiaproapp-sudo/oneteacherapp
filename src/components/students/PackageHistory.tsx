@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, MoreVertical, Play, X, CheckCircle2, Link2 } from "lucide-react";
+import { Package, MoreVertical, Play, X, CheckCircle2, Link2, ArrowRightLeft, AlertTriangle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ import { formatHoursDisplay } from "@/lib/formatMinutes";
 import { statusBadgeClasses, statusLabel } from "@/lib/packageUtils";
 import { format } from "date-fns";
 import ReconcilePackageDialog from "./ReconcilePackageDialog";
+import TransferExcessDialog from "./TransferExcessDialog";
 
 interface PackageRow {
   id: string; name: string; hours_total: number; hours_used: number;
@@ -28,6 +29,7 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [reconcilePkg, setReconcilePkg] = useState<PackageRow | null>(null);
+  const [transferPkg, setTransferPkg] = useState<PackageRow | null>(null);
   const [pendingCount, setPendingCount] = useState<number>(0);
 
   const loadPendingCount = async () => {
@@ -89,6 +91,7 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
   }
 
   const sorted = [...packages].sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+  const activePkg = packages.find((p) => p.status === "ativo") || null;
 
   return (
     <div className="space-y-2">
@@ -96,6 +99,8 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
         const remaining = Math.max(0, p.hours_total - p.hours_used);
         const isClosed = p.status === "encerrado" || p.status === "concluido" || p.status === "cancelado";
         const isActive = p.status === "ativo";
+        const excess = Math.max(0, Number(p.hours_used || 0) - Number(p.hours_total || 0));
+        const hasExcess = excess > 0;
         return (
           <div key={p.id} className="p-3 rounded-xl border border-border/60 bg-card space-y-2">
             <div className="flex items-start justify-between gap-2">
@@ -124,8 +129,18 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
                     </DropdownMenuItem>
                   )}
                   {p.status === "ativo" && (
-                    <DropdownMenuItem onClick={() => updateStatus(p, "encerrado")}>
-                      <CheckCircle2 className="h-4 w-4 mr-2" /> Encerrar
+                    <>
+                      <DropdownMenuItem onClick={() => setReconcilePkg(p)}>
+                        <Link2 className="h-4 w-4 mr-2" /> Conciliar consumo
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => updateStatus(p, "encerrado")}>
+                        <CheckCircle2 className="h-4 w-4 mr-2" /> Encerrar
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {hasExcess && (
+                    <DropdownMenuItem onClick={() => setTransferPkg(p)}>
+                      <ArrowRightLeft className="h-4 w-4 mr-2" /> Corrigir excesso de consumo
                     </DropdownMenuItem>
                   )}
                   {!isClosed && (
@@ -143,7 +158,7 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
               </div>
               <div>
                 <p className="text-muted-foreground">Consumidas</p>
-                <p className="font-semibold">{formatHoursDisplay(p.hours_used)}</p>
+                <p className={`font-semibold ${hasExcess ? "text-destructive" : ""}`}>{formatHoursDisplay(p.hours_used)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Restantes</p>
@@ -154,6 +169,23 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
               <span className="text-muted-foreground">R$ {p.total_value.toFixed(2)}</span>
               <span className="text-muted-foreground capitalize">{p.payment_method === "parcelado" ? "Parcelado" : "À vista"}</span>
             </div>
+            {hasExcess && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-[11px] text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Excesso de {formatHoursDisplay(excess)} consumidas</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px] rounded-md gap-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                  onClick={() => setTransferPkg(p)}
+                >
+                  <ArrowRightLeft className="h-3 w-3" />
+                  Corrigir excesso
+                </Button>
+              </div>
+            )}
             {isActive && (
               <div className="pt-1">
                 <Button
@@ -180,6 +212,17 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
           open={!!reconcilePkg}
           onOpenChange={(v) => { if (!v) setReconcilePkg(null); }}
           pkg={reconcilePkg}
+          studentId={studentId}
+          studentName={studentName}
+          onChanged={() => { onChanged(); loadPendingCount(); }}
+        />
+      )}
+      {transferPkg && (
+        <TransferExcessDialog
+          open={!!transferPkg}
+          onOpenChange={(v) => { if (!v) setTransferPkg(null); }}
+          sourcePkg={transferPkg}
+          destPkg={activePkg && activePkg.id !== transferPkg.id ? activePkg : null}
           studentId={studentId}
           studentName={studentName}
           onChanged={() => { onChanged(); loadPendingCount(); }}
