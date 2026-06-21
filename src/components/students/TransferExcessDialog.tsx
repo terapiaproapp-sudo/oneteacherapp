@@ -48,11 +48,16 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [mode, setMode] = useState<"lessons" | "numeric">("lessons");
   const [numericInput, setNumericInput] = useState<string>("");
+  const [step, setStep] = useState<"form" | "markOrphans">("form");
+  const [orphanLessons, setOrphanLessons] = useState<LessonRow[]>([]);
+  const [orphanSelected, setOrphanSelected] = useState<Record<string, boolean>>({});
+  const [lastNumericHours, setLastNumericHours] = useState<number>(0);
 
   const excess = Math.max(0, Number(sourcePkg.hours_used || 0) - Number(sourcePkg.hours_total || 0));
 
   useEffect(() => {
     if (!open) return;
+    setStep("form");
     let cancelled = false;
     (async () => {
       setLoading(true);
