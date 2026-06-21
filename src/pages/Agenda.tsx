@@ -1520,6 +1520,56 @@ export default function Agenda() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Conflict dialog: blocks scheduling when slots overlap with existing lessons */}
+      <AlertDialog open={conflictDialog.open} onOpenChange={(open) => setConflictDialog(s => ({ ...s, open }))}>
+        <AlertDialogContent className="max-w-lg rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-bold text-destructive">
+              Conflito de horário
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm pt-2">
+              Já existe {conflictDialog.items.length === 1 ? "uma aula agendada" : `${conflictDialog.items.length} aulas agendadas`} neste dia e horário. Altere a data ou o horário para continuar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="max-h-72 overflow-auto rounded-xl border border-border/60 divide-y divide-border/60 my-2">
+            {conflictDialog.items.map((c, i) => (
+              <div key={i} className="p-3 text-xs">
+                <div className="font-semibold text-sm">
+                  {safeFormatDate(c.date + "T12:00:00", "dd/MM/yyyy", c.date)} — {c.time} às {c.end}
+                </div>
+                <div className="text-muted-foreground mt-1">
+                  {c.studentName ? <span className="font-medium text-foreground">{c.studentName}</span> : "Aluno"}
+                  {c.subject ? <> · {c.subject}</> : null}
+                  {c.modality ? <> · {c.modality}</> : null}
+                  {c.status ? <> · {c.status}</> : null}
+                </div>
+                {c.newTime && c.newEnd && (c.newTime !== c.time || c.newEnd !== c.end) && (
+                  <div className="text-[11px] text-destructive/80 mt-1">
+                    Tentativa: {c.newTime} às {c.newEnd}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="rounded-xl"
+              onClick={() => { setConflictDialog({ open: false, items: [] }); setDialogOpen(false); setEditing(null); }}
+            >
+              Cancelar agendamento
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl"
+              onClick={() => setConflictDialog({ open: false, items: [] })}
+            >
+              Alterar data/horário
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
