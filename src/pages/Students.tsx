@@ -745,13 +745,15 @@ export default function Students() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-bold truncate">{s.name}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{s.subject || "Sem disciplina"} · {s.modality}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {s.subject?.trim() ? s.subject : "Disciplina não informada"} · {s.modality}
+                        </p>
                       </div>
                     </div>
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-5 border ${statusBadge(s.status)}`}>{s.status}</Badge>
                   </div>
 
-                  {activePkg && (
+                  {activePkg ? (
                     <div className="mb-3 space-y-2">
                       <div className="flex justify-between items-center text-[11px]">
                         <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" />{formatHoursDisplay(info.usedHours)} / {formatHoursDisplay(info.totalHours)}</span>
@@ -763,6 +765,23 @@ export default function Students() {
                       <Progress value={info.percentage} className="h-2" />
                       <p className="text-[10px] text-muted-foreground text-right">{info.percentage}% consumido</p>
                     </div>
+                  ) : (
+                    <div className="mb-3 rounded-lg border border-dashed border-border bg-muted/30 p-3 text-center">
+                      <p className="text-[11px] font-semibold text-foreground flex items-center justify-center gap-1">
+                        <Package className="h-3 w-3" /> Sem pacote ativo
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                        Adicione um novo pacote ou agende uma aula avulsa.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 mt-2 text-[11px] rounded-lg gap-1"
+                        onClick={() => setNewPkgStudent(s)}
+                      >
+                        <Plus className="h-3 w-3" /> Pacote
+                      </Button>
+                    </div>
                   )}
 
                   {activePkg && (
@@ -771,7 +790,10 @@ export default function Students() {
                     </div>
                   )}
 
-                  {s.phone && <p className="text-[11px] text-muted-foreground mb-3 flex items-center gap-1"><Phone className="h-3 w-3" /> {s.phone}</p>}
+                  <p className="text-[11px] text-muted-foreground mb-3 flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {s.phone?.trim() ? s.phone : <span className="italic">Telefone não informado</span>}
+                  </p>
 
                   <div className="flex items-center justify-between pt-3 border-t border-border/40">
                     <div className="flex gap-1">
