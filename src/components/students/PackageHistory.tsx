@@ -41,6 +41,7 @@ export default function PackageHistory({ studentId, studentName, packages, onCha
       .is("package_id", null)
       .eq("lesson_type", "pacote")
       .in("status", ["concluida", "noshow"])
+      .is("reconciliation_status", null)
       .lte("date", today);
     setPendingCount(count || 0);
   };

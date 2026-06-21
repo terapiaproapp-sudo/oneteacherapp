@@ -48,11 +48,16 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [mode, setMode] = useState<"lessons" | "numeric">("lessons");
   const [numericInput, setNumericInput] = useState<string>("");
+  const [step, setStep] = useState<"form" | "markOrphans">("form");
+  const [orphanLessons, setOrphanLessons] = useState<LessonRow[]>([]);
+  const [orphanSelected, setOrphanSelected] = useState<Record<string, boolean>>({});
+  const [lastNumericHours, setLastNumericHours] = useState<number>(0);
 
   const excess = Math.max(0, Number(sourcePkg.hours_used || 0) - Number(sourcePkg.hours_total || 0));
 
   useEffect(() => {
     if (!open) return;
+    setStep("form");
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -251,6 +256,31 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
           title: "Saldo ajustado ✅",
           description: `${formatHoursDisplay(movedHours)} transferida(s) numericamente do pacote antigo para o novo.`,
         });
+        // Buscar aulas órfãs (sem pacote, ainda não tratadas) — se houver,
+        // pular para etapa de marcar como tratadas em vez de fechar.
+        const today = format(new Date(), "yyyy-MM-dd");
+        const { data: orphans } = await supabase
+          .from("lessons")
+          .select("id,date,time,duration,status,subject")
+          .eq("student_id", studentId)
+          .is("package_id", null)
+          .eq("lesson_type", "pacote")
+          .in("status", ["concluida", "noshow"])
+          .is("reconciliation_status", null)
+          .lte("date", today)
+          .order("date", { ascending: false });
+        const rows = (orphans || []) as LessonRow[];
+        if (rows.length > 0) {
+          setOrphanLessons(rows);
+          const init: Record<string, boolean> = {};
+          rows.forEach((l) => { init[l.id] = true; });
+          setOrphanSelected(init);
+          setLastNumericHours(movedHours);
+          setStep("markOrphans");
+          onChanged();
+          setSaving(false);
+          return;
+        }
       }
       onChanged();
       onOpenChange(false);
@@ -261,9 +291,117 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
     }
   };
 
+  const markOrphansAsTreated = async (mark: boolean) => {
+    if (!mark) {
+      onOpenChange(false);
+      return;
+    }
+    const ids = orphanLessons.filter((l) => orphanSelected[l.id]).map((l) => l.id);
+    if (ids.length === 0) {
+      onOpenChange(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const note = `Consumo tratado por ajuste numérico de pacote em ${format(new Date(), "dd/MM/yyyy")} (${formatHoursDisplay(lastNumericHours)} · ${sourcePkg.name} → ${destPkg.name}).`;
+      const { error } = await supabase
+        .from("lessons")
+        .update({
+          reconciliation_status: "numeric_adjustment",
+          reconciliation_note: note,
+          reconciled_at: new Date().toISOString(),
+          reconciled_by: userData.user?.id || null,
+        })
+        .in("id", ids)
+        .is("package_id", null)
+        .is("reconciliation_status", null);
+      if (error) throw error;
+      for (const lid of ids) {
+        await logActivity("lesson_marked_as_reconciled_by_numeric_adjustment", {
+          student_id: studentId,
+          student_name: studentName,
+          lesson_id: lid,
+          source_package_id: sourcePkg.id,
+          source_package_name: sourcePkg.name,
+          dest_package_id: destPkg.id,
+          dest_package_name: destPkg.name,
+          hours_adjusted: lastNumericHours,
+          reconciled_by: userData.user?.id || null,
+        });
+      }
+      toast({
+        title: "Aulas marcadas como tratadas ✅",
+        description: `${ids.length} aula(s) não aparecerão mais como pendentes.`,
+      });
+      onChanged();
+      onOpenChange(false);
+    } catch (err: any) {
+      toast({ title: "Erro ao marcar aulas", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => !saving && onOpenChange(v)}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        {step === "markOrphans" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Marcar aulas como tratadas?
+              </DialogTitle>
+              <DialogDescription>
+                Existe{orphanLessons.length > 1 ? "m" : ""} <strong>{orphanLessons.length}</strong> aula{orphanLessons.length > 1 ? "s" : ""} sem pacote
+                relacionada{orphanLessons.length > 1 ? "s" : ""} a este aluno. Como o excesso já foi corrigido por <strong>ajuste numérico</strong>,
+                você pode marcá-la{orphanLessons.length > 1 ? "s" : ""} como tratada{orphanLessons.length > 1 ? "s" : ""} para que não apareça{orphanLessons.length > 1 ? "m" : ""} mais como pendente.
+                A aula continua existindo no histórico — apenas deixa de aparecer em "aulas aguardando vínculo".
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto space-y-2">
+              <div className="border border-border/60 rounded-lg divide-y">
+                {orphanLessons.map((l) => {
+                  const end = calculateEndTime(l.time, Number(l.duration || 0));
+                  return (
+                    <label key={l.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/30">
+                      <Checkbox
+                        checked={!!orphanSelected[l.id]}
+                        onCheckedChange={(v) => setOrphanSelected((s) => ({ ...s, [l.id]: !!v }))}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold">{format(new Date(l.date + "T12:00:00"), "dd/MM/yyyy")}</span>
+                          <span className="text-xs text-muted-foreground">{l.time}–{end} · {formatHoursDisplay(Number(l.duration || 0))}</span>
+                          {l.subject && <span className="text-xs text-muted-foreground truncate">· {l.subject}</span>}
+                        </div>
+                        <div className="mt-0.5">
+                          <Badge variant="outline" className="text-[10px] h-4 px-1 bg-muted text-muted-foreground border-border">sem pacote</Badge>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Marcar como tratada <strong>não</strong> vincula a aula ao pacote, não altera consumo, financeiro ou pagamentos. Apenas registra que o consumo já foi resolvido pelo ajuste numérico.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => markOrphansAsTreated(false)} disabled={saving}>
+                Não, manter pendente
+              </Button>
+              <Button onClick={() => markOrphansAsTreated(true)} disabled={saving}>
+                {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Marcando…</> : "Sim, marcar como tratada"}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+        <>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />
@@ -438,6 +576,8 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
             )}
           </Button>
         </DialogFooter>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   );
