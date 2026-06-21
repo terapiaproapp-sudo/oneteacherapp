@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, ArrowRightLeft, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowRightLeft, Loader2, Calculator } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { logActivity } from "@/lib/activityLogger";
 import { formatHoursDisplay, calculateEndTime } from "@/lib/formatMinutes";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { parseHoursToMinutes, formatMinutesToHoursInput } from "@/lib/packageUtils";
 
 interface PackageRow {
   id: string;
@@ -44,6 +46,8 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
   const [saving, setSaving] = useState(false);
   const [lessons, setLessons] = useState<LessonRow[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [mode, setMode] = useState<"lessons" | "numeric">("lessons");
+  const [numericInput, setNumericInput] = useState<string>("");
 
   const excess = Math.max(0, Number(sourcePkg.hours_used || 0) - Number(sourcePkg.hours_total || 0));
 
@@ -76,6 +80,13 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
           acc += Number(l.duration || 0);
         }
         setSelected(init);
+        // Se não há aulas vinculadas, abrir direto no modo numérico
+        if (rows.length === 0) {
+          setMode("numeric");
+          setNumericInput(formatMinutesToHoursInput(Math.round(excess * 60)));
+        } else {
+          setMode("lessons");
+        }
       }
       setLoading(false);
     })();
@@ -83,10 +94,16 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
   }, [open, studentId, sourcePkg.id, excess, toast]);
 
   const selectedLessons = useMemo(() => lessons.filter((l) => selected[l.id]), [lessons, selected]);
-  const totalHoursToMove = useMemo(
+  const lessonHoursSelected = useMemo(
     () => selectedLessons.reduce((acc, l) => acc + Number(l.duration || 0), 0),
     [selectedLessons]
   );
+  const numericHours = useMemo(() => {
+    const mins = parseHoursToMinutes(numericInput);
+    return mins / 60;
+  }, [numericInput]);
+
+  const totalHoursToMove = mode === "lessons" ? lessonHoursSelected : numericHours;
 
   const sourceUsedAfter = Math.max(0, Number(sourcePkg.hours_used || 0) - totalHoursToMove);
   const destUsedAfter = destPkg ? Number(destPkg.hours_used || 0) + totalHoursToMove : 0;
@@ -114,14 +131,16 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
   }
 
   const apply = async () => {
-    if (selectedLessons.length === 0) {
+    if (mode === "lessons" && selectedLessons.length === 0) {
       toast({ title: "Selecione ao menos uma aula", variant: "destructive" });
+      return;
+    }
+    if (mode === "numeric" && (!numericHours || numericHours <= 0)) {
+      toast({ title: "Informe um valor de horas válido", variant: "destructive" });
       return;
     }
     setSaving(true);
     try {
-      const ids = selectedLessons.map((l) => l.id);
-
       // Re-fetch ambos pacotes para snapshot consistente
       const { data: pkgs, error: pkgErr } = await supabase
         .from("packages")
@@ -132,24 +151,31 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
       const dst = (pkgs || []).find((p: any) => p.id === destPkg.id);
       if (!src || !dst) throw new Error("Pacote não encontrado");
 
-      // Mover somente aulas que AINDA estão no pacote de origem (anti-duplicidade)
-      const { data: moved, error: updErr } = await supabase
-        .from("lessons")
-        .update({ package_id: destPkg.id })
-        .in("id", ids)
-        .eq("package_id", sourcePkg.id)
-        .select("id,duration");
-      if (updErr) throw updErr;
+      let movedRows: { id: string; duration: number }[] = [];
+      let movedHours = 0;
 
-      const movedRows = moved || [];
-      if (movedRows.length === 0) {
-        toast({ title: "Nenhuma aula transferida", description: "As aulas já não estavam no pacote de origem.", variant: "destructive" });
-        setSaving(false);
-        onChanged();
-        onOpenChange(false);
-        return;
+      if (mode === "lessons") {
+        const ids = selectedLessons.map((l) => l.id);
+        const { data: moved, error: updErr } = await supabase
+          .from("lessons")
+          .update({ package_id: destPkg.id })
+          .in("id", ids)
+          .eq("package_id", sourcePkg.id)
+          .select("id,duration");
+        if (updErr) throw updErr;
+        movedRows = (moved || []) as any;
+        if (movedRows.length === 0) {
+          toast({ title: "Nenhuma aula transferida", description: "As aulas já não estavam no pacote de origem.", variant: "destructive" });
+          setSaving(false);
+          onChanged();
+          onOpenChange(false);
+          return;
+        }
+        movedHours = movedRows.reduce((a, l: any) => a + Number(l.duration || 0), 0);
+      } else {
+        // Ajuste numérico — apenas saldo, sem mover aulas
+        movedHours = numericHours;
       }
-      const movedHours = movedRows.reduce((a, l: any) => a + Number(l.duration || 0), 0);
 
       const srcUsedBefore = Number(src.hours_used || 0);
       const dstUsedBefore = Number(dst.hours_used || 0);
@@ -174,6 +200,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
         source_package_name: sourcePkg.name,
         dest_package_id: dst.id,
         dest_package_name: destPkg.name,
+        mode,
         lesson_ids: movedRows.map((l: any) => l.id),
         lessons_count: movedRows.length,
         hours_transferred: movedHours,
@@ -185,11 +212,19 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
         dest_hours_total: Number(dst.hours_total || 0),
       });
 
-      const skipped = ids.length - movedRows.length;
-      toast({
-        title: "Excesso corrigido ✅",
-        description: `${movedRows.length} aula(s) transferida(s) (${formatHoursDisplay(movedHours)})${skipped > 0 ? ` · ${skipped} ignorada(s)` : ""}.`,
-      });
+      if (mode === "lessons") {
+        const ids = selectedLessons.map((l) => l.id);
+        const skipped = ids.length - movedRows.length;
+        toast({
+          title: "Excesso corrigido ✅",
+          description: `${movedRows.length} aula(s) transferida(s) (${formatHoursDisplay(movedHours)})${skipped > 0 ? ` · ${skipped} ignorada(s)` : ""}.`,
+        });
+      } else {
+        toast({
+          title: "Saldo ajustado ✅",
+          description: `${formatHoursDisplay(movedHours)} transferida(s) numericamente do pacote antigo para o novo.`,
+        });
+      }
       onChanged();
       onOpenChange(false);
     } catch (err: any) {
@@ -218,12 +253,37 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
             <div className="py-10 flex items-center justify-center text-muted-foreground text-sm">
               <Loader2 className="h-4 w-4 animate-spin mr-2" /> Buscando aulas…
             </div>
-          ) : lessons.length === 0 ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              Nenhuma aula vinculada a este pacote.
-            </div>
           ) : (
             <>
+              {/* Tabs de modo */}
+              <div className="flex gap-2 p-1 bg-muted/40 rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setMode("lessons")}
+                  disabled={lessons.length === 0}
+                  className={`flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-colors ${mode === "lessons" ? "bg-background shadow-sm" : "text-muted-foreground"} ${lessons.length === 0 ? "opacity-40 cursor-not-allowed" : ""}`}
+                >
+                  Por aulas {lessons.length > 0 && `(${lessons.length})`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("numeric")}
+                  className={`flex-1 text-xs font-medium px-3 py-1.5 rounded-md transition-colors flex items-center justify-center gap-1 ${mode === "numeric" ? "bg-background shadow-sm" : "text-muted-foreground"}`}
+                >
+                  <Calculator className="h-3 w-3" /> Ajuste numérico
+                </button>
+              </div>
+
+              {mode === "lessons" && lessons.length === 0 && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Nenhuma aula está vinculada ao pacote antigo. Use o modo <strong>Ajuste numérico</strong> para transferir só o saldo.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {mode === "lessons" && lessons.length > 0 && (
               <div className="border border-border/60 rounded-lg divide-y">
                 {lessons.map((l) => {
                   const end = calculateEndTime(l.time, Number(l.duration || 0));
@@ -253,6 +313,27 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
                   );
                 })}
               </div>
+              )}
+
+              {mode === "numeric" && (
+                <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Transfere apenas o <strong>saldo</strong> entre pacotes. Nenhuma aula é alterada. Use quando o pacote antigo tem horas consumidas sem aulas vinculadas (dados legados).
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-medium w-32">Horas a transferir</label>
+                    <Input
+                      value={numericInput}
+                      onChange={(e) => setNumericInput(e.target.value)}
+                      placeholder="Ex: 3h ou 3h30"
+                      className="h-9 text-sm flex-1"
+                    />
+                    <Button type="button" size="sm" variant="outline" className="h-9 text-xs" onClick={() => setNumericInput(formatMinutesToHoursInput(Math.round(excess * 60)))}>
+                      Usar excesso ({formatHoursDisplay(excess)})
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-lg border border-border/60 bg-card p-3 space-y-1">
@@ -290,8 +371,17 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={apply} disabled={saving || loading || selectedLessons.length === 0}>
-            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Aplicando…</> : `Transferir ${selectedLessons.length} aula(s)`}
+          <Button
+            onClick={apply}
+            disabled={saving || loading || (mode === "lessons" ? selectedLessons.length === 0 : !numericHours || numericHours <= 0)}
+          >
+            {saving ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Aplicando…</>
+            ) : mode === "lessons" ? (
+              `Transferir ${selectedLessons.length} aula(s)`
+            ) : (
+              `Transferir ${formatHoursDisplay(numericHours || 0)}`
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
