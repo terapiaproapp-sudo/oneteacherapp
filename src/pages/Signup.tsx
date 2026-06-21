@@ -7,10 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Lock, Mail, User, Phone, Globe, MapPin, Building2, ShieldCheck, Check } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User, ShieldCheck, Check, Globe } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import PhoneInput from 'react-phone-number-input';
-import { CountryDropdown, RegionDropdown } from 'react-country-region-selector';
 import logo from "@/assets/logo-oneteacher.png";
 import Seo from "@/components/Seo";
 
@@ -18,10 +16,6 @@ export default function Signup() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    whatsapp: "",
-    country: "",
-    region: "",
-    city: "",
     password: "",
     confirmPassword: "",
     acceptTerms: false,
@@ -67,8 +61,8 @@ export default function Signup() {
       return;
     }
 
-    if (!formData.whatsapp) {
-      toast({ title: "WhatsApp é obrigatório", variant: "destructive" });
+    if (formData.password.length < 6) {
+      toast({ title: "Senha deve ter no mínimo 6 caracteres", variant: "destructive" });
       return;
     }
 
@@ -77,15 +71,11 @@ export default function Signup() {
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        options: { 
-          data: { 
+        options: {
+          data: {
             full_name: formData.name,
-            whatsapp: formData.whatsapp,
-            country: formData.country,
-            region: formData.region,
-            city: formData.city
           },
-          emailRedirectTo: window.location.origin 
+          emailRedirectTo: window.location.origin,
         },
       });
 
@@ -119,7 +109,7 @@ export default function Signup() {
         description="Crie sua conta OneTeacher e teste 7 dias grátis a plataforma de gestão para professores particulares. Sem cartão de crédito."
         path="/signup"
       />
-      <div className="w-full max-w-2xl space-y-8 animate-fade-in">
+      <div className="w-full max-w-md space-y-8 animate-fade-in">
         <div className="text-center">
           <motion.img 
             initial={{ opacity: 0, y: -20 }}
@@ -128,14 +118,14 @@ export default function Signup() {
             alt="OneTeacher - Gestão para professores particulares"
             className="h-16 mx-auto mb-6 object-contain" 
           />
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Crie sua conta global</h1>
-          <p className="text-slate-500 mt-2 text-lg">Comece a organizar suas aulas em qualquer lugar do mundo</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Crie sua conta</h1>
+          <p className="text-slate-500 mt-2 text-lg">Comece a organizar suas aulas em poucos minutos</p>
         </div>
 
         <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl overflow-hidden bg-white">
-          <CardContent className="p-8 sm:p-12">
+          <CardContent className="p-8">
             <form onSubmit={handleSignup} className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 {/* Nome Completo */}
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -152,71 +142,8 @@ export default function Signup() {
                   </motion.div>
                 </div>
 
-                {/* WhatsApp Internacional */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-slate-400" /> WhatsApp internacional
-                  </Label>
-                  <motion.div variants={inputVariants} whileFocus="focus" whileTap="tap">
-                    <PhoneInput
-                      placeholder="+55 (11) 99999-9999"
-                      value={formData.whatsapp}
-                      onChange={val => updateField("whatsapp", val)}
-                      className="flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-within:ring-2 focus-within:ring-primary/20 focus-within:bg-white transition-all custom-phone-input"
-                    />
-                  </motion.div>
-                </div>
-
-                {/* País */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-slate-400" /> País
-                  </Label>
-                  <motion.div variants={inputVariants} whileFocus="focus" whileTap="tap">
-                    <CountryDropdown
-                      value={formData.country}
-                      onChange={(val) => updateField("country", val)}
-                      className="flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-base focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-                      defaultOptionLabel="Selecione o país"
-                    />
-                  </motion.div>
-                </div>
-
-                {/* Estado/Região */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-400" /> Estado/Região
-                  </Label>
-                  <motion.div variants={inputVariants} whileFocus="focus" whileTap="tap">
-                    <RegionDropdown
-                      country={formData.country}
-                      value={formData.region}
-                      onChange={(val) => updateField("region", val)}
-                      className="flex h-12 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-base focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all outline-none disabled:opacity-50"
-                      defaultOptionLabel="Selecione a região"
-                      blankOptionLabel="Selecione o país primeiro"
-                    />
-                  </motion.div>
-                </div>
-
-                {/* Cidade */}
-                <div className="space-y-2 sm:col-span-2">
-                  <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-slate-400" /> Cidade
-                  </Label>
-                  <motion.div variants={inputVariants} whileFocus="focus" whileTap="tap">
-                    <Input 
-                      value={formData.city} 
-                      onChange={e => updateField("city", e.target.value)} 
-                      required 
-                      className="h-12 bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all text-base" 
-                      placeholder="Ex: São Paulo" 
-                    />
-                  </motion.div>
-                </div>
-
                 {/* E-mail */}
-                <div className="space-y-2 sm:col-span-2">
+                <div className="space-y-2">
                   <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                     <Mail className="w-4 h-4 text-slate-400" /> E-mail
                   </Label>
