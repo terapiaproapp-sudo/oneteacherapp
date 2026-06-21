@@ -256,11 +256,88 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
           title: "Saldo ajustado ✅",
           description: `${formatHoursDisplay(movedHours)} transferida(s) numericamente do pacote antigo para o novo.`,
         });
+        // Buscar aulas órfãs (sem pacote, ainda não tratadas) — se houver,
+        // pular para etapa de marcar como tratadas em vez de fechar.
+        const today = format(new Date(), "yyyy-MM-dd");
+        const { data: orphans } = await supabase
+          .from("lessons")
+          .select("id,date,time,duration,status,subject")
+          .eq("student_id", studentId)
+          .is("package_id", null)
+          .eq("lesson_type", "pacote")
+          .in("status", ["concluida", "noshow"])
+          .is("reconciliation_status", null)
+          .lte("date", today)
+          .order("date", { ascending: false });
+        const rows = (orphans || []) as LessonRow[];
+        if (rows.length > 0) {
+          setOrphanLessons(rows);
+          const init: Record<string, boolean> = {};
+          rows.forEach((l) => { init[l.id] = true; });
+          setOrphanSelected(init);
+          setLastNumericHours(movedHours);
+          setStep("markOrphans");
+          onChanged();
+          setSaving(false);
+          return;
+        }
       }
       onChanged();
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Erro ao transferir", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const markOrphansAsTreated = async (mark: boolean) => {
+    if (!mark) {
+      onOpenChange(false);
+      return;
+    }
+    const ids = orphanLessons.filter((l) => orphanSelected[l.id]).map((l) => l.id);
+    if (ids.length === 0) {
+      onOpenChange(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const note = `Consumo tratado por ajuste numérico de pacote em ${format(new Date(), "dd/MM/yyyy")} (${formatHoursDisplay(lastNumericHours)} · ${sourcePkg.name} → ${destPkg.name}).`;
+      const { error } = await supabase
+        .from("lessons")
+        .update({
+          reconciliation_status: "numeric_adjustment",
+          reconciliation_note: note,
+          reconciled_at: new Date().toISOString(),
+          reconciled_by: userData.user?.id || null,
+        })
+        .in("id", ids)
+        .is("package_id", null)
+        .is("reconciliation_status", null);
+      if (error) throw error;
+      for (const lid of ids) {
+        await logActivity("lesson_marked_as_reconciled_by_numeric_adjustment", {
+          student_id: studentId,
+          student_name: studentName,
+          lesson_id: lid,
+          source_package_id: sourcePkg.id,
+          source_package_name: sourcePkg.name,
+          dest_package_id: destPkg.id,
+          dest_package_name: destPkg.name,
+          hours_adjusted: lastNumericHours,
+          reconciled_by: userData.user?.id || null,
+        });
+      }
+      toast({
+        title: "Aulas marcadas como tratadas ✅",
+        description: `${ids.length} aula(s) não aparecerão mais como pendentes.`,
+      });
+      onChanged();
+      onOpenChange(false);
+    } catch (err: any) {
+      toast({ title: "Erro ao marcar aulas", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
