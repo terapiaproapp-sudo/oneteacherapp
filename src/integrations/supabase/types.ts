@@ -51,6 +51,10 @@ export type Database = {
           package_id: string | null
           payment_status: string | null
           receipt_url: string | null
+          reconciled_at: string | null
+          reconciled_by: string | null
+          reconciliation_note: string | null
+          reconciliation_status: string | null
           recurrence_config: Json | null
           recurrence_id: string | null
           recurrence_index: number | null
@@ -73,6 +77,10 @@ export type Database = {
           package_id?: string | null
           payment_status?: string | null
           receipt_url?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_note?: string | null
+          reconciliation_status?: string | null
           recurrence_config?: Json | null
           recurrence_id?: string | null
           recurrence_index?: number | null
@@ -95,6 +103,10 @@ export type Database = {
           package_id?: string | null
           payment_status?: string | null
           receipt_url?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_note?: string | null
+          reconciliation_status?: string | null
           recurrence_config?: Json | null
           recurrence_id?: string | null
           recurrence_index?: number | null
