@@ -304,7 +304,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
     try {
       const { data: userData } = await supabase.auth.getUser();
       const note = `Consumo tratado por ajuste numérico de pacote em ${format(new Date(), "dd/MM/yyyy")} (${formatHoursDisplay(lastNumericHours)} · ${sourcePkg.name} → ${destPkg.name}).`;
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("lessons")
         .update({
           reconciliation_status: "numeric_adjustment",
