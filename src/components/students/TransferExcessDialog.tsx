@@ -71,13 +71,17 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
       } else {
         const rows = (data || []) as LessonRow[];
         setLessons(rows);
-        // Pré-selecionar aulas mais recentes até cobrir o excesso
+        // Pré-selecionar aulas mais recentes SEM ultrapassar o excesso real.
+        // Nunca selecionar uma aula que sozinha já passe do excesso.
         const init: Record<string, boolean> = {};
         let acc = 0;
         for (const l of rows) {
+          const d = Number(l.duration || 0);
+          if (acc + d <= excess + 1e-9) {
+            init[l.id] = true;
+            acc += d;
+          }
           if (acc >= excess) break;
-          init[l.id] = true;
-          acc += Number(l.duration || 0);
         }
         setSelected(init);
         // Se não há aulas vinculadas, abrir direto no modo numérico
@@ -86,6 +90,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
           setNumericInput(formatMinutesToHoursInput(Math.round(excess * 60)));
         } else {
           setMode("lessons");
+          setNumericInput(formatMinutesToHoursInput(Math.round(Math.max(0, excess - acc) * 60)));
         }
       }
       setLoading(false);
@@ -104,6 +109,16 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
   }, [numericInput]);
 
   const totalHoursToMove = mode === "lessons" ? lessonHoursSelected : numericHours;
+
+  const lessonsTotalHours = useMemo(
+    () => lessons.reduce((acc, l) => acc + Number(l.duration || 0), 0),
+    [lessons]
+  );
+  const exceedsExcess =
+    mode === "lessons"
+      ? lessonHoursSelected > excess + 1e-9
+      : numericHours > excess + 1e-9;
+  const remainingExcessToFix = Math.max(0, excess - (mode === "lessons" ? lessonHoursSelected : 0));
 
   const sourceUsedAfter = Math.max(0, Number(sourcePkg.hours_used || 0) - totalHoursToMove);
   const destUsedAfter = destPkg ? Number(destPkg.hours_used || 0) + totalHoursToMove : 0;
@@ -137,6 +152,14 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
     }
     if (mode === "numeric" && (!numericHours || numericHours <= 0)) {
       toast({ title: "Informe um valor de horas válido", variant: "destructive" });
+      return;
+    }
+    if (exceedsExcess) {
+      toast({
+        title: "Seleção ultrapassa o excesso",
+        description: `A seleção ultrapassa o excesso de ${formatHoursDisplay(excess)}. Para corrigir este pacote, selecione no máximo ${formatHoursDisplay(excess)} ou use ajuste numérico.`,
+        variant: "destructive",
+      });
       return;
     }
     setSaving(true);
@@ -193,7 +216,9 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
         await supabase.from("students").update({ hours_remaining: newRem }).eq("id", studentId);
       }
 
-      await logActivity("package_excess_transfer", {
+      await logActivity(
+        mode === "numeric" ? "package_excess_numeric_adjustment" : "package_excess_transfer",
+        {
         student_id: studentId,
         student_name: studentName,
         source_package_id: src.id,
@@ -201,6 +226,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
         dest_package_id: dst.id,
         dest_package_name: destPkg.name,
         mode,
+        excess_detected: excess,
         lesson_ids: movedRows.map((l: any) => l.id),
         lessons_count: movedRows.length,
         hours_transferred: movedHours,
@@ -210,7 +236,8 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
         dest_hours_used_before: dstUsedBefore,
         dest_hours_used_after: dstUsedNew,
         dest_hours_total: Number(dst.hours_total || 0),
-      });
+        }
+      );
 
       if (mode === "lessons") {
         const ids = selectedLessons.map((l) => l.id);
@@ -318,7 +345,7 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
               {mode === "numeric" && (
                 <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
                   <p className="text-xs text-muted-foreground">
-                    Transfere apenas o <strong>saldo</strong> entre pacotes. Nenhuma aula é alterada. Use quando o pacote antigo tem horas consumidas sem aulas vinculadas (dados legados).
+                    Reduz o consumo do pacote antigo e aumenta o do novo, sem mexer em aulas. Máximo permitido: <strong>{formatHoursDisplay(excess)}</strong> (excesso real).
                   </p>
                   <div className="flex items-center gap-2">
                     <label className="text-xs font-medium w-32">Horas a transferir</label>
@@ -357,6 +384,28 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
                 </div>
               </div>
 
+              {/* Resumo da reconciliação */}
+              <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Excesso real do pacote antigo</span><span className="font-semibold text-destructive">{formatHoursDisplay(excess)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Máximo permitido p/ reconciliação</span><span className="font-semibold">{formatHoursDisplay(excess)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Aulas vinculadas ao pacote antigo</span><span>{formatHoursDisplay(lessonsTotalHours)} ({lessons.length})</span></div>
+                {mode === "lessons" && remainingExcessToFix > 0 && (
+                  <div className="flex justify-between text-warning"><span>Faltam para fechar o excesso</span><span className="font-semibold">{formatHoursDisplay(remainingExcessToFix)} (use ajuste numérico)</span></div>
+                )}
+                {mode === "lessons" && lessonsTotalHours > excess && (
+                  <p className="text-[11px] text-muted-foreground italic pt-1">Atenção: nem todas as aulas vinculadas devem ser usadas — limite à medida do excesso.</p>
+                )}
+              </div>
+
+              {exceedsExcess && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    A seleção ultrapassa o excesso de <strong>{formatHoursDisplay(excess)}</strong>. Selecione no máximo {formatHoursDisplay(excess)} ou use <strong>Ajuste numérico</strong>.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               {destExceeds && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
@@ -373,7 +422,12 @@ export default function TransferExcessDialog({ open, onOpenChange, sourcePkg, de
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
           <Button
             onClick={apply}
-            disabled={saving || loading || (mode === "lessons" ? selectedLessons.length === 0 : !numericHours || numericHours <= 0)}
+            disabled={
+              saving ||
+              loading ||
+              exceedsExcess ||
+              (mode === "lessons" ? selectedLessons.length === 0 : !numericHours || numericHours <= 0)
+            }
           >
             {saving ? (
               <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Aplicando…</>
