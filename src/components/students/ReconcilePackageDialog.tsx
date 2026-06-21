@@ -69,6 +69,7 @@ export default function ReconcilePackageDialog({ open, onOpenChange, pkg, studen
         .is("package_id", null)
         .eq("lesson_type", "pacote")
         .in("status", ["concluida", "noshow"])
+        .is("reconciliation_status", null)
         .lte("date", today)
         .order("date", { ascending: true })
         .order("time", { ascending: true });
