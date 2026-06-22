@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, ChevronRight, Zap, Star, Shield, Smartphone, Clock, CalendarDays, Users, BarChart3, Package, Percent } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Zap, Star, Shield, Smartphone, Clock, CalendarDays, Users, BarChart3, Package, Percent } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { usePlanGuard } from "@/hooks/usePlanGuard";
 import { supabase } from "@/lib/supabase";
@@ -189,7 +189,20 @@ export default function Planos() {
     <div className="min-h-screen bg-background">
       <nav className="border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
-          <img src={logo} alt="OneTeacher" className="h-12 object-contain cursor-pointer" onClick={() => navigate("/")} />
+          <div className="flex items-center gap-4">
+            <img src={logo} alt="OneTeacher" className="h-12 object-contain cursor-pointer" onClick={() => navigate("/")} />
+            {profile?.plan && profile?.status === "ativo" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/dashboard")}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Voltar ao Dashboard
+              </Button>
+            )}
+          </div>
           {profile && (
             <div className="text-sm font-medium">
               Olá, {profile.full_name?.split(" ")[0]}
