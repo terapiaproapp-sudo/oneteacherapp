@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,6 @@ export default function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(0);
-  
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -37,16 +35,6 @@ export default function Signup() {
   const updateField = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
-  useEffect(() => {
-    const password = formData.password;
-    let strength = 0;
-    if (password.length >= 6) strength += 25;
-    if (/[A-Z]/.test(password)) strength += 25;
-    if (/[0-9]/.test(password)) strength += 25;
-    if (/[^A-Za-z0-9]/.test(password)) strength += 25;
-    setPasswordStrength(strength);
-  }, [formData.password]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,22 +172,6 @@ export default function Signup() {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  {/* Password Strength Indicator */}
-                  {formData.password && (
-                    <div className="space-y-1.5 mt-2">
-                      <div className="flex justify-between items-center text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                        <span>Força da senha</span>
-                        <span>{passwordStrength === 100 ? "Forte" : passwordStrength >= 50 ? "Média" : "Fraca"}</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${passwordStrength}%` }}
-                          className={`h-full ${passwordStrength === 100 ? "bg-emerald-500" : passwordStrength >= 50 ? "bg-amber-500" : "bg-rose-500"}`}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Confirmar Senha */}
