@@ -7,6 +7,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { usePlanGuard } from "@/hooks/usePlanGuard";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import logo from "@/assets/logo-oneteacher.png";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 
@@ -77,6 +78,7 @@ export default function Planos() {
   const { profile, isLoading } = usePlanGuard();
   const [isActivatingTrial, setIsActivatingTrial] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
 
   // Se o usuário voltar autenticado e havia uma escolha pendente em sessionStorage
   // (ou parâmetro ?plan=), retoma o redirecionamento ao checkout oficial.
@@ -101,6 +103,11 @@ export default function Planos() {
   const handleSubscribe = async (plan: typeof plans[0]) => {
     if (plan.id === "teste") {
       if (!profile) {
+        // Usuário não autenticado ou perfil ainda carregando → manda cadastrar
+        if (isLoading) {
+          toast.info("Carregando seu perfil, tente novamente em instantes.");
+          return;
+        }
         navigate("/cadastro");
         return;
       }
@@ -111,8 +118,9 @@ export default function Planos() {
       }
 
       setIsActivatingTrial(true);
-      const today = new Date();
-      const validUntil = new Date(today.setDate(today.getDate() + 7)).toISOString().split("T")[0];
+      const validUntilDate = new Date();
+      validUntilDate.setDate(validUntilDate.getDate() + 7);
+      const validUntil = validUntilDate.toISOString().split("T")[0];
 
       const { error } = await supabase
         .from("profiles")
@@ -123,14 +131,21 @@ export default function Planos() {
         })
         .eq("id", profile.id);
 
-      setIsActivatingTrial(false);
-
       if (error) {
+        setIsActivatingTrial(false);
+        console.error("Erro ao ativar trial:", error);
         toast.error("Erro ao ativar teste. Tente novamente.");
-      } else {
-        toast.success("Teste de 7 dias ativado!");
-        navigate("/dashboard");
+        return;
       }
+
+      // Invalida e refaz o fetch do profile antes de navegar, senão o
+      // usePlanGuard do /dashboard lê cache antigo (plan=null) e redireciona
+      // de volta para /planos.
+      await queryClient.invalidateQueries({ queryKey: ["profile-guard"] });
+      await queryClient.refetchQueries({ queryKey: ["profile-guard"] });
+      setIsActivatingTrial(false);
+      toast.success("Teste de 7 dias ativado!");
+      navigate("/dashboard", { replace: true });
       return;
     }
 
